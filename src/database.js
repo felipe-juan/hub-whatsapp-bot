@@ -70,6 +70,7 @@ const DEFAULT_SETTINGS = {
   institutional_cards_v098_migrated: 'false',
   structured_sectors_v098_seeded: 'false',
   fun_cards_v0101_seeded: 'false',
+  fun_cards_v0102_seeded: 'false',
   automatic_messages_v0101_simplified: 'false',
   contextual_followup_seconds: '300',
   risk_guard_enabled: 'false',

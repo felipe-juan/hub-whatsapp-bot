@@ -1,4 +1,5 @@
 const { normalizeText, containsPhrase } = require('./text');
+const { implicitQuestionStructure } = require('./semantic-question');
 
 const SECTOR_CARD_TITLE = 'Consulta estruturada — setores do IFBA';
 const SECTOR_INTENTS = Object.freeze({
@@ -71,6 +72,7 @@ function directPhrasesFor(sector) {
 function classifySectorRequest(text, sectors = []) {
   const raw = String(text || '').trim();
   const hasFinalQuestion = /\?\s*$/.test(raw);
+  const hasQuestionStructure = hasFinalQuestion || implicitQuestionStructure(raw);
   const clean = stripQuestion(raw);
   const matches = findSector(clean, sectors);
   if (!matches.length) return { matched: false };
@@ -80,17 +82,18 @@ function classifySectorRequest(text, sectors = []) {
   const asksForNonPhysicalResource = intent === 'location'
     && NON_PHYSICAL_RESOURCE_TERMS.some(value => containsPhrase(clean, normalizeText(value)));
   if (asksForNonPhysicalResource) return { matched: false, deferredToCards: true };
-  if (!hasFinalQuestion && !directPhrasesFor(best.sector).has(clean)) return { matched: false };
+  if (!hasQuestionStructure && !directPhrasesFor(best.sector).has(clean)) return { matched: false };
   return { matched: true, intent, sector: best.sector, alias: best.alias, ambiguous: matches.filter(item => item.alias.length === best.alias.length).length > 1 };
 }
 function classifySectorFollowUp(text) {
   const raw = String(text || '').trim();
   const hasFinalQuestion = /\?\s*$/.test(raw);
+  const hasQuestionStructure = hasFinalQuestion || implicitQuestionStructure(raw);
   const clean = stripQuestion(raw).replace(/^(?:e|mas|entao|então)\s+/, '').trim();
   const intent = detectIntent(clean);
   if (!intent) return '';
   const allowedDirect = new Set(['contato', 'ctt', 'email', 'e mail', 'whatsapp', 'whats', 'zap', 'telefone', 'fone', 'numero', 'ramal', 'onde fica', 'localizacao', 'servicos', 'o que resolve', 'o que faz', 'fonte', 'mais detalhes']);
-  return hasFinalQuestion || allowedDirect.has(clean) ? intent : '';
+  return hasQuestionStructure || allowedDirect.has(clean) ? intent : '';
 }
 function line(label, value) { return value ? `${label} ${value}` : ''; }
 function formatSectorResponse(sector, intent = 'contact', { includeSource = false } = {}) {

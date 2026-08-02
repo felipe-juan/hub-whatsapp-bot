@@ -31,7 +31,7 @@ Principais objetivos:
 
 ## Estado do projeto
 
-Versão atual: **0.10.1**
+Versão atual: **0.10.2**
 
 O projeto ainda está em preparação para a versão 1.0. Apesar da suíte automatizada e dos testes realizados pelo mantenedor, ele deve ser considerado experimental.
 
@@ -44,14 +44,13 @@ Antes de usar em produção:
 5. configure backup e retenção de logs;
 6. mantenha o painel restrito a `localhost`, salvo necessidade específica.
 
-## Novidades da v0.10.1
+## Novidades da v0.10.2
 
-- adiciona o card de humor **Como passar em Cálculo?**, com gatilhos específicos e sem conflito com dúvidas de TCC ou consultas sobre a disciplina;
-- remove as etiquetas do painel, da pesquisa, das ações em massa e do modelo CSV atual;
-- remove do editor o campo visível **Mais detalhes**, preservando as continuações contextuais já incorporadas ao conteúdo institucional;
-- move as variáveis para **Configurações avançadas**;
-- transforma o nome interno no título editável da própria janela de edição;
-- responde em conversas privadas com a ajuda automática sempre que uma mensagem não corresponde a nenhum comando ou card.
+- reconhece perguntas completas mesmo sem `?` no final, desde que tenham ao menos três termos e uma estrutura interrogativa clara;
+- aceita inícios como **como**, **onde**, **qual**, **quem**, **quando**, **posso**, **preciso**, **você sabe**, **gostaria de saber** e equivalentes;
+- aplica a mesma regra a cards automáticos, setores, contatos docentes, horários e localização de professores;
+- mantém bloqueadas menções casuais, frases incompletas e discurso relatado, reduzindo falsos positivos;
+- corrige automaticamente o card **Como passar em Cálculo?** para funcionar com e sem o ponto de interrogação, preservando resposta e anexo personalizados.
 
 ## Recursos principais
 
@@ -59,7 +58,8 @@ Antes de usar em produção:
 
 - cards editáveis com frases, palavras-chave, exclusões e prioridade;
 - frases diretas curtas que podem funcionar sem `?`;
-- mensagens maiores que precisam terminar em `?`;
+- perguntas completas que podem funcionar sem `?` quando a estrutura interrogativa é clara;
+- exigência do `?` ou de uma frase direta completa quando não há estrutura interrogativa reconhecível;
 - proteção contra menções indiretas e discurso relatado;
 - desambiguação quando mais de uma resposta é possível;
 - respostas progressivas com `mais detalhes`;
@@ -116,23 +116,27 @@ contato caens
 contato da caens
 ```
 
-### Pergunta em uma mensagem maior
+### Pergunta completa sem `?`
 
-Quando há texto adicional, a mensagem precisa terminar em `?`:
+Desde a v0.10.2, uma mensagem com ao menos três termos pode ser reconhecida como pergunta mesmo sem o sinal final, quando começa com uma estrutura interrogativa ou de pedido clara:
 
 ```text
-Você sabe qual é o contato da CAENS?
+Como passar em Cálculo
+Você sabe qual é o contato da CAENS
+Onde fica a sala do professor Allan
+Por favor, como solicito aproveitamento
 ```
 
-Estas mensagens não devem responder:
+O `?` continua útil e é necessário quando a mensagem não apresenta uma estrutura interrogativa reconhecível. Estas mensagens não devem responder:
 
 ```text
 Alguma coisa calendário acadêmico
-Você sabe qual é o contato da CAENS
-Você sabe qual é o contato da CAENS? obrigado
+A gente falou do contato da CAENS
+Ontem comentaram sobre como passar em Cálculo
+Onde fica
 ```
 
-O motor também tenta bloquear frases que apenas mencionam um tema, como relatos sobre algo que outra pessoa comentou ou publicou.
+Saudações e expressões de cortesia no começo são ignoradas para a análise. O motor continua bloqueando frases incompletas, menções casuais e relatos sobre algo que outra pessoa comentou ou publicou.
 
 ## Requisitos
 
@@ -302,7 +306,7 @@ Verificar scripts e indicador do desktop:
 npm run desktop:check
 ```
 
-A versão 0.10.1 foi empacotada após 253 testes automatizados aprovados, executados individualmente no ambiente de desenvolvimento para evitar retenção de processo pelo executor combinado do Node.js. Esse número não substitui revisão independente nem teste em uma conta real diferente.
+A versão 0.10.2 foi empacotada após 258 testes automatizados aprovados, executados pela suíte combinada do Node.js. Esse número não substitui revisão independente nem teste em uma conta real diferente.
 
 ## Variáveis de ambiente
 

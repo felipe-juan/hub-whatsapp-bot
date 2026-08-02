@@ -9,7 +9,28 @@ const REPORTED_SPEECH = [
 const DIRECT_REQUEST = /(?:^|\b)(?:qual|quais|onde|como|quando|quem|quanto|quantos|quanta|quantas|que\s+dia|posso|podemos|preciso|precisamos|existe|existem|tem|sabe|sabem|pode|podem|poderia|poderiam|devo|devemos|gostaria\s+de\s+saber|quero\s+saber|queria\s+saber|me\s+(?:diga|informe|mande|manda|envie|mostre|passa|passe)|informe|diga)\b/u;
 const EXPLICIT_POLITE_REQUEST = /\b(?:pode|poderia|consegue|conseguiria|alguem|alguém)\b.{0,35}\b(?:informar|dizer|mostrar|explicar|enviar|passar|indicar)\b/u;
 const DIRECT_AFTER_REPORT = /\b(?:mas|entao|então|por isso|nesse caso|neste caso|agora)\b[, ]{0,4}(?:qual|quais|onde|como|quando|quem|posso|preciso|existe|tem|pode|poderia)\b/u;
+const COURTESY_PREFIX = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|por favor|por gentileza|favor|pfv)\b\s*)+/u;
+const LEADING_INTERROGATIVE = /^(?:qual|quais|onde|como|quando|quem|quanto|quantos|quanta|quantas|que\s+dia|o\s+que|por\s+que)\b/u;
+const LEADING_REQUEST = /^(?:(?:eu|voce|voces|alguem)\s+)?(?:posso|podemos|preciso|precisamos|existe|existem|tem|sabe|sabem|pode|podem|poderia|poderiam|devo|devemos|consegue|conseguem|conseguiria|conseguiriam|gostaria\s+de\s+saber|quero\s+saber|queria\s+saber|me\s+(?:diga|informe|mande|envie|mostre|passe)|informe|diga)\b/u;
 const COVERAGE_IGNORED = new Set(['a','ao','aos','as','da','das','de','do','dos','e','em','na','nas','no','nos','o','os','para','por','pra','pro','que','um','uma','uns','umas','voce','você','voces','vocês','me','porfavor','favor']);
+
+
+function implicitQuestionStructure(value) {
+  let text = normalizeText(value);
+  if (!text) return false;
+  // Saudações e marcadores de cortesia não mudam a intenção da frase.
+  // Ex.: “oi, como faço...” e “por favor qual é...”.
+  let previous = '';
+  while (text && text !== previous) {
+    previous = text;
+    text = text.replace(COURTESY_PREFIX, '').trim();
+  }
+  const tokens = tokenize(text);
+  if (tokens.length < 3) return false;
+  const reported = REPORTED_SPEECH.some(pattern => pattern.test(text));
+  if (reported && !DIRECT_AFTER_REPORT.test(text)) return false;
+  return LEADING_INTERROGATIVE.test(text) || LEADING_REQUEST.test(text);
+}
 
 function questionIntent(value) {
   const text = normalizeText(value);
@@ -80,5 +101,6 @@ module.exports = {
   semanticQuestionAssessment,
   questionIntent,
   intentsCompatible,
-  evidenceCoverage
+  evidenceCoverage,
+  implicitQuestionStructure
 };

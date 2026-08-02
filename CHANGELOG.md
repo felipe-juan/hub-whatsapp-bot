@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.2 — 2026-08-02
+
+- reconhece perguntas completas sem `?` final quando há ao menos três termos e uma estrutura interrogativa ou de pedido clara;
+- aceita saudações e cortesias antes de inícios como `como`, `onde`, `qual`, `quem`, `quando`, `posso`, `preciso`, `você sabe` e `gostaria de saber`;
+- aplica a regra aos cards automáticos, diretório de setores, contatos docentes, horários e localização de professores;
+- mantém a proteção contra frases incompletas, menções casuais e discurso relatado;
+- corrige o card **Como passar em Cálculo?** para funcionar com e sem o ponto de interrogação;
+- migra o gatilho oficial do card sem substituir resposta, anexo ou escopo personalizados;
+- amplia a suíte para 258 testes automatizados aprovados.
+
 ## 0.10.1 — 2026-08-02
 
 - adiciona o card de humor **Como passar em Cálculo?** com a resposta fornecida e um gatilho por padrão de pergunta que não conflita com TCC nem com consultas da disciplina;

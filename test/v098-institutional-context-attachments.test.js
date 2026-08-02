@@ -42,7 +42,7 @@ test('institutional cards have a single canonical source file', () => {
   assert.doesNotMatch(bsi, /capne\.vdc@ifba\.edu\.br/);
 });
 
-test('structured sectors use safe direct phrases and final-question policy', () => {
+test('structured sectors use safe direct phrases and implicit-question policy', () => {
   const { db, dir } = temporaryDatabase(); const engine = new BotEngine(db);
   try {
     let result = engine.evaluate('contato caens', { isGroup: false, ignorePermissions: true });
@@ -52,7 +52,7 @@ test('structured sectors use safe direct phrases and final-question policy', () 
     result = engine.evaluate('você sabe o contato da caens?', { isGroup: false, ignorePermissions: true });
     assert.equal(result.type, 'sector');
     result = engine.evaluate('você sabe o contato da caens', { isGroup: false, ignorePermissions: true });
-    assert.equal(result.matched, false);
+    assert.equal(result.type, 'sector');
   } finally { closeAll(engine, db, dir); }
 });
 
@@ -141,8 +141,8 @@ test('admin asset exposes sector editor and separated source fields', () => {
   assert.match(app, /editableTitle/);
   assert.match(app, /source_url/);
   assert.match(app, /verified_at/);
-  assert.match(index, /app\.js\?v=0\.10\.1/);
-  assert.match(index, /js\/sectors\.js\?v=0\.10\.1/);
+  assert.match(index, /app\.js\?v=0\.10\.2/);
+  assert.match(index, /js\/sectors\.js\?v=0\.10\.2/);
 });
 
 test('institutional migration does not falsely verify administrator cards', () => {

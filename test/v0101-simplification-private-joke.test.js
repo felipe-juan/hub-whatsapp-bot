@@ -27,7 +27,7 @@ test('card Como passar em Cálculo is seeded with specific triggers', () => {
   try {
     const card = ctx.db.listAutomaticMessages().find(item => item.title === 'Como passar em Cálculo?');
     assert.ok(card);
-    const matched = ctx.engine.evaluate('como eu faço para passar em cálculo?', { isGroup: false });
+    const matched = ctx.engine.evaluate('como eu faço para passar em cálculo', { isGroup: false });
     assert.equal(matched.matched, true);
     assert.equal(matched.matchedItem, 'Como passar em Cálculo?');
     assert.match(matched.text, /Depende da sua religião/);

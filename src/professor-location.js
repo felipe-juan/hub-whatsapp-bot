@@ -1,5 +1,6 @@
 const { normalizeText, containsPhrase, tokenize } = require('./text');
 const { endsWithQuestionMark } = require('./trigger-rules');
+const { implicitQuestionStructure } = require('./semantic-question');
 
 const LOCATION_CARD_TITLE = 'Onde está o professor — salas do IFBA';
 const COORDINATION_EMAIL = 'csi.vdc@ifba.edu.br';
@@ -122,17 +123,18 @@ function classifyProfessorLocationRequest(rawMessage, teachers = []) {
   if (!normalized) return { matched: false, reason: 'empty' };
 
   const endsQuestion = endsWithQuestionMark(raw);
+  const questionLike = endsQuestion || implicitQuestionStructure(raw);
   const genericDirect = GENERIC_DIRECT_REQUESTS.has(normalized);
-  let matches = endsQuestion ? findTeacherMatches(normalized, teachers) : exactDirectTeacherMatches(normalized, teachers);
+  let matches = questionLike ? findTeacherMatches(normalized, teachers) : exactDirectTeacherMatches(normalized, teachers);
   const professorContext = hasProfessorTerm(normalized) || matches.length > 0;
 
   if (isClassroomRequest(normalized) && professorContext) {
-    if (!endsQuestion && !matches.length) return { matched: false, reason: 'not-exact-direct' };
+    if (!questionLike && !matches.length) return { matched: false, reason: 'not-exact-direct' };
     return { matched: true, kind: 'classroom', matches };
   }
   if (hasExcludedContext(normalized)) return { matched: false, reason: 'excluded-context' };
 
-  if (!endsQuestion) {
+  if (!questionLike) {
     if (genericDirect) return { matched: true, kind: 'ask-name', matches: [] };
     if (!matches.length) return { matched: false, reason: 'not-exact-direct' };
     return { matched: true, kind: matches.length > 1 ? 'ambiguous' : 'location', matches };

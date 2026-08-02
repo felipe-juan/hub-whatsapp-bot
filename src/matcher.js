@@ -1,10 +1,11 @@
 const { containsPhrase, normalizeText, tokenize } = require('./text');
 const { evaluateTrigger, endsWithQuestionMark } = require('./trigger-rules');
+const { implicitQuestionStructure } = require('./semantic-question');
 
 const CONTACT_INTENT = ['email', 'e-mail', 'contato', 'contact', 'como falar', 'falar com', 'entrar em contato'];
 
 function hasQuestionMark(message) { return endsWithQuestionMark(message); }
-function looksLikeTeacherQuestion(message) { return hasQuestionMark(message) && CONTACT_INTENT.some(word => containsPhrase(message, word)); }
+function looksLikeTeacherQuestion(message) { return (hasQuestionMark(message) || implicitQuestionStructure(message)) && CONTACT_INTENT.some(word => containsPhrase(message, word)); }
 
 function teacherScore(message, teacher) {
   const normalized = normalizeText(message);

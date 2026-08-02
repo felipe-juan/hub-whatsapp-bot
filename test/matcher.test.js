@@ -10,8 +10,9 @@ test('encontra professor quando há pergunta, intenção de contato e identifica
   assert.equal(findTeacherMatches('qual o e-mail do joão?', teachers)[0].email, 'joao@ifba.edu.br');
 });
 
-test('ignora pedido de contato sem ponto de interrogação', () => {
-  assert.equal(looksLikeTeacherQuestion('qual o contato do professor joao'), false);
+test('aceita pergunta completa sem ? e mantém frases nominais genéricas bloqueadas', () => {
+  assert.equal(looksLikeTeacherQuestion('qual o contato do professor joao'), true);
+  assert.equal(findTeacherMatches('qual o contato do professor joao', teachers)[0].email, 'joao@ifba.edu.br');
   assert.equal(findTeacherMatches('email do joao', teachers).length, 0);
 });
 

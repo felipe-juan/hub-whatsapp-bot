@@ -1,6 +1,6 @@
 const { normalizeText, containsPhrase, tokenize, parseList } = require('./text');
 const { compileSafeRegex, assertSafeSyntax } = require('./safe-regex');
-const { semanticQuestionAssessment, intentsCompatible } = require('./semantic-question');
+const { semanticQuestionAssessment, intentsCompatible, implicitQuestionStructure } = require('./semantic-question');
 
 // Conectivos curtos que podem aparecer naturalmente entre os termos de uma
 // sentença cadastrada sem alterar sua intenção. Ex.: “como passar cálculo”
@@ -286,7 +286,8 @@ function evaluateTrigger(message, { title = '', keywords = [], trigger = {} } = 
   const result = { matched: false, score: 0, reasons: [], blockedReasons: [], rules, keywordMatched: 0, keywordTotal: 0 };
 
   if (!rawMessage.trim()) { result.blockedReasons.push('mensagem vazia'); return result; }
-  const directOnly = !endsWithQuestionMark(rawMessage);
+  const implicitQuestion = implicitQuestionStructure(rawMessage);
+  const directOnly = !endsWithQuestionMark(rawMessage) && !implicitQuestion;
   for (const phrase of rules.excluded_words) {
     if (containsPhrase(rawMessage, phrase)) { result.blockedReasons.push(`termo excluído: ${phrase}`); return result; }
   }
@@ -308,7 +309,7 @@ function evaluateTrigger(message, { title = '', keywords = [], trigger = {} } = 
     const directUnits = units.map(unit => evaluateUnit(rawMessage, unit, 0));
     const requiredTerms = rules.required_words.map(raw => ({ raw, tokens: tokenize(raw) }));
     if (applyDirectKeywordMatch(result, directUnits, requiredTerms, rules.match_mode, tokenize(rawMessage))) return result;
-    result.blockedReasons.push('sem “?” no final: a mensagem precisa ser exatamente uma frase direta cadastrada');
+    result.blockedReasons.push('sem “?” no final e sem estrutura interrogativa completa: use uma frase direta cadastrada ou uma pergunta iniciada por como, onde, qual, quem, quando etc.');
     return result;
   }
 
@@ -373,7 +374,13 @@ function evaluateTrigger(message, { title = '', keywords = [], trigger = {} } = 
     if (!semantic.allowed) {
       result.matched = false;
       result.blockedReasons.push(`proteção semântica: ${semantic.reason}`);
-    } else if (semantic.coverage >= 0.5) result.score += 2;
+    } else {
+      if (semantic.coverage >= 0.5) result.score += 2;
+      if (implicitQuestion && !endsWithQuestionMark(rawMessage)) {
+        result.score += 1;
+        result.reasons.push('estrutura interrogativa reconhecida sem “?” final');
+      }
+    }
   }
   if (!result.matched && units.length && rules.match_mode === 'all') {
     const missing = unitResults.filter(item => !item.matched).map(item => item.label);
@@ -472,7 +479,8 @@ function evaluateCompiledTrigger(message, compiledTrigger, hints = null) {
   const result = { matched: false, score: 0, reasons: [], blockedReasons: [], rules, keywordMatched: 0, keywordTotal: 0 };
 
   if (!prepared.raw.trim()) { result.blockedReasons.push('mensagem vazia'); return result; }
-  const directOnly = !prepared.endsWithQuestionMark;
+  const implicitQuestion = implicitQuestionStructure(prepared.raw);
+  const directOnly = !prepared.endsWithQuestionMark && !implicitQuestion;
   for (const phrase of compiled.excluded) {
     if (phraseMatchPrepared(prepared, phrase, 0).matched) { result.blockedReasons.push(`termo excluído: ${phrase.raw}`); return result; }
   }
@@ -491,7 +499,7 @@ function evaluateCompiledTrigger(message, compiledTrigger, hints = null) {
     if (applyDirectExactMatch(result, directMatch)) return result;
     const directUnits = compiled.units.map(unit => evaluateCompiledUnit(prepared, unit, 0));
     if (applyDirectKeywordMatch(result, directUnits, compiled.required, rules.match_mode, prepared.tokens)) return result;
-    result.blockedReasons.push('sem “?” no final: a mensagem precisa ser exatamente uma frase direta cadastrada');
+    result.blockedReasons.push('sem “?” no final e sem estrutura interrogativa completa: use uma frase direta cadastrada ou uma pergunta iniciada por como, onde, qual, quem, quando etc.');
     return result;
   }
 
@@ -559,7 +567,13 @@ function evaluateCompiledTrigger(message, compiledTrigger, hints = null) {
     if (!semantic.allowed) {
       result.matched = false;
       result.blockedReasons.push(`proteção semântica: ${semantic.reason}`);
-    } else if (semantic.coverage >= 0.5) result.score += 2;
+    } else {
+      if (semantic.coverage >= 0.5) result.score += 2;
+      if (implicitQuestion && !prepared.endsWithQuestionMark) {
+        result.score += 1;
+        result.reasons.push('estrutura interrogativa reconhecida sem “?” final');
+      }
+    }
   }
   if (!result.matched && compiled.units.length && rules.match_mode === 'all') {
     const missing = unitResults.filter(item => !item.matched).map(item => item.label);

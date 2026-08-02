@@ -31,7 +31,7 @@ const { classifySectorRequest, classifySectorFollowUp, formatSectorResponse } = 
 const { classifyGuidedFlow, formatFlowMenu } = require('./guided-flows');
 const { menuCandidates, formatMenu } = require('./help-menu');
 const { progressiveMenuFor } = require('./progressive-menus');
-const { semanticQuestionAssessment } = require('./semantic-question');
+const { semanticQuestionAssessment, implicitQuestionStructure } = require('./semantic-question');
 
 function asBool(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -188,7 +188,7 @@ class BotEngine {
     const classified = classifySectorRequest(text, sectors);
     if (!classified.matched || !classified.sector) return null;
     const sector = classified.sector; const intent = classified.intent || 'contact';
-    if (/\?\s*$/.test(String(text || ''))) {
+    if (/\?\s*$/.test(String(text || '')) || implicitQuestionStructure(text)) {
       const intentLabel = intent === 'location' ? 'onde fica' : intent === 'services' ? 'o que resolve' : intent === 'source' ? 'qual a fonte' : 'contato';
       const semantic = semanticQuestionAssessment(text, [`${intentLabel} ${sector.acronym || sector.name}`, sector.name, sector.acronym || '']);
       if (!semantic.allowed) return null;

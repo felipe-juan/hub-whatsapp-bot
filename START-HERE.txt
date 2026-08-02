@@ -1,20 +1,13 @@
-HUB WhatsApp Bot v0.10.1 — Fedora GNOME
+HUB WhatsApp Bot v0.10.2 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.10.1
-- Card de humor “Como passar em Cálculo?” adicionado sem conflito com TCC ou consultas da disciplina.
-- Etiquetas removidas do painel, da busca e da importação atual.
-- O campo “Mais detalhes” não aparece mais no editor.
-- Variáveis ficam em Configurações avançadas.
-- O nome interno é o título editável da janela.
-- No privado, toda mensagem não reconhecida recebe uma ajuda automática.
-- Mensagens longas precisam ser perguntas reais; menções indiretas e discurso relatado são bloqueados.
-- O menu “ajuda” possui categorias e submenus numéricos.
-- TCC I é separado por intenção: professor, roteiro, horário ou pré-requisito.
-- Contextos ambíguos pedem confirmação.
-- O editor mostra o total da legenda, incluindo resposta e fonte.
-- O projeto passou a usar módulos menores e mantém somente os assets atual e anterior.
-- O instalador valida o lockfile, usa npm ci e pode reutilizar dependências anteriores compatíveis sem internet.
+ATUALIZAÇÃO v0.10.2
+- Perguntas completas podem funcionar sem ? quando começam com uma estrutura interrogativa clara.
+- São reconhecidos inícios como como, onde, qual, quem, quando, posso, preciso, você sabe e gostaria de saber.
+- A regra vale para cards automáticos, setores, contatos, horários e localização docente.
+- O card “Como passar em Cálculo?” agora responde com ou sem o ponto de interrogação.
+- A atualização preserva resposta e anexo personalizados desse card.
+- Frases incompletas, menções casuais e discurso relatado continuam bloqueados.
 
 INSTALAÇÃO
 1. Extraia o ZIP.
@@ -102,8 +95,11 @@ REGRA GLOBAL DOS GATILHOS
 --------------------------
 - Frases diretas cadastradas podem funcionar sem ponto de interrogação.
   Exemplos: calendario academico, contato caens, contato da caens.
-- Mensagens maiores ou com texto adicional só respondem quando terminam em ?.
-- Um ? no meio da mensagem não é suficiente.
+- Perguntas completas com ao menos três termos também podem responder sem ?.
+  Exemplos: como passar em calculo; onde fica a CAENS; voce sabe qual e o contato da CAENS.
+- A frase deve começar com estrutura interrogativa ou de pedido clara, após saudações e cortesias opcionais.
+- Frases incompletas, menções casuais e discurso relatado continuam bloqueados.
+- Quando não houver estrutura interrogativa clara nem frase direta completa, o ? final continua necessário.
 - A regra vale para cards antigos, novos, personalizados e futuros.
 - Esta versão inclui 92 cards revisados do IFBA Vitória da Conquista, com foco em BSI.
 

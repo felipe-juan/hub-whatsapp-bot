@@ -11,8 +11,9 @@ module.exports = function createMixin(deps) {
     triggerInput.match_mode = 'all';
     const trigger = {
       ...this.validateTrigger(triggerInput, parseList(input.keywords || input.trigger?.keywords)),
-      // Política global da v0.9.5: trechos em mensagens maiores exigem “?” no
-      // final. O motor mantém a exceção segura para frases diretas completas.
+      // A marca permanece ativa por compatibilidade. Desde a v0.10.2, o motor
+      // também aceita perguntas completas sem “?”, desde que a estrutura
+      // interrogativa seja clara; menções soltas continuam bloqueadas.
       require_question_mark: true
     };
     const hasTrigger = trigger.keywords.length || trigger.sentences.length || trigger.exact_phrases.length || trigger.regex_pattern || trigger.synonym_group_ids.length;

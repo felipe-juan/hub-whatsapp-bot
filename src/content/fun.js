@@ -10,7 +10,7 @@ const FUN_CARDS_V0101 = Object.freeze([
       scope: 'both',
       trigger: {
         match_mode: 'all',
-        sentences: [],
+        sentences: ['como passar cálculo', 'como passar em cálculo', 'dicas para passar em cálculo'],
         keywords: [],
         required_words: [],
         require_question_mark: true,
@@ -19,7 +19,7 @@ const FUN_CARDS_V0101 = Object.freeze([
         exact_phrases: [],
         synonym_group_ids: [],
         negative_examples: [],
-        regex_pattern: '(?:(?:como|dicas?|jeito|forma|segredo|o que|qual)[^?\n]{0,120}(?:passar|passo|ser aprovad[oa])[^?\n]{0,100}(?:c[aá]lculo|calculo)|(?:c[aá]lculo|calculo)[^?\n]{0,100}(?:como|dicas?|jeito|forma|segredo|o que|qual)[^?\n]{0,120}(?:passar|passo|ser aprovad[oa]))[^?\n]*\\?\\s*$',
+        regex_pattern: '(?:(?:como|dicas?|jeito|forma|segredo|o que|qual)[^?\n]{0,120}(?:passar|passo|ser aprovad[oa])[^?\n]{0,100}(?:c[aá]lculo|calculo)|(?:c[aá]lculo|calculo)[^?\n]{0,100}(?:como|dicas?|jeito|forma|segredo|o que|qual)[^?\n]{0,120}(?:passar|passo|ser aprovad[oa]))[^?\n]*(?:\\?\\s*)?$',
         regex_flags: 'iu'
       }
     }

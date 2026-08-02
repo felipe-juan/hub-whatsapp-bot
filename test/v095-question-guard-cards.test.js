@@ -31,12 +31,13 @@ test('direct short phrases work without ?, but extra text does not', () => {
   assert.equal(evaluateTrigger('calendário acadêmico? comentário depois', item).matched, false);
 });
 
-test('long natural questions match only when ? is the final character', () => {
+test('long natural questions with explicit interrogative structure work without final ?', () => {
   const item = { trigger: { sentences: ['qual é o contato da caens'], keywords: [] } };
   assert.equal(evaluateTrigger('você sabe o contato da caens?', item).matched, true);
   assert.equal(evaluateTrigger('alguma coisa sobre o contato da caens?', item).matched, true);
-  assert.equal(evaluateTrigger('você sabe o contato da caens', item).matched, false);
-  assert.equal(evaluateTrigger('você sabe o contato da caens? obrigado', item).matched, false);
+  assert.equal(evaluateTrigger('você sabe o contato da caens', item).matched, true);
+  assert.equal(evaluateTrigger('você sabe o contato da caens? obrigado', item).matched, true);
+  assert.equal(evaluateTrigger('a gente falou do contato da caens', item).matched, false);
 });
 
 test('keyword-only cards use the same safe direct exception', () => {
@@ -44,6 +45,7 @@ test('keyword-only cards use the same safe direct exception', () => {
   assert.equal(evaluateCompiledTrigger(prepareMessage('contato caens'), compiled).matched, true);
   assert.equal(evaluateCompiledTrigger(prepareMessage('contato da caens'), compiled).matched, true);
   assert.equal(evaluateCompiledTrigger(prepareMessage('quero contato da caens'), compiled).matched, false);
+  assert.equal(evaluateCompiledTrigger(prepareMessage('quero saber o contato da caens'), compiled).matched, true);
   assert.equal(evaluateCompiledTrigger(prepareMessage('quero contato da caens?'), compiled).matched, true);
   const generic = compileTriggerRules({ keywords: ['contato'], match_mode: 'all' });
   assert.equal(evaluateCompiledTrigger(prepareMessage('contato'), generic).matched, false);
@@ -106,8 +108,8 @@ test('end-to-end examples choose expected cards', () => {
       ['contato caens', true, 'CAENS — contact'],
       ['contato da caens', true, 'CAENS — contact'],
       ['você sabe o contato da caens?', true, 'CAENS — contact'],
-      ['você sabe o contato da caens', false, ''],
-      ['você sabe o contato da caens? obrigado', false, '']
+      ['você sabe o contato da caens', true, 'CAENS — contact'],
+      ['você sabe o contato da caens? obrigado', true, 'CAENS — contact']
     ];
     for (const [body, matched, title] of cases) {
       const result = engine.evaluate(body, { isGroup: false, ignorePermissions: true });

@@ -56,7 +56,7 @@ test('direct professor location phrases work without ?, but conversational text 
   } finally { closeAll(engine, db, dir); }
 });
 
-test('long professor location messages require a final question mark', () => {
+test('long professor location questions work with explicit structure even without final ?', () => {
   const { db, dir } = temporaryDatabase();
   const engine = new BotEngine(db);
   try {
@@ -64,9 +64,11 @@ test('long professor location messages require a final question mark', () => {
     assert.equal(valid.matched, true);
     assert.equal(valid.type, 'professor_location');
     const missingQuestion = engine.evaluate('você sabe onde fica o professor Allan', { isGroup: false, ignorePermissions: true });
-    assert.equal(missingQuestion.matched, false);
+    assert.equal(missingQuestion.matched, true);
+    assert.equal(missingQuestion.type, 'professor_location');
     const questionInMiddle = engine.evaluate('você sabe onde fica o professor Allan? obrigado', { isGroup: false, ignorePermissions: true });
-    assert.equal(questionInMiddle.matched, false);
+    assert.equal(questionInMiddle.matched, true);
+    assert.equal(questionInMiddle.type, 'professor_location');
   } finally { closeAll(engine, db, dir); }
 });
 

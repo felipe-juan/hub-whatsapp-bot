@@ -195,6 +195,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.seedStructuredSectorsV098();
     this.simplifyAutomaticMessagesV0101();
     if (seedBundledContent) this.seedFunCardsV0101();
+    if (seedBundledContent) this.seedFunCardsV0102();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -641,6 +642,57 @@ module.exports = function createMixin(deps) {
         .run(definition.key, JSON.stringify(snapshot), nowIso(), Number(existing.id));
     }
     this.db.prepare("INSERT INTO settings(key,value) VALUES ('fun_cards_v0101_seeded','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
+  seedFunCardsV0102() {
+    if (asBool(this.getSetting('fun_cards_v0102_seeded', 'false'), false)) return;
+    const official = FUN_CARDS_V0101.find(definition => definition.key === 'hub-fun-como-passar-em-calculo');
+    if (!official) throw new Error('Card de Cálculo da v0.10.2 não encontrado.');
+
+    // Atualiza automaticamente instalações não personalizadas. Em cartões
+    // personalizados, a atualização oficial continua disponível no painel.
+    this.stagePackageAutomaticMessage(official.key, official.message);
+
+    // A correção do gatilho é aplicada mesmo quando a resposta foi
+    // personalizada: preservamos texto, anexo e escopo, alterando somente a
+    // estrutura necessária para reconhecer perguntas sem “?” final.
+    const row = this.db.prepare('SELECT id,draft_json FROM automatic_messages WHERE package_key=? OR lower(title)=lower(?) ORDER BY package_key=? DESC LIMIT 1')
+      .get(official.key, official.message.title, official.key);
+    if (row) {
+      const current = this.getAutomaticMessage(row.id);
+      if (current) {
+        const nextTrigger = normalizeTriggerRules({
+          ...(current.trigger || {}),
+          sentences: [...new Set([...(current.trigger?.sentences || []), ...(official.message.trigger.sentences || [])])],
+          excluded_words: [...new Set([...(current.trigger?.excluded_words || []), ...(official.message.trigger.excluded_words || [])])],
+          require_question_mark: true,
+          regex_pattern: official.message.trigger.regex_pattern,
+          regex_flags: official.message.trigger.regex_flags || 'iu'
+        });
+        let draftJson = String(row.draft_json || '');
+        if (draftJson) {
+          const draft = parseJson(draftJson, null);
+          if (draft && typeof draft === 'object') {
+            draft.trigger = normalizeTriggerRules({
+              ...(draft.trigger || nextTrigger),
+              sentences: [...new Set([...(draft.trigger?.sentences || []), ...(official.message.trigger.sentences || [])])],
+              excluded_words: [...new Set([...(draft.trigger?.excluded_words || []), ...(official.message.trigger.excluded_words || [])])],
+              require_question_mark: true,
+              regex_pattern: official.message.trigger.regex_pattern,
+              regex_flags: official.message.trigger.regex_flags || 'iu'
+            });
+            draftJson = JSON.stringify(draft);
+          }
+        }
+        if (JSON.stringify(nextTrigger) !== JSON.stringify(current.trigger || {}) || draftJson !== String(row.draft_json || '')) {
+          this.archiveAutomaticMessage(current, 'v0.10.2-perguntas-sem-interrogacao');
+          this.db.prepare('UPDATE automatic_messages SET trigger_json=?,draft_json=?,updated_at=? WHERE id=?')
+            .run(JSON.stringify(nextTrigger), draftJson, nowIso(), Number(row.id));
+        }
+      }
+    }
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('fun_cards_v0102_seeded','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
     this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 
