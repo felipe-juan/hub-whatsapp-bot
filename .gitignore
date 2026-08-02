@@ -1,0 +1,11 @@
+node_modules/
+.env
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/.wwebjs_auth/
+data/.wwebjs_cache/
+npm-debug.log*
+.DS_Store
+
+data/.baileys_auth/

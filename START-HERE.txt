@@ -1,0 +1,133 @@
+HUB WhatsApp Bot v0.10.0 — Fedora GNOME
+
+
+PREPARAÇÃO PARA A v1.0 — v0.10.0
+- Mensagens longas precisam ser perguntas reais; menções indiretas e discurso relatado são bloqueados.
+- O menu “ajuda” possui categorias e submenus numéricos.
+- TCC I é separado por intenção: professor, roteiro, horário ou pré-requisito.
+- Contextos ambíguos pedem confirmação.
+- O editor mostra o total da legenda, incluindo resposta e fonte.
+- O projeto passou a usar módulos menores e mantém somente os assets atual e anterior.
+- O instalador valida o lockfile, usa npm ci e pode reutilizar dependências anteriores compatíveis sem internet.
+
+INSTALAÇÃO
+1. Extraia o ZIP.
+2. Abra um terminal na pasta extraída.
+3. Execute:
+
+   bash INSTALL.sh
+
+4. Guarde a senha exibida.
+5. Entre no painel aberto pelo instalador.
+6. Leia o QR code com o número do bot.
+
+PAINEL
+- O topo mostra permanentemente a saúde da conexão, mensagens e filas por conversa.
+- Em Diagnóstico, escolha Modo simples ou Modo técnico.
+- Em Mensagens automáticas, escolha cards ou lista, selecione de 1 a 4 colunas e use seleção múltipla para ações em lote.
+- Use “Cadastro docente” para registrar sala, bloco, fonte e data de confirmação.
+- Use “Atualizar quadro docente” para importar CSV, TSV ou XLSX sem perder gatilhos personalizados nem salas confirmadas.
+- Mensagens podem ser ativas, inativas ou arquivadas.
+
+EDITOR
+- A resposta é enviada exatamente como foi escrita.
+- Há prévia semelhante ao WhatsApp e modo de tela cheia.
+- Variáveis: {{data}}, {{hora}}, {{nome_do_grupo}}, {{nome_da_pessoa}}.
+- O painel avisa sobre gatilhos genéricos, ausentes ou conflitantes.
+
+BUSCA
+Exemplos: #contato ativo, #faq privado, anexo:pdf, status:arquivado.
+
+SEGURANÇA
+Cadastre números de outros bots e prefixos em Configurações para evitar ciclos automáticos.
+
+BACKUP
+O backup completo ZIP inclui banco, mensagens, histórico e anexos. A sessão do WhatsApp é opcional e sensível.
+
+ATUALIZAÇÃO
+Execute bash INSTALL.sh dentro da pasta da nova versão. Banco, senha, anexos e sessão são preservados.
+
+PROFESSORES — SISTEMAS DE INFORMAÇÃO 2026.2
+- 28 cartões de professores e 1 pendência são adicionados automaticamente.
+- Filtre por #professor ou #email.
+- Os e-mails informados já estão preenchidos, incluindo Luana Bittencourt.
+- Os gatilhos aceitam pedidos por nome ou por disciplina, além de perguntas sobre dias/horários no IFBA.
+- No desktop, a quantidade de colunas pode ser dinâmica ou escolhida entre 1 e 4.
+
+MEDIA FINAL
+- !final: mostra a explicação completa.
+- !final help: mostra a mesma ajuda.
+- !final MP PF: calcula MF = (MP×2 + PF) ÷ 3.
+
+ORIGEM DOS CARTÕES
+- O painel identifica conteúdo do pacote, importado ou criado localmente.
+- Alterações locais não são substituídas silenciosamente por atualizações do pacote.
+
+FILA POR CONVERSA
+- O mesmo grupo mantém a ordem das respostas.
+- Grupos e conversas privadas diferentes são processados em paralelo.
+
+
+FONTES AUTOMÁTICAS E PAAE — v0.9.9
+- Cards e setores com fonte cadastrada voltam a incluir fonte e data na própria resposta.
+- O comando “qual a fonte?” continua disponível para repetir a referência.
+- Perguntas por editais, documentos, resultados e outros recursos não são confundidas com localização física de setores.
+- “Onde encontro os editais do PAAE?” responde o card de editais, não o Serviço Social como local físico.
+
+CARDS, SETORES, CONTEXTO E ANEXOS — v0.9.8
+- Os cards institucionais têm uma fonte única em institutional-cards.js.
+- Setores são consultados por um cadastro estruturado editável no painel.
+- Respostas curtas podem oferecer “mais detalhes” e “qual a fonte?”.
+- O contexto curto entende continuações como “e onde fica?” na mesma conversa.
+- Estágio, TCC, atividades, SUAP e auxílios possuem fluxos guiados.
+- Texto e anexo seguem no mesmo balão; o envio separado só é usado se a mídia falhar.
+
+LOCALIZAÇÃO E CADASTRO DOCENTE — v0.9.7
+- O card de localização consulta o cadastro estruturado de professores.
+- Salas só são informadas quando há data e fonte de confirmação.
+- Perguntas sobre sala da aula são separadas da sala de atendimento.
+- Nomes ambíguos geram escolha por sobrenome.
+
+GATILHOS SEGUROS E CARDS DE BSI — v0.9.5
+- Gatilhos ficam pré-compilados em memória e são trocados atomicamente após validação.
+
+REGRA GLOBAL DOS GATILHOS
+--------------------------
+- Frases diretas cadastradas podem funcionar sem ponto de interrogação.
+  Exemplos: calendario academico, contato caens, contato da caens.
+- Mensagens maiores ou com texto adicional só respondem quando terminam em ?.
+- Um ? no meio da mensagem não é suficiente.
+- A regra vale para cards antigos, novos, personalizados e futuros.
+- Esta versão inclui 92 cards revisados do IFBA Vitória da Conquista, com foco em BSI.
+
+- Backup, importação, conflitos, links e atualização rodam em um processo administrativo separado.
+- O SQLite usa WAL e índices; envios pendentes sobrevivem a reinicializações.
+- O painel recebe alterações em tempo real e carrega anexos somente quando necessário.
+- Sockets antigos têm listeners e temporizadores removidos durante reconexões.
+
+- O índice invertido reduz o número de cartões avaliados sem pular a validação completa.
+- A concorrência é limitada com contrapressão; nenhuma pergunta é descartada.
+- Circuit breaker, idempotência, watchdog e encerramento controlado aumentam a estabilidade.
+- Estatísticas são gravadas em lote e o WAL recebe checkpoint automático.
+- A lista de mensagens usa paginação no servidor e virtualização verdadeira.
+- O painel exibe latências p50, p95 e p99 e usa arquivos estáticos versionados.
+
+- Sentenças usam Aho-Corasick; candidatos são cruzados por IDs numéricos e bitsets.
+- Perguntas repetidas usam cache LRU seguro; comandos e frases exatas têm caminho rápido.
+- Regex personalizadas são validadas e executadas com mecanismo resistente a ReDoS em produção.
+- Um processo exclusivo organiza gravações SQLite, logs em lote e manutenção do WAL.
+- Texto e mídia usam pools separados; anexos iguais são deduplicados por SHA-256.
+- Núcleo e painel se comunicam por socket Unix e workers administrativos têm prioridade menor.
+
+- Entregas persistentes agora são reservadas atomicamente e não podem ser enviadas duas vezes.
+- Backups completos usam snapshot consistente do SQLite, incluindo dados ainda no WAL.
+- O atualizador rejeita conteúdo não declarado, links simbólicos e expansão excessiva.
+- O watchdog força reinício completo quando a recuperação profunda é necessária.
+
+- Timeouts de envio ficam como resultado desconhecido e não são reenviados automaticamente.
+- O painel mostra entregas incertas para revisão e reenvio manual.
+- Reservas da fila usam token exclusivo para evitar perda após timeout do worker.
+- O núcleo adquire o socket exclusivo antes de abrir o SQLite ou iniciar workers.
+- Atualizador e instalador restauram código e dependências antigas sem internet se houver falha.
+- Anexos deduplicados são conferidos pelo SHA-256 real e links simbólicos são recusados.
+- O login limita tamanho de senha, verificações simultâneas e memória usada por tentativas.

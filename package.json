@@ -1,0 +1,31 @@
+{
+  "name": "hub-whatsapp-bot",
+  "version": "0.10.0",
+  "private": true,
+  "description": "Bot comunitário autohospedado do HUB Arquivos IFBA, com painel local de administração.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "check": "node scripts/check.js",
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "HUB_SKIP_BUNDLED_CONTENT=1 node --test --test-concurrency=4",
+    "syntax": "find src public scripts test -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "install:fedora": "bash install-fedora-gnome.sh",
+    "uninstall:fedora": "bash uninstall-fedora-gnome.sh",
+    "desktop:check": "python3 -m py_compile desktop/hub-bot-indicator.py && rm -rf desktop/__pycache__ && bash -n install-fedora-gnome.sh && bash -n uninstall-fedora-gnome.sh",
+    "resources": "bash scripts/resource-usage.sh",
+    "setup:fedora": "bash INSTALL.sh"
+  },
+  "dependencies": {
+    "dotenv": "17.4.2",
+    "qrcode": "1.5.4",
+    "@whiskeysockets/baileys": "7.0.0-rc13",
+    "re2js": "2.8.6"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "license": "MIT"
+}

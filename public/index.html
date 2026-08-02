@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a1016">
+  <meta name="color-scheme" content="dark">
+  <title>HUB Bot — Painel local</title>
+  <link rel="stylesheet" href="/app.css?v=0.10.0">
+</head>
+<body>
+  <div id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card">
+      <div class="brand-mark">H</div>
+      <p class="eyebrow">HUB ARQUIVOS IFBA</p>
+      <h1>Painel do WhatsApp Bot</h1>
+      <p class="muted">Entre com a senha administrativa local.</p>
+      <label>Senha<input id="login-password" type="password" autocomplete="current-password" required autofocus></label>
+      <button id="login-submit" class="button primary full" type="submit">🔐 Entrar</button>
+      <p id="login-feedback" class="login-feedback" aria-live="polite" hidden></p>
+    </form>
+  </div>
+
+  <div id="app" class="app" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark small">H</span><div><strong>HUB Bot</strong><small id="side-version">Painel local</small></div></div>
+      <nav id="nav">
+        <button data-view="dashboard" class="active">🏠 <span>Visão geral</span></button>
+        <button data-view="messages">💬 <span>Mensagens</span></button>
+        <button data-view="diagnostics">🔎 <span>Diagnóstico</span></button>
+        <button data-view="calculators">🧮 <span>Calculadoras</span></button>
+        <button data-view="groups">👥 <span>Grupos</span></button>
+        <button data-view="analytics">📈 <span>Estatísticas</span></button>
+        <button data-view="settings">⚙️ <span>Configurações</span></button>
+        <button data-view="logs">🧾 <span>Registros</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="side-status" class="status-dot offline"></span><span id="side-status-text">Carregando…</span>
+        <button id="logout-admin" class="link-button">🚪 Sair do painel</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">HUB ARQUIVOS IFBA</p><h1 id="page-title">Visão geral</h1></div>
+        <div id="top-status" class="status-pill offline">WhatsApp desconectado</div>
+      </header>
+      <section id="global-health" class="global-health" aria-label="Estado geral do bot"></section>
+      <section id="content" class="content"></section>
+    </main>
+  </div>
+
+  <dialog id="modal"><div id="modal-shell"><div id="modal-content"></div></div></dialog>
+  <div id="toast" class="toast" hidden></div>
+  <input id="restore-file" type="file" accept="application/json" hidden>
+  <input id="update-file" type="file" accept="application/zip,.zip" hidden>
+  <script src="/js/cards.js?v=0.10.0" defer></script>
+  <script src="/js/professors.js?v=0.10.0" defer></script>
+  <script src="/js/sectors.js?v=0.10.0" defer></script>
+  <script src="/js/diagnostics.js?v=0.10.0" defer></script>
+  <script src="/js/updates.js?v=0.10.0" defer></script>
+  <script src="/app.js?v=0.10.0" defer></script>
+</body>
+</html>

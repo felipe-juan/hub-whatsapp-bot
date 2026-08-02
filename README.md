@@ -1,0 +1,441 @@
+# HUB WhatsApp Bot
+
+> [!IMPORTANT]
+> ## Transparência sobre autoria por inteligência artificial
+>
+> **Todo o código deste projeto foi produzido por inteligência artificial generativa, principalmente pelo ChatGPT/OpenAI.** O mantenedor humano não se apresenta como autor manual do código-fonte.
+>
+> **Allan de Sousa Soares** foi responsável pela ideia, definição dos requisitos, decisões funcionais, curadoria do conteúdo, testes realizados em seu próprio ambiente, revisão dos resultados, publicação e manutenção do projeto.
+>
+> Até o momento, os testes funcionais foram realizados apenas pelo mantenedor. O projeto não passou por auditoria independente de segurança, revisão profissional de código ou validação ampla por terceiros. Quem utilizar, modificar ou implantar este software deve revisar o código e assumir responsabilidade por sua própria instalação.
+
+> [!WARNING]
+> Este é um projeto **independente e não oficial**. Ele não representa o IFBA, o Campus Vitória da Conquista, o WhatsApp, a Meta ou a OpenAI.
+>
+> A integração com o WhatsApp usa o Baileys, uma biblioteca não oficial. O uso pode estar sujeito a limitações, mudanças de compatibilidade ou restrições da plataforma. Recomenda-se usar um número separado e evitar automações abusivas, mensagens em massa ou conteúdo não solicitado.
+
+## Visão geral
+
+O HUB WhatsApp Bot é uma aplicação autohospedada para responder perguntas recorrentes em grupos e conversas privadas do WhatsApp. O projeto foi desenvolvido inicialmente para apoiar estudantes do Bacharelado em Sistemas de Informação do IFBA — Campus Vitória da Conquista, mas sua estrutura pode ser adaptada para outras instituições, cursos e comunidades.
+
+O bot utiliza regras, cards, diretórios estruturados e fluxos guiados. **Ele não usa inteligência artificial generativa durante a execução e não envia conversas para serviços de IA por padrão.**
+
+Principais objetivos:
+
+- centralizar informações institucionais verificadas;
+- responder perguntas frequentes com mensagens previsíveis;
+- reduzir falsos positivos por meio de gatilhos controlados;
+- permitir administração local pelo navegador;
+- manter dados, sessão e histórico sob controle do operador;
+- oferecer diagnóstico, backup, atualização e recuperação.
+
+## Estado do projeto
+
+Versão atual: **0.10.0**
+
+O projeto ainda está em preparação para a versão 1.0. Apesar da suíte automatizada e dos testes realizados pelo mantenedor, ele deve ser considerado experimental.
+
+Antes de usar em produção:
+
+1. revise os cards e contatos incorporados;
+2. confirme as fontes e datas de verificação;
+3. teste os gatilhos em um grupo controlado;
+4. use uma conta separada do WhatsApp;
+5. configure backup e retenção de logs;
+6. mantenha o painel restrito a `localhost`, salvo necessidade específica.
+
+## Recursos principais
+
+### Respostas automáticas
+
+- cards editáveis com frases, palavras-chave, exclusões e prioridade;
+- frases diretas curtas que podem funcionar sem `?`;
+- mensagens maiores que precisam terminar em `?`;
+- proteção contra menções indiretas e discurso relatado;
+- desambiguação quando mais de uma resposta é possível;
+- respostas progressivas com `mais detalhes`;
+- fonte oficial e data de verificação na própria resposta;
+- anexos enviados com o texto no mesmo balão quando tecnicamente possível.
+
+### Conteúdo estruturado
+
+- cadastro de professores;
+- cadastro de setores;
+- disciplinas, horários, semestres e contatos;
+- localização docente somente quando houver fonte e data de confirmação;
+- fluxos guiados para TCC, estágio, ACEX, atividades complementares, SUAP e auxílios;
+- cards institucionais voltados ao IFBA Vitória da Conquista e ao curso de Sistemas de Informação.
+
+### Administração
+
+- painel web local;
+- criação, edição, ativação, arquivamento e exclusão de cards;
+- prévia semelhante ao WhatsApp;
+- diagnóstico em tempo real;
+- relatório de conflitos de gatilhos;
+- importação de quadro docente por CSV, TSV ou XLSX;
+- cadastro estruturado de setores e professores;
+- histórico de alterações;
+- pesquisa, filtros e ações em massa;
+- estatísticas e métricas de desempenho.
+
+### Confiabilidade
+
+- SQLite em modo WAL;
+- fila persistente de envios;
+- ordenação por conversa e paralelismo entre conversas distintas;
+- proteção contra envio duplicado;
+- estado de entrega incerta para timeouts não confirmados;
+- watchdog e recuperação de conexão;
+- backup consistente do banco;
+- rollback do instalador e do atualizador;
+- deduplicação e verificação SHA-256 de anexos;
+- processo dedicado para gravações no banco;
+- workers administrativos separados do núcleo do WhatsApp.
+
+## Como os gatilhos funcionam
+
+A política global procura reduzir ativações acidentais.
+
+### Frase direta
+
+Uma frase curta cadastrada pode funcionar sem ponto de interrogação:
+
+```text
+calendário acadêmico
+contato caens
+contato da caens
+```
+
+### Pergunta em uma mensagem maior
+
+Quando há texto adicional, a mensagem precisa terminar em `?`:
+
+```text
+Você sabe qual é o contato da CAENS?
+```
+
+Estas mensagens não devem responder:
+
+```text
+Alguma coisa calendário acadêmico
+Você sabe qual é o contato da CAENS
+Você sabe qual é o contato da CAENS? obrigado
+```
+
+O motor também tenta bloquear frases que apenas mencionam um tema, como relatos sobre algo que outra pessoa comentou ou publicou.
+
+## Requisitos
+
+Instalação principal testada em:
+
+- Fedora Linux com GNOME;
+- Node.js 22.13 ou superior;
+- npm;
+- systemd no modo de usuário;
+- Chromium ou navegador compatível;
+- conexão com a internet para a instalação inicial e vinculação do WhatsApp.
+
+O instalador Fedora adiciona os pacotes de sistema necessários, configura o serviço e cria o indicador da área de trabalho.
+
+## Instalação no Fedora GNOME
+
+Extraia o projeto, entre na pasta e execute:
+
+```bash
+bash INSTALL.sh
+```
+
+O instalador:
+
+- instala as dependências necessárias;
+- copia a aplicação para `~/.local/share/hub-whatsapp-bot`;
+- cria o arquivo de configuração local;
+- configura o serviço `hub-whatsapp-bot.service`;
+- inicia o bot em segundo plano;
+- abre o painel local no navegador.
+
+Por padrão, o painel usa:
+
+```text
+http://127.0.0.1:3210
+```
+
+Guarde a senha gerada pelo instalador.
+
+## Vinculação do WhatsApp
+
+No painel, abra a área de conexão e leia o QR code pelo aplicativo:
+
+```text
+WhatsApp → Configurações → Dispositivos conectados → Conectar um dispositivo
+```
+
+Use preferencialmente um número dedicado ao bot.
+
+## Comandos do serviço
+
+Ver o estado:
+
+```bash
+systemctl --user status hub-whatsapp-bot.service
+```
+
+Reiniciar:
+
+```bash
+systemctl --user restart hub-whatsapp-bot.service
+```
+
+Parar:
+
+```bash
+systemctl --user stop hub-whatsapp-bot.service
+```
+
+Iniciar:
+
+```bash
+systemctl --user start hub-whatsapp-bot.service
+```
+
+Acompanhar logs:
+
+```bash
+journalctl --user -u hub-whatsapp-bot.service -f
+```
+
+## Atualização
+
+Baixe ou extraia a nova versão e execute novamente:
+
+```bash
+bash INSTALL.sh
+```
+
+O instalador foi projetado para preservar:
+
+- `.env`;
+- banco SQLite;
+- sessão do WhatsApp;
+- anexos;
+- cards personalizados;
+- dependências anteriores para rollback, quando disponíveis.
+
+Ainda assim, faça um backup antes de atualizar.
+
+## Desinstalação
+
+Na pasta do projeto:
+
+```bash
+bash uninstall-fedora-gnome.sh
+```
+
+Revise as opções apresentadas antes de remover dados e sessão.
+
+## Execução para desenvolvimento
+
+Copie a configuração de exemplo:
+
+```bash
+cp .env.example .env
+```
+
+Edite a senha e as opções locais:
+
+```bash
+nano .env
+```
+
+Instale as dependências:
+
+```bash
+npm install
+```
+
+Execute as verificações iniciais:
+
+```bash
+npm run setup
+npm run check
+```
+
+Inicie em modo normal:
+
+```bash
+npm start
+```
+
+Ou em modo de desenvolvimento:
+
+```bash
+npm run dev
+```
+
+## Testes
+
+Executar a suíte automatizada:
+
+```bash
+npm test
+```
+
+Verificar sintaxe JavaScript:
+
+```bash
+npm run syntax
+```
+
+Verificar scripts e indicador do desktop:
+
+```bash
+npm run desktop:check
+```
+
+A versão 0.10.0 foi empacotada após uma suíte automatizada com 251 testes aprovados no ambiente de desenvolvimento do mantenedor. Esse número não substitui revisão independente nem teste em uma conta real diferente.
+
+## Variáveis de ambiente
+
+Exemplo disponível em `.env.example`:
+
+```dotenv
+ADMIN_PASSWORD="troque-esta-senha"
+ADMIN_HOST="127.0.0.1"
+ADMIN_PORT="3210"
+SESSION_HOURS="12"
+GROUP_TOUCH_INTERVAL_SECONDS="600"
+TRAY_POLL_SECONDS="10"
+DATA_DIR="./data"
+```
+
+Nunca publique o arquivo `.env`.
+
+## Dados locais e privacidade
+
+Por padrão, os dados ficam na própria máquina do operador. Dependendo da configuração e do uso, podem ser armazenados:
+
+- sessão de autenticação do WhatsApp;
+- números e identificadores de conversas;
+- mensagens necessárias para diagnóstico;
+- cards e histórico de alterações;
+- banco SQLite;
+- anexos;
+- backups;
+- estatísticas.
+
+O operador é responsável por definir retenção, acesso, backup, finalidade e proteção desses dados, observando a legislação aplicável.
+
+Não publique no GitHub:
+
+- `.env`;
+- banco SQLite;
+- sessão do WhatsApp;
+- diretório `data`;
+- backups;
+- anexos privados;
+- exportações contendo números, mensagens ou contatos não públicos.
+
+O `.gitignore` já bloqueia os caminhos locais mais comuns, mas o responsável deve revisar cada commit.
+
+## Estrutura do projeto
+
+```text
+hub-whatsapp-bot/
+├── desktop/                 # indicador e ícones do desktop
+├── public/                  # painel web
+│   └── js/                  # módulos da interface
+├── scripts/                 # setup, verificação e manifesto
+├── src/
+│   ├── content/             # conteúdo institucional por domínio
+│   ├── database/            # conexão, migrações e repositórios
+│   ├── bot-engine.js        # coordenação do processamento
+│   ├── matcher.js           # correspondência e pontuação
+│   ├── semantic-question.js # proteção semântica
+│   ├── guided-flows.js      # fluxos guiados
+│   ├── whatsapp.js          # integração do núcleo
+│   └── ...
+├── test/                    # testes automatizados
+├── .env.example
+├── .gitignore
+├── INSTALL.sh
+├── LICENSE
+├── package.json
+└── README.md
+```
+
+## Conteúdo institucional incorporado
+
+A distribuição inclui cards e cadastros voltados ao IFBA — Campus Vitória da Conquista, com foco no Bacharelado em Sistemas de Informação.
+
+Esses dados podem ficar desatualizados. Antes de usar:
+
+- confira as fontes oficiais;
+- revise contatos, nomes, horários e regulamentos;
+- observe a data de verificação;
+- desative o que não se aplica ao seu contexto;
+- não apresente o bot como canal oficial da instituição.
+
+Cards personalizados e dados locais não fazem parte do código público, salvo quando alguém os exporta ou os grava manualmente no repositório.
+
+## Segurança
+
+Recomendações mínimas:
+
+- mantenha `ADMIN_HOST=127.0.0.1`;
+- use senha exclusiva e forte;
+- não exponha o painel diretamente à internet;
+- proteja backups e sessão do WhatsApp;
+- revise dependências e atualizações;
+- teste novas regras antes de ativá-las;
+- não use o bot para spam;
+- não envie dados pessoais desnecessários;
+- use um número separado da conta pessoal.
+
+Falhas de segurança não devem ser publicadas com credenciais, sessões, números ou dados reais. Abra uma issue com informações mínimas ou procure o mantenedor por um canal privado quando houver risco de exposição.
+
+## Limitações conhecidas
+
+- integração não oficial com o WhatsApp;
+- testes realizados principalmente em Fedora GNOME;
+- conteúdo institucional sujeito a mudanças;
+- respostas dependem da qualidade dos gatilhos cadastrados;
+- nenhuma garantia contra bloqueio ou alteração da plataforma;
+- ainda não houve auditoria independente;
+- o projeto não substitui orientação oficial de setores, coordenações ou regulamentos.
+
+## Contribuições
+
+Contribuições são bem-vindas, especialmente em:
+
+- revisão de segurança;
+- testes em outros ambientes;
+- redução de falsos positivos;
+- acessibilidade do painel;
+- documentação;
+- modularização;
+- testes de integração;
+- migração futura para provedores oficiais.
+
+Ao contribuir, descreva claramente:
+
+- o problema resolvido;
+- os testes executados;
+- possíveis impactos em dados e compatibilidade;
+- uso de IA na contribuição, quando aplicável.
+
+Não envie dados reais de estudantes, professores, grupos ou sessões.
+
+## Licença
+
+Distribuído sob a licença MIT. Consulte [`LICENSE`](LICENSE).
+
+A licença permite uso, cópia, modificação e redistribuição, sem garantia de funcionamento ou adequação a uma finalidade específica.
+
+## Créditos e responsabilidade
+
+- Concepção, especificação, testes, curadoria e manutenção: **Allan de Sousa Soares**.
+- Geração do código-fonte: **inteligência artificial generativa, principalmente ChatGPT/OpenAI**.
+- Integração com WhatsApp: projeto comunitário Baileys.
+
+A menção a OpenAI, ChatGPT, WhatsApp, Meta ou IFBA não representa parceria, aprovação ou endosso por essas organizações.
