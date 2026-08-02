@@ -116,6 +116,14 @@ class BotEngine {
     };
   }
 
+  privateUnknownEvaluation(settings) {
+    return {
+      matched: true, type: 'private_unknown', text: formatUnknownMentionResponse(settings),
+      signature: 'private-unknown', matchedItem: 'Ajuda automática no privado', topic: 'Ajuda',
+      reasons: ['mensagem privada sem comando ou gatilho reconhecido'], candidates: [], conflict: false, redactLog: false, analysis: []
+    };
+  }
+
   activeContent({ includeDrafts = false } = {}) {
     let messages = this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false });
     if (includeDrafts) {
@@ -540,7 +548,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   async reply(message, evaluation, chat, originalBody) {
     const settings = this.db.getSettings(); const seconds = Number(settings.cooldown_seconds || 20);
     const cooldownKey = this.conversationKey(message);
-    if (seconds > 0 && this.cooldown.isActive(cooldownKey, evaluation.type, evaluation.signature, seconds)) {
+    if (evaluation.type !== 'private_unknown' && seconds > 0 && this.cooldown.isActive(cooldownKey, evaluation.type, evaluation.signature, seconds)) {
       evaluation.replyBlockedReason = 'antirrepetição';
       return false;
     }
@@ -564,7 +572,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     else sendResult = await chat.sendMessage(evaluation.text);
     finishSend();
     if (sendResult?.attachmentError) evaluation.attachmentSendError = String(sendResult.attachmentError);
-    if (seconds > 0) this.cooldown.touch(cooldownKey, evaluation.type, evaluation.signature, seconds);
+    if (evaluation.type !== 'private_unknown' && seconds > 0) this.cooldown.touch(cooldownKey, evaluation.type, evaluation.signature, seconds);
     this.metrics.lastReplyAt = new Date().toISOString(); this.metrics.totalReplies += 1; this.metrics.lastMatchType = evaluation.type; this.metrics.lastMatchedItem = evaluation.matchedItem;
 
     if (evaluation.type !== 'disambiguation') {
@@ -625,6 +633,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (!evaluation.matched && !this.isAdminCommand(body) && this.botMentioned(message, body, settings) && this.featureAllowed({ isGroup: Boolean(chat.isGroup), groupId }, 'help', settings)) {
       evaluation = this.unknownMentionEvaluation(settings);
     }
+    if (!evaluation.matched && !chat.isGroup) evaluation = this.privateUnknownEvaluation(settings);
     if (!evaluation.matched) {
       this.diagnostic({ type: 'ignored', outcome: 'ignored', matchedItem: '', summary: evaluation.blockedBy || evaluation.reasons.join('; ') || 'Nenhuma regra correspondeu.', details: this.analysisDetails(evaluation), ...diagnosticBase }, settings);
       return;

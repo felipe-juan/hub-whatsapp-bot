@@ -31,7 +31,7 @@ Principais objetivos:
 
 ## Estado do projeto
 
-Versão atual: **0.10.0**
+Versão atual: **0.10.1**
 
 O projeto ainda está em preparação para a versão 1.0. Apesar da suíte automatizada e dos testes realizados pelo mantenedor, ele deve ser considerado experimental.
 
@@ -43,6 +43,15 @@ Antes de usar em produção:
 4. use uma conta separada do WhatsApp;
 5. configure backup e retenção de logs;
 6. mantenha o painel restrito a `localhost`, salvo necessidade específica.
+
+## Novidades da v0.10.1
+
+- adiciona o card de humor **Como passar em Cálculo?**, com gatilhos específicos e sem conflito com dúvidas de TCC ou consultas sobre a disciplina;
+- remove as etiquetas do painel, da pesquisa, das ações em massa e do modelo CSV atual;
+- remove do editor o campo visível **Mais detalhes**, preservando as continuações contextuais já incorporadas ao conteúdo institucional;
+- move as variáveis para **Configurações avançadas**;
+- transforma o nome interno no título editável da própria janela de edição;
+- responde em conversas privadas com a ajuda automática sempre que uma mensagem não corresponde a nenhum comando ou card.
 
 ## Recursos principais
 
@@ -293,7 +302,7 @@ Verificar scripts e indicador do desktop:
 npm run desktop:check
 ```
 
-A versão 0.10.0 foi empacotada após uma suíte automatizada com 251 testes aprovados no ambiente de desenvolvimento do mantenedor. Esse número não substitui revisão independente nem teste em uma conta real diferente.
+A versão 0.10.1 foi empacotada após 253 testes automatizados aprovados, executados individualmente no ambiente de desenvolvimento para evitar retenção de processo pelo executor combinado do Node.js. Esse número não substitui revisão independente nem teste em uma conta real diferente.
 
 ## Variáveis de ambiente
 

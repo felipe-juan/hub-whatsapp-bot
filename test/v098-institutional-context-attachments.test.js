@@ -66,11 +66,12 @@ test('short context resolves sector follow-up only inside the same conversation'
     assert.match(replies[1], /Bloco do CVT/i);
     const other = [];
     await engine.handle(mockMessage('e onde fica?', other, '5522888888888@s.whatsapp.net'));
-    assert.equal(other.length, 0);
+    assert.equal(other.length, 1);
+    assert.match(other[0], /Não identifiquei nenhum comando/);
   } finally { closeAll(engine, db, dir); }
 });
 
-test('mais detalhes and fonte use metadata from the last card', async () => {
+test('mais detalhes and fonte use the contextual TCC flow', async () => {
   const { db, dir } = temporaryDatabase(); const engine = new BotEngine(db); const replies = [];
   try {
     await engine.handle(mockMessage('onde encontro o regulamento de tcc de bsi?', replies));
@@ -135,11 +136,13 @@ test('admin asset exposes sector editor and separated source fields', () => {
   const app = readAdminJs(path.join(__dirname, '..'));
   const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   assert.match(app, /Cadastro de setores/);
-  assert.match(app, /details_text/);
+  assert.doesNotMatch(app, /Mais detalhes — opcional/);
+  assert.doesNotMatch(app, /Etiquetas com #/);
+  assert.match(app, /editableTitle/);
   assert.match(app, /source_url/);
   assert.match(app, /verified_at/);
-  assert.match(index, /app\.js\?v=0\.10\.0/);
-  assert.match(index, /js\/sectors\.js\?v=0\.10\.0/);
+  assert.match(index, /app\.js\?v=0\.10\.1/);
+  assert.match(index, /js\/sectors\.js\?v=0\.10\.1/);
 });
 
 test('institutional migration does not falsely verify administrator cards', () => {

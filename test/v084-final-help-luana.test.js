@@ -25,8 +25,7 @@ test('v0.8.4 migrates Luana from não encontrado to the institutional email', ()
     const reopened = new Database(dbPath, { seedBundledContent: true });
     const migrated = reopened.listAutomaticMessages().find(item => item.title === 'Professor — Luana Lima Bittencourt Silva');
     assert.match(migrated.response_text, /luanabittencourt@ifba\.edu\.br/);
-    assert.ok(migrated.tags.includes('email'));
-    assert.equal(migrated.tags.includes('email-pendente'), false);
+    assert.deepEqual(migrated.tags, []);
     assert.equal(reopened.getSetting('si_professors_2026_2_luana_email_v084_migrated'), 'true');
     reopened.close();
   } finally {
@@ -49,8 +48,7 @@ test('v0.8.4 preserves a manually customized Luana email', () => {
     const migrated = reopened.listAutomaticMessages().find(item => item.title === 'Professor — Luana Lima Bittencourt Silva');
     assert.match(migrated.response_text, /luana\.personalizado@ifba\.edu\.br/);
     assert.doesNotMatch(migrated.response_text, /luanabittencourt@ifba\.edu\.br/);
-    assert.ok(migrated.tags.includes('email'));
-    assert.equal(migrated.tags.includes('email-pendente'), false);
+    assert.deepEqual(migrated.tags, []);
     reopened.close();
   } finally {
     try { db.close(); } catch {}

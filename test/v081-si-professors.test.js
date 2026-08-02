@@ -16,7 +16,7 @@ test('v0.8.1 seeds the 28 SI professors and the pending Meio Ambiente card once'
   const { db, dir } = temporaryDatabase();
   try {
     const messages = db.listAutomaticMessages();
-    const professors = messages.filter(item => item.tags.includes('professor') && item.tags.includes('2026-2') && !item.tags.includes('disciplina-compartilhada'));
+    const professors = messages.filter(item => item.title.startsWith('Professor — ') || item.title === 'Pendência — Meio Ambiente (docente substituto)');
     assert.equal(professors.length, 29);
     assert.ok(professors.some(item => item.title === 'Professor — Alexandro dos Santos Silva'));
     assert.ok(professors.some(item => item.title === 'Professor — Viviane Maria Lélis Carvalho'));
@@ -25,7 +25,7 @@ test('v0.8.1 seeds the 28 SI professors and the pending Meio Ambiente card once'
 
     db.close();
     const reopened = new Database(path.join(dir, 'data.sqlite'), { seedBundledContent: true });
-    assert.equal(reopened.listAutomaticMessages().filter(item => item.tags.includes('professor') && item.tags.includes('2026-2') && !item.tags.includes('disciplina-compartilhada')).length, 29);
+    assert.equal(reopened.listAutomaticMessages().filter(item => item.title.startsWith('Professor — ') || item.title === 'Pendência — Meio Ambiente (docente substituto)').length, 29);
     reopened.close();
   } finally {
     try { db.close(); } catch {}
@@ -43,8 +43,7 @@ test('professor cards contain institutional emails and complete 2026.2 schedules
     assert.match(allan.response_text, /quinta-feira/);
     assert.match(allan.response_text, /Matemática Discreta II/);
     assert.match(allan.response_text, /sexta-feira/);
-    assert.ok(allan.tags.includes('email'));
-    assert.equal(allan.tags.includes('email-pendente'), false);
+    assert.deepEqual(allan.tags, []);
     assert.equal(allan.scope, 'both');
   } finally {
     db.close();

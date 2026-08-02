@@ -18,7 +18,6 @@ function cleanup(db, dir) { try { db?.close(); } catch {} fs.rmSync(dir, { recur
 function baseMessage(overrides = {}) {
   return {
     title: 'Calendário do curso',
-    tags: ['curso', 'datas'],
     scope: 'both',
     response_text: '📅 Resposta administrada',
     trigger: { match_mode: 'all', keywords: ['calendário', '?'] },
@@ -43,17 +42,17 @@ test('escopo por mensagem bloqueia ou libera grupos e conversas privadas', () =>
   cleanup(db, dir);
 });
 
-test('etiquetas são persistidas, pesquisáveis, duplicadas e restauráveis sem organização por pasta', () => {
+test('etiquetas antigas são descartadas em salvamento, duplicação e histórico', () => {
   const dir = tempDir(); const db = new Database(path.join(dir, 'test.sqlite')); db.deleteExampleData();
-  const original = db.saveAutomaticMessage(baseMessage());
+  const original = db.saveAutomaticMessage(baseMessage({ tags: ['curso', 'datas'], topic: 'Calendário' }));
   assert.equal(original.topic, '');
-  assert.deepEqual(original.tags, ['curso', 'datas']);
-  assert.equal(db.listAutomaticMessages({ search: 'datas' }).find(item => item.title === original.title).id, original.id);
+  assert.deepEqual(original.tags, []);
+  assert.equal(db.listAutomaticMessages({ search: 'datas' }).some(item => item.id === original.id), false);
 
   const copy = db.duplicateAutomaticMessage(original.id);
   assert.equal(copy.active, false);
   assert.equal(copy.scope, original.scope);
-  assert.deepEqual(copy.tags, original.tags);
+  assert.deepEqual(copy.tags, []);
   assert.match(copy.title, /^Cópia de /);
 
   db.saveAutomaticMessage(baseMessage({ response_text: '📅 Versão alterada', tags: ['alterada'] }), original.id);
@@ -62,7 +61,7 @@ test('etiquetas são persistidas, pesquisáveis, duplicadas e restauráveis sem 
   assert.ok(old, 'a versão anterior deve estar no histórico');
   const restored = db.restoreAutomaticMessageHistory(original.id, old.id);
   assert.equal(restored.response_text, '📅 Resposta administrada');
-  assert.deepEqual(restored.tags, ['curso', 'datas']);
+  assert.deepEqual(restored.tags, []);
   cleanup(db, dir);
 });
 
@@ -200,7 +199,7 @@ test('API administrativa oferece duplicação, histórico, anexo e diagnóstico 
   assert.ok((await history.json()).length >= 2);
 });
 
-test('painel expõe diagnóstico, escopo, anexos, duplicação, etiquetas e histórico', () => {
+test('painel expõe diagnóstico, escopo, anexos, duplicação e histórico sem etiquetas', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
   const app = readAdminJs(path.join(__dirname, '..'));
   assert.match(html, /data-view="diagnostics"/);
@@ -211,5 +210,5 @@ test('painel expõe diagnóstico, escopo, anexos, duplicação, etiquetas e hist
   assert.match(app, /duplicate-message/);
   assert.match(app, /Histórico de alterações/);
   assert.doesNotMatch(app, /Pasta(?:s)? de mensagens|folder-filter|name="folder"/);
-  assert.match(app, /Etiquetas com #/);
+  assert.doesNotMatch(app, /Etiquetas com #|tag-filter|data-bulk=\"add-tag\"/);
 });

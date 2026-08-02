@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.1 — 2026-08-02
+
+- adiciona o card de humor **Como passar em Cálculo?** com a resposta fornecida e um gatilho por padrão de pergunta que não conflita com TCC nem com consultas da disciplina;
+- migra um card antigo com o mesmo título para a versão de pacote, preservando eventual anexo e evitando duplicação;
+- remove completamente as etiquetas da interface, busca, importação CSV, ações em lote e novos salvamentos; valores antigos são descartados com segurança durante a atualização;
+- remove do editor o campo visível **Mais detalhes**, preservando apenas continuações contextuais já usadas pelo conteúdo institucional;
+- move as variáveis `{{data}}`, `{{hora}}`, `{{nome_do_grupo}}` e `{{nome_da_pessoa}}` para **Configurações avançadas**;
+- transforma o nome interno no próprio título editável da janela de edição;
+- faz toda mensagem privada não reconhecida receber a ajuda automática, inclusive quando o antirrepetição está ativo;
+- atualiza testes, documentação, assets versionados e manifesto de atualização para a v0.10.1.
+
 ## 0.10.0 — 2026-08-01
 
 - adiciona uma camada semântica para mensagens longas, exigindo intenção interrogativa compatível e cobertura relevante do gatilho;

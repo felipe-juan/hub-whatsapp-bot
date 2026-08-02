@@ -1,5 +1,5 @@
 module.exports = function createMixin(deps) {
-  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, crypto } = deps;
+  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, crypto } = deps;
   return class {
   migrate() {
     this.db.exec(`
@@ -193,6 +193,8 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.seedProfessorDirectoryV097();
     if (seedBundledContent) this.migrateInstitutionalCardsV098();
     if (seedBundledContent) this.seedStructuredSectorsV098();
+    this.simplifyAutomaticMessagesV0101();
+    if (seedBundledContent) this.seedFunCardsV0101();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -597,6 +599,49 @@ module.exports = function createMixin(deps) {
       this.db.exec('COMMIT');
     } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
     this.invalidate('settings', 'activeMessages');
+  }
+
+  simplifyAutomaticMessagesV0101() {
+    if (this.getSetting('automatic_messages_v0101_simplified') === 'true') return;
+    const rows = this.db.prepare("SELECT id,draft_json FROM automatic_messages WHERE tags_json<>'[]' OR draft_json<>''").all();
+    const update = this.db.prepare("UPDATE automatic_messages SET tags_json='[]',draft_json=?,updated_at=? WHERE id=?");
+    this.db.exec('BEGIN');
+    try {
+      for (const row of rows) {
+        let draftJson = String(row.draft_json || '');
+        if (draftJson) {
+          const draft = parseJson(draftJson, null);
+          if (draft && typeof draft === 'object') {
+            delete draft.tags;
+            draftJson = JSON.stringify(draft);
+          }
+        }
+        update.run(draftJson, nowIso(), Number(row.id));
+      }
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('automatic_messages_v0101_simplified','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+    this.invalidate('activeMessages', 'conflictReport');
+  }
+
+  seedFunCardsV0101() {
+    if (asBool(this.getSetting('fun_cards_v0101_seeded', 'false'), false)) return;
+    for (const definition of FUN_CARDS_V0101) {
+      const existing = this.listAutomaticMessages().find(item => normalizeText(item.title) === normalizeText(definition.message.title));
+      if (!existing) {
+        this.stagePackageAutomaticMessage(definition.key, definition.message);
+        continue;
+      }
+      const updated = this.saveAutomaticMessage({ ...definition.message, attachment: existing.attachment || null }, existing.id);
+      const snapshot = comparableMessageSnapshot(updated);
+      this.db.prepare("UPDATE automatic_messages SET source_type='hub_package',package_key=?,package_snapshot_json=?,pending_package_json='',customized=0,updated_at=? WHERE id=?")
+        .run(definition.key, JSON.stringify(snapshot), nowIso(), Number(existing.id));
+    }
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('fun_cards_v0101_seeded','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 
   seedStructuredSectorsV098() {

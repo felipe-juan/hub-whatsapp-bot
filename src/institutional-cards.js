@@ -22,7 +22,7 @@ function automaticMessagePayload(item) {
     title: item.title, response_text: item.response_text, details_text: item.details_text || '',
     source_url: item.source_url || '', source_title: item.source_title || '', verified_at: item.verified_at || '',
     priority: Number(item.priority || 40), active: item.active !== false, archived: Boolean(item.archived),
-    scope: item.scope || 'both', tags: item.tags || [], attachment: item.attachment || null,
+    scope: item.scope || 'both', attachment: item.attachment || null,
     trigger: item.trigger || { match_mode: 'all', sentences: item.sentences || [], keywords: [], required_words: [], require_question_mark: true, typo_tolerance: 1, excluded_words: [], exact_phrases: [], synonym_group_ids: [], negative_examples: [], regex_pattern: item.regex_pattern || '', regex_flags: 'iu' }
   };
 }

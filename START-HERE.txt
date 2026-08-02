@@ -1,7 +1,13 @@
-HUB WhatsApp Bot v0.10.0 — Fedora GNOME
+HUB WhatsApp Bot v0.10.1 — Fedora GNOME
 
 
-PREPARAÇÃO PARA A v1.0 — v0.10.0
+ATUALIZAÇÃO v0.10.1
+- Card de humor “Como passar em Cálculo?” adicionado sem conflito com TCC ou consultas da disciplina.
+- Etiquetas removidas do painel, da busca e da importação atual.
+- O campo “Mais detalhes” não aparece mais no editor.
+- Variáveis ficam em Configurações avançadas.
+- O nome interno é o título editável da janela.
+- No privado, toda mensagem não reconhecida recebe uma ajuda automática.
 - Mensagens longas precisam ser perguntas reais; menções indiretas e discurso relatado são bloqueados.
 - O menu “ajuda” possui categorias e submenus numéricos.
 - TCC I é separado por intenção: professor, roteiro, horário ou pré-requisito.
@@ -32,11 +38,12 @@ PAINEL
 EDITOR
 - A resposta é enviada exatamente como foi escrita.
 - Há prévia semelhante ao WhatsApp e modo de tela cheia.
-- Variáveis: {{data}}, {{hora}}, {{nome_do_grupo}}, {{nome_da_pessoa}}.
+- Em Configurações avançadas: {{data}}, {{hora}}, {{nome_do_grupo}}, {{nome_da_pessoa}}.
+- Clique no título da janela para editar o nome interno.
 - O painel avisa sobre gatilhos genéricos, ausentes ou conflitantes.
 
 BUSCA
-Exemplos: #contato ativo, #faq privado, anexo:pdf, status:arquivado.
+Exemplos: contato, privado, anexo:pdf, status:arquivado.
 
 SEGURANÇA
 Cadastre números de outros bots e prefixos em Configurações para evitar ciclos automáticos.
@@ -49,7 +56,7 @@ Execute bash INSTALL.sh dentro da pasta da nova versão. Banco, senha, anexos e 
 
 PROFESSORES — SISTEMAS DE INFORMAÇÃO 2026.2
 - 28 cartões de professores e 1 pendência são adicionados automaticamente.
-- Filtre por #professor ou #email.
+- Pesquise pelo nome do professor, disciplina ou conteúdo da resposta.
 - Os e-mails informados já estão preenchidos, incluindo Luana Bittencourt.
 - Os gatilhos aceitam pedidos por nome ou por disciplina, além de perguntas sobre dias/horários no IFBA.
 - No desktop, a quantidade de colunas pode ser dinâmica ou escolhida entre 1 e 4.

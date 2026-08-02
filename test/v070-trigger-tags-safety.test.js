@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { evaluateTrigger } = require('../src/trigger-rules');
-const { Database, normalizeTag, normalizeTags } = require('../src/database');
+const { Database } = require('../src/database');
 const { OutboundGuard } = require('../src/outbound-guard');
 const { readAdminJs } = require('./helpers/admin-assets');
 
@@ -25,12 +25,7 @@ test('sentenças e palavras-chave são canais independentes que podem coexistir'
   assert.equal(evaluateTrigger('nome interno que não deve ativar', rule).matched, false, 'o nome interno não é gatilho');
 });
 
-test('normalização de etiquetas usa # apenas na apresentação', () => {
-  assert.equal(normalizeTag('#Contato'), 'contato');
-  assert.deepEqual(normalizeTags(['#Contato', 'Perguntas frequentes', '#contato']), ['contato', 'perguntas-frequentes']);
-});
-
-test('banco remove pasta do modelo e preserva o valor antigo como etiqueta', () => {
+test('banco descarta tópico e etiquetas legadas do modelo de mensagens', () => {
   const dir = tempDir();
   const db = new Database(path.join(dir, 'test.sqlite'));
   db.deleteExampleData();
@@ -39,20 +34,21 @@ test('banco remove pasta do modelo e preserva o valor antigo como etiqueta', () 
     trigger: { sentences: ['onde está o documento'] }, active: true
   });
   assert.equal(item.topic, '');
-  assert.deepEqual(item.tags, ['faq', 'documentos']);
+  assert.deepEqual(item.tags, []);
   db.close(); fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('painel remove pastas e simulador da tela de mensagens e traz anexo no editor', () => {
+test('painel remove pastas, etiquetas e simulador e mantém anexo no editor', () => {
   const root = path.join(__dirname, '..');
   const app = readAdminJs(root);
   assert.match(app, /Sentenças ou trechos/);
   assert.match(app, /Palavras-chave obrigatórias/);
-  assert.match(app, /Etiquetas com #/);
+  assert.doesNotMatch(app, /Etiquetas com #|tag-filter|data-bulk="add-tag"/);
   assert.match(app, /Anexo da mensagem \(opcional\)/);
   assert.match(app, /name="attachment_file"/);
   assert.doesNotMatch(app, /Testar uma mensagem|folder-filter|name="folder"|Como combinar/);
 });
+
 
 test('limites conservadores bloqueiam rajadas globais e por pessoa', () => {
   const guard = new OutboundGuard();

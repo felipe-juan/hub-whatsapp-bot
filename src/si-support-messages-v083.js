@@ -9,7 +9,6 @@ const LEGACY_TITLES = new Set([
 function legacyShape(message) {
   return {
     title: message.title,
-    tags: message.tags || [],
     priority: Number(message.priority || 40),
     sentences: message.trigger?.sentences || [],
     regex_pattern: message.trigger?.regex_pattern || '',

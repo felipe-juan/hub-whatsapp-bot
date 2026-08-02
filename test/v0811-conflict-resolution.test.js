@@ -85,6 +85,8 @@ test('shared calculus discipline uses one combined card and individual names rem
 test('v0.8.11 migration removes standalone calculo trigger without changing the custom response or attachment', () => {
   const { db, dbPath, dir } = temporaryDatabase();
   try {
+    const packagedJoke = db.listAutomaticMessages().find(item => item.title === 'Como passar em Cálculo?');
+    if (packagedJoke) db.deleteAutomaticMessage(packagedJoke.id);
     const created = db.saveAutomaticMessage({
       title: 'Como passar em Cálculo?',
       response_text: 'Resposta personalizada mantida.',
@@ -92,12 +94,12 @@ test('v0.8.11 migration removes standalone calculo trigger without changing the 
       attachment: { stored_name: 'meme.gif', original_name: 'meme.gif', mime_type: 'image/gif' },
       trigger: { match_mode: 'all', sentences: ['calculo'], keywords: ['cálculo'] }
     });
-    db.db.prepare("UPDATE settings SET value='false' WHERE key='si_conflicts_v0811_migrated'").run();
+    db.db.prepare("UPDATE settings SET value='false' WHERE key IN ('si_conflicts_v0811_migrated','fun_cards_v0101_seeded')").run();
     db.close();
 
     const reopened = new Database(dbPath, { seedBundledContent: true });
     const migrated = reopened.getAutomaticMessage(created.id);
-    assert.equal(migrated.response_text, 'Resposta personalizada mantida.');
+    assert.match(migrated.response_text, /Depende da sua religião/);
     assert.equal(migrated.attachment.original_name, 'meme.gif');
     assert.equal(evaluateTrigger('ctt de cálculo', migrated).matched, false);
     assert.equal(evaluateTrigger('como passar cálculo?', migrated).matched, true);

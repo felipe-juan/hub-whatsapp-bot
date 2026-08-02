@@ -3,7 +3,6 @@ module.exports = function createMixin(deps) {
   return class {
   validateAutomaticMessage(input) {
     const title = String(input.title || '').trim();
-    const legacyTopic = String(input.topic || '').trim();
     const responseText = String(input.response_text || input.answer || '').trim();
     if (!title) throw new Error('O nome interno da mensagem é obrigatório.');
     if (!responseText) throw new Error('Escreva a resposta completa que o bot deve enviar.');
@@ -19,7 +18,7 @@ module.exports = function createMixin(deps) {
     const hasTrigger = trigger.keywords.length || trigger.sentences.length || trigger.exact_phrases.length || trigger.regex_pattern || trigger.synonym_group_ids.length;
     if (!hasTrigger) throw new Error('Cadastre ao menos uma sentença, palavra-chave ou expressão regular.');
     const scope = ['both', 'group', 'private'].includes(String(input.scope || 'both')) ? String(input.scope || 'both') : 'both';
-    const tags = normalizeTags(input.tags || input.tags_json || [], legacyTopic);
+    const tags = [];
     const topic = '';
     const attachment = input.attachment && typeof input.attachment === 'object' ? { ...input.attachment } : null;
     const sourceUrl = String(input.source_url || '').trim();
@@ -30,7 +29,7 @@ module.exports = function createMixin(deps) {
     if (verifiedAt && !/^\d{4}-\d{2}-\d{2}$/.test(verifiedAt)) throw new Error('A data de verificação deve usar AAAA-MM-DD.');
     if (detailsText.length > 12000) throw new Error('A resposta detalhada excede o tamanho permitido.');
     const caption = captionAnalysis({ response_text: responseText, source_url: sourceUrl, source_title: sourceTitle, verified_at: verifiedAt, attachment });
-    if (attachment && caption.status === 'blocked') throw new Error(`A legenda com resposta e fonte possui ${caption.totalCharacters} caracteres. O limite máximo de envio com anexo é ${caption.hardLimit}. Encurte a resposta principal ou mova conteúdo para “mais detalhes”.`);
+    if (attachment && caption.status === 'blocked') throw new Error(`A legenda com resposta e fonte possui ${caption.totalCharacters} caracteres. O limite máximo de envio com anexo é ${caption.hardLimit}. Encurte a resposta principal ou remova o anexo.`);
     return {
       title, topic, response_text: responseText, details_text: detailsText, source_url: sourceUrl, source_title: sourceTitle, verified_at: verifiedAt,
       trigger, scope, tags, attachment,
@@ -48,7 +47,7 @@ module.exports = function createMixin(deps) {
       ...draft,
       active: Boolean(draft.active), archived: Boolean(draft.archived), sort_order: Number(draft.sort_order || 0),
       scope: ['both', 'group', 'private'].includes(draft.scope) ? draft.scope : 'both',
-      tags: Array.isArray(draft.tags) ? draft.tags : [],
+      tags: [],
       attachment: draft.attachment && typeof draft.attachment === 'object' ? draft.attachment : null,
       details_text: String(draft.details_text || ''), source_url: String(draft.source_url || ''),
       source_title: String(draft.source_title || ''), verified_at: String(draft.verified_at || ''),
@@ -60,7 +59,7 @@ module.exports = function createMixin(deps) {
       package_key: String(row.package_key || ''), customized: Boolean(row.customized),
       package_snapshot: parseJson(package_snapshot_json || '', null), pending_package_update: parseJson(pending_package_json || '', null),
       scope: ['both', 'group', 'private'].includes(row.scope) ? row.scope : 'both',
-      tags: parseJsonList(tags_json), attachment: (() => { const value = parseJson(attachment_json || '{}', null); return value?.stored_name ? value : null; })(),
+      tags: [], attachment: (() => { const value = parseJson(attachment_json || '{}', null); return value?.stored_name ? value : null; })(),
       trigger: normalizeTriggerRules(parseJson(trigger_json, {})),
       draft: mappedDraft,
       has_draft: Boolean(draft)
@@ -70,7 +69,7 @@ module.exports = function createMixin(deps) {
     if (activeOnly && !search && this.cache.activeMessages) return cloneResult ? clone(this.cache.activeMessages) : this.cache.activeMessages;
     let sql = 'SELECT * FROM automatic_messages'; const where = []; const params = [];
     if (activeOnly) where.push('published=1 AND active=1 AND archived=0');
-    if (search) { where.push('(title LIKE ? OR topic LIKE ? OR response_text LIKE ? OR details_text LIKE ? OR source_url LIKE ? OR source_title LIKE ? OR trigger_json LIKE ? OR draft_json LIKE ? OR tags_json LIKE ?)'); const term = `%${search}%`; params.push(term, term, term, term, term, term, term, term, term); }
+    if (search) { where.push('(title LIKE ? OR response_text LIKE ? OR details_text LIKE ? OR source_url LIKE ? OR source_title LIKE ? OR trigger_json LIKE ? OR draft_json LIKE ?)'); const term = `%${search}%`; params.push(term, term, term, term, term, term, term); }
     if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
     sql += ' ORDER BY archived ASC,sort_order ASC,published DESC,active DESC,priority DESC,title COLLATE NOCASE';
     const rows = this.db.prepare(sql).all(...params).map(row => this.mapAutomaticMessage(row));
@@ -84,7 +83,7 @@ module.exports = function createMixin(deps) {
     const triggerTokens = [...new Set([
       ...trigger.sentences, ...trigger.keywords, ...trigger.required_words, ...trigger.exact_phrases
     ].flatMap(value => normalizeText(value).split(' ').filter(Boolean)))];
-    const searchable = [effective.title || '', ...(effective.tags || []), response.slice(0, 800), ...triggerTokens].join(' ');
+    const searchable = [effective.title || '', response.slice(0, 800), ...triggerTokens].join(' ');
     return {
       id: Number(item.id), title: effective.title || '', priority: Number(effective.priority || 0),
       sort_order: Number(effective.sort_order || 0), active: effective.active !== false,
@@ -93,10 +92,8 @@ module.exports = function createMixin(deps) {
       source_type: item.source_type || 'administrator', package_key: item.package_key || '',
       customized: Boolean(item.customized), has_package_update: Boolean(item.pending_package_update),
       scope: ['both','group','private'].includes(effective.scope) ? effective.scope : 'both',
-      tags: Array.isArray(effective.tags) ? effective.tags : [],
       attachment: (() => { const value = effective.attachment || item.attachment || null; return value ? { file_name: value.file_name || '', mime_type: value.mime_type || '', size_bytes: Number(value.size_bytes || 0), kind: value.kind || 'document' } : null; })(),
       response_text: response.slice(0, 360), response_truncated: response.length > 360,
-      details_text: String(effective.details_text || '').slice(0, 240),
       source_url: String(effective.source_url || ''), source_title: String(effective.source_title || ''), verified_at: String(effective.verified_at || ''),
       trigger: {
         sentences: trigger.sentences.slice(0, 4), keywords: trigger.keywords.slice(0, 4),
@@ -115,7 +112,7 @@ module.exports = function createMixin(deps) {
     if (!search) this.cache.messageSummaries = summaries;
     return clone(summaries);
   }
-  listAutomaticMessageSummaryPage({ search = '', limit = 30, cursor = '', status = 'current', tag = '', origin = '', conflictsOnly = false } = {}) {
+  listAutomaticMessageSummaryPage({ search = '', limit = 30, cursor = '', status = 'current', origin = '', conflictsOnly = false } = {}) {
     const safeLimit = Math.max(10, Math.min(100, Number(limit || 30)));
     let offset = 0;
     try {
@@ -130,11 +127,10 @@ module.exports = function createMixin(deps) {
     else if (normalizedStatus === 'inactive') where.push('archived=0 AND active=0');
     else if (normalizedStatus === 'archived') where.push('archived=1');
     if (origin) { where.push('source_type=?'); params.push(String(origin)); }
-    if (tag) { where.push('tags_json LIKE ?'); params.push(`%"${String(tag).replace(/["%_]/g, '')}"%`); }
     if (search) {
-      where.push('(title LIKE ? OR response_text LIKE ? OR trigger_json LIKE ? OR tags_json LIKE ? OR draft_json LIKE ?)');
+      where.push('(title LIKE ? OR response_text LIKE ? OR trigger_json LIKE ? OR draft_json LIKE ?)');
       const term = `%${String(search).slice(0, 200)}%`;
-      params.push(term, term, term, term, term);
+      params.push(term, term, term, term);
     }
     if (conflictsOnly) {
       const ids = [...new Set(this.getConflictReport().conflicts.flatMap(item => item.items || []).map(Number).filter(Boolean))];
@@ -371,22 +367,20 @@ module.exports = function createMixin(deps) {
       try {
         const current = this.findProfessorMessageForImport(record);
         const response = buildProfessorScheduleResponse(record);
-        const periodTag = normalizeTag(record.academic_period || 'periodo-importado');
         if (current) {
           this.archiveAutomaticMessage(current, 'teacher-schedule-import');
-          const tags = [...new Set([...(current.tags || []), 'professor', 'quadro-docente', 'importacao-docente', periodTag].filter(Boolean))];
           let draftJson = this.db.prepare('SELECT draft_json FROM automatic_messages WHERE id=?').get(Number(current.id))?.draft_json || '';
           if (draftJson) {
             const draft = parseJson(draftJson, null);
             if (draft && typeof draft === 'object') {
               draft.title = `Professor — ${record.name}`;
               draft.response_text = response;
-              draft.tags = [...new Set([...(draft.tags || tags), 'professor', 'quadro-docente', 'importacao-docente', periodTag].filter(Boolean))];
+              delete draft.tags;
               draftJson = JSON.stringify(draft);
             }
           }
-          this.db.prepare(`UPDATE automatic_messages SET title=?,response_text=?,tags_json=?,active=1,archived=0,published=1,draft_json=?,customized=1,updated_at=? WHERE id=?`)
-            .run(`Professor — ${record.name}`, response, JSON.stringify(tags), draftJson, nowIso(), Number(current.id));
+          this.db.prepare(`UPDATE automatic_messages SET title=?,response_text=?,tags_json='[]',active=1,archived=0,published=1,draft_json=?,customized=1,updated_at=? WHERE id=?`)
+            .run(`Professor — ${record.name}`, response, draftJson, nowIso(), Number(current.id));
           report.updated += 1; report.preservedTriggers += 1;
         } else {
           const professorShape = {
@@ -400,7 +394,6 @@ module.exports = function createMixin(deps) {
           ])];
           const created = this.saveAutomaticMessage({
             title: `Professor — ${record.name}`, response_text: response, priority: 35, active: true, archived: false, scope: 'both',
-            tags: ['professor', 'quadro-docente', 'importacao-docente', periodTag].filter(Boolean),
             trigger: { match_mode: 'all', sentences, keywords: [], required_words: [], require_question_mark: false,
               typo_tolerance: 1, excluded_words: [], exact_phrases: [], synonym_group_ids: [], negative_examples: [] }
           });
@@ -440,10 +433,7 @@ module.exports = function createMixin(deps) {
       else if (action === 'archive') this.db.prepare(`UPDATE automatic_messages SET archived=1,active=0,updated_at=? WHERE id IN (${placeholders})`).run(timestamp, ...clean);
       else if (action === 'unarchive') this.db.prepare(`UPDATE automatic_messages SET archived=0,updated_at=? WHERE id IN (${placeholders})`).run(timestamp, ...clean);
       else if (action === 'delete') this.db.prepare(`DELETE FROM automatic_messages WHERE id IN (${placeholders})`).run(...clean);
-      else if (action === 'add-tag') {
-        const tag = normalizeTag(value); if (!tag) throw new Error('Informe uma etiqueta válida.');
-        for (const id of clean) { const item = this.getAutomaticMessage(id); if (!item) continue; const tags = [...new Set([...(item.tags || []), tag])]; this.db.prepare('UPDATE automatic_messages SET tags_json=?,updated_at=? WHERE id=?').run(JSON.stringify(tags), timestamp, id); }
-      } else throw new Error('Ação em lote inválida.');
+      else throw new Error('Ação em lote inválida.');
       if (action !== 'delete') this.db.prepare(`UPDATE automatic_messages SET customized=1 WHERE source_type='hub_package' AND id IN (${placeholders})`).run(...clean);
       this.db.exec('COMMIT');
     } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
@@ -486,7 +476,7 @@ module.exports = function createMixin(deps) {
       const urls = [...new Set([
         String(item.source_url || '').trim(),
         ...(String(item.response_text || '').match(/https?:\/\/[^\s<>]+/gi) || []),
-        ...(String(item.details_text || '').match(/https?:\/\/[^\s<>]+/gi) || [])
+        ...(String(item.details_text || '').match(/https?:\/\/[^\s<>]+/gi) || []),
       ].filter(Boolean).map(url => url.replace(/[),.;!?]+$/, '')))];
       return urls.slice(0, 3).map(url => ({ id: item.id, title: item.title, url }));
     });

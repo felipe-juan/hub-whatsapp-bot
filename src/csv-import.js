@@ -39,7 +39,7 @@ function headerKey(value) {
     url: 'url', link: 'url', descricao: 'description', description: 'description',
     palavras_chave: 'keywords', keywords: 'keywords', gatilhos: 'keywords',
     resposta: 'response_text', mensagem: 'response_text', texto_da_resposta: 'response_text', resposta_personalizada: 'response_text', response_text: 'response_text',
-    topico: 'topic', topic: 'topic', pasta: 'folder', folder: 'folder', etiquetas: 'tags', tags: 'tags', escopo: 'scope', scope: 'scope',
+    topico: 'topic', topic: 'topic', escopo: 'scope', scope: 'scope',
     sentencas: 'sentences', sentenca: 'sentences', frases: 'sentences', sentences: 'sentences', frase_exata: 'sentences', frases_exatas: 'sentences',
     exige_interrogacao: 'require_question_mark', require_question_mark: 'require_question_mark',
     prioridade: 'priority', priority: 'priority', publicar: 'publish', publish: 'publish'
@@ -122,7 +122,6 @@ function importAutomaticMessagesCsv(database, csv, options = {}) {
       const result = database.upsertAutomaticMessageByTitle({
         title: data.title,
         topic: '',
-        tags: parseList([data.tags || '', data.folder || data.topic || data.category || ''].filter(Boolean).join('|').replace(/\|/g, '\n')),
         scope: ['group','private','both'].includes(String(data.scope || '').toLowerCase()) ? String(data.scope).toLowerCase() : 'both',
         response_text: data.response_text || '',
         priority: Number(data.priority || 0),

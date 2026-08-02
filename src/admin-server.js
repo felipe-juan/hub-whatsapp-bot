@@ -181,7 +181,7 @@ class AdminServer {
     const analytics = this.cachedStatusPart('analytics30', 60_000, () => this.db.getUsageStats(30));
     const databaseHealth = this.cachedStatusPart('database-health', 60_000, () => this.db.healthCheck());
     return {
-      version: this.updates?.status?.().currentVersion || '0.10.0', whatsapp: this.whatsapp.getStatus(),
+      version: this.updates?.status?.().currentVersion || '0.10.1', whatsapp: this.whatsapp.getStatus(),
       stats,
       analytics,
       health: {
@@ -462,7 +462,7 @@ Allan de Sousa Soares,allansoares@ifba.edu.br,Matemática Discreta I,1º semestr
 `,
       'text/csv; charset=utf-8', { 'Content-Disposition': 'attachment; filename="quadro-docente-modelo.csv"' });
     if (route === '/api/import/messages-csv' && req.method === 'POST') { const body = await readBody(req, 5 * 1024 * 1024); const result = this.writeQueue?.importMessagesCsv ? await this.writeQueue.importMessagesCsv(body.csv || '', { publish: body.publish !== false }) : importAutomaticMessagesCsv(this.db, body.csv || '', { publish: body.publish !== false }); await this.refreshAfterExternalTask('messages-import'); return json(res, 200, result); }
-    if (route === '/api/templates/messages.csv' && req.method === 'GET') return text(res, 200, 'title,tags,scope,sentences,keywords,require_question_mark,response_text,priority,active,publish\nContato de Bruno,"#contato|#professores",both,"qual o contato de bruno|email do professor bruno","bruno|contato",true,"📧 contato.bruno@example.invalid",50,true,true\n', 'text/csv; charset=utf-8', { 'Content-Disposition': 'attachment; filename="mensagens-modelo.csv"' });
+    if (route === '/api/templates/messages.csv' && req.method === 'GET') return text(res, 200, 'title,scope,sentences,keywords,require_question_mark,response_text,priority,active,publish\nContato de Bruno,both,"qual o contato de bruno|email do professor bruno","bruno|contato",true,"📧 contato.bruno@example.invalid",50,true,true\n', 'text/csv; charset=utf-8', { 'Content-Disposition': 'attachment; filename="mensagens-modelo.csv"' });
 
     if (route === '/api/teachers' && req.method === 'GET') return json(res, 200, this.db.listTeachers({ search: url.searchParams.get('q') || '' }));
     if (route === '/api/teachers' && req.method === 'POST') return json(res, 201, await this.mutateDatabase('saveTeacher', [await readBody(req)], { reason: 'teacher-created', reloadRules: true }));

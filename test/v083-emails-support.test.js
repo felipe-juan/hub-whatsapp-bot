@@ -25,7 +25,7 @@ test('bundled professor cards include all supplied emails, including Luana in v0
     ]) {
       const item = messages.find(message => message.title === title);
       assert.ok(item); assert.match(item.response_text, new RegExp(email.replace('.', '\\.')));
-      assert.ok(item.tags.includes('email')); assert.equal(item.tags.includes('email-pendente'), false);
+      assert.deepEqual(item.tags, []);
     }
     assert.equal(db.getSetting('si_professors_2026_2_emails_v083_migrated'), 'true');
     assert.equal(db.getSetting('si_professors_2026_2_luana_email_v084_migrated'), 'true');

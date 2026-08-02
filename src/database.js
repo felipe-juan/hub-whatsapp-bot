@@ -7,6 +7,7 @@ const { SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_20
 const { buildProfessorScheduleResponse } = require('./professor-schedule-import');
 const { SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload } = require('./si-support-messages-v083');
 const { INSTITUTIONAL_CARDS_V098 } = require('./institutional-cards');
+const { FUN_CARDS_V0101 } = require('./content/fun');
 const { captionAnalysis } = require('./caption-policy');
 const createMigrationsMixin = require('./database/migrations');
 const createCardsRepositoryMixin = require('./database/cards-repository');
@@ -68,6 +69,8 @@ const DEFAULT_SETTINGS = {
   professor_location_v097_migrated: 'false',
   institutional_cards_v098_migrated: 'false',
   structured_sectors_v098_seeded: 'false',
+  fun_cards_v0101_seeded: 'false',
+  automatic_messages_v0101_simplified: 'false',
   contextual_followup_seconds: '300',
   risk_guard_enabled: 'false',
   outbound_min_interval_ms: '0',
@@ -145,9 +148,7 @@ function comparableMessageSnapshot(value = {}) {
     active: item.active !== false,
     archived: Boolean(item.archived),
     scope: ['both', 'group', 'private'].includes(item.scope) ? item.scope : 'both',
-    tags: Array.isArray(item.tags) ? [...item.tags] : [],
     attachment: item.attachment || null,
-    details_text: String(item.details_text || '').trim(),
     source_url: String(item.source_url || '').trim(),
     source_title: String(item.source_title || '').trim(),
     verified_at: String(item.verified_at || '').trim()
@@ -743,7 +744,7 @@ class Database {
   }
 
 }
-const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, crypto };
+const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, crypto };
 for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;

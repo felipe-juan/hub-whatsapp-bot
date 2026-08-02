@@ -25,7 +25,7 @@ test('v0.8.12 seeds the schedule board card with the supplied SharePoint link', 
     assert.ok(card);
     assert.match(card.response_text, /ifbaedubr-my\.sharepoint\.com/);
     assert.match(card.response_text, /IQCqjeOoMcvWQoiikRSUwWOxAZSOwJaih1qWmWFq5Vxa73Y/);
-    assert.ok(card.tags.includes('quadro-de-horarios'));
+    assert.deepEqual(card.tags, []);
     assert.equal(db.getSetting('schedule_board_v0812_seeded'), 'true');
   } finally {
     db.close();

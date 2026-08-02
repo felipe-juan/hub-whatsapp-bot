@@ -16,7 +16,7 @@ test('painel usa uma única área de mensagens em vez de professores, links e FA
   assert.doesNotMatch(html, /data-view="(?:teachers|links|faqs|automation|synonyms)"/);
   assert.match(app, /Resposta completa do bot/);
   assert.match(app, /Resposta completa do bot — curta por padrão/);
-  assert.match(app, /Mais detalhes — opcional/);
+  assert.doesNotMatch(app, /Mais detalhes — opcional/);
   assert.match(app, /Salvar mensagem/);
   assert.doesNotMatch(app, /Salvar rascunho/);
 });

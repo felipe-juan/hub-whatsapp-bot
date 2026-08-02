@@ -14,7 +14,7 @@ function tempDir(prefix = 'hub-v080-') { return fs.mkdtempSync(path.join(os.tmpd
 function message(title, keyword, extra = {}) {
   return {
     title, response_text: `Resposta de ${title}`, active: true, archived: false, scope: 'both',
-    tags: [], trigger: { keywords: [keyword], sentences: [] }, ...extra
+    trigger: { keywords: [keyword], sentences: [] }, ...extra
   };
 }
 
@@ -39,8 +39,8 @@ test('ordenação, arquivamento e ações em lote preservam histórico', () => {
   const ordered = db.listAutomaticMessages().filter(item => [a.id,b.id,c.id].includes(item.id));
   assert.deepEqual(ordered.map(item => item.id), [c.id, a.id, b.id]);
 
-  db.bulkAutomaticMessages([a.id, b.id], 'add-tag', '#revisar');
-  assert.deepEqual(db.getAutomaticMessage(a.id).tags, ['revisar']);
+  assert.throws(() => db.bulkAutomaticMessages([a.id, b.id], 'add-tag', '#revisar'), /inválida/);
+  assert.deepEqual(db.getAutomaticMessage(a.id).tags, []);
   db.bulkAutomaticMessages([b.id], 'archive');
   assert.equal(db.getAutomaticMessage(b.id).archived, true);
   assert.equal(db.getAutomaticMessage(b.id).active, false);

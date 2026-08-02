@@ -357,3 +357,6 @@ select[multiple] option{padding:7px;border-radius:5px;margin-bottom:2px}
 .uncertain-banner{border-color:rgba(255,107,107,.42);background:linear-gradient(135deg,rgba(255,107,107,.14),rgba(240,179,91,.08))}
 .uncertain-list .conflict-item{border-color:rgba(240,179,91,.25)}
 #caption-meter .validation-item{line-height:1.45}#caption-meter .validation-item.ok{border-color:#2f855a;background:rgba(47,133,90,.12)}#caption-meter .validation-item.warning{border-color:#b7791f;background:rgba(183,121,31,.12)}
+
+/* v0.10.1 — nome interno editável no cabeçalho do cartão */
+.modal-editable-title{min-width:0;flex:1}.modal-editable-title small{display:block;margin-top:4px}.modal-title-input{width:min(760px,100%);padding:2px 0 6px;border:0;border-bottom:1px solid transparent;border-radius:0;background:transparent;color:var(--text);font:inherit;font-size:clamp(1.25rem,2vw,1.75rem);font-weight:800}.modal-title-input:hover,.modal-title-input:focus{border-bottom-color:var(--blue);outline:0;background:rgba(255,255,255,.025)}
