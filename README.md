@@ -1,5 +1,16 @@
 # HUB WhatsApp Bot
 
+## Novidades da v0.10.6
+
+- consulta aulas de BSI por dia e semestre, reconhecendo `hoje`, `amanhã`, `depois de amanhã` e dias da semana;
+- aceita também pedidos curtos formados por data e semestre, como `amanhã terceiro semestre`;
+- quando o dia é informado sem o semestre, pergunta qual semestre deve ser consultado e mantém o contexto para a resposta seguinte;
+- retorna somente disciplina, sala e professor, com base no quadro 2026.2 incorporado;
+- usa o horário real da mensagem e o fuso `America/Bahia` para interpretar datas relativas;
+- corrige a sigla exibida para **ACEX**, mantendo `ACE` como alias legado;
+- amplia as variantes de elogios, agradecimentos, ofensas e xingamentos das reações contextuais;
+- permite dados comunitários privados por `private-content.json`, arquivo ignorado pelo Git e ausente deste repositório público.
+
 ## Novidades da v0.10.5
 
 - `!final` agora mostra somente a situação e a nota mínima necessária, sem exibir a MF;
@@ -54,7 +65,7 @@ Principais objetivos:
 
 ## Estado do projeto
 
-Versão atual: **0.10.5**
+Versão atual: **0.10.6**
 
 O projeto ainda está em preparação para a versão 1.0. Apesar da suíte automatizada e dos testes realizados pelo mantenedor, ele deve ser considerado experimental.
 

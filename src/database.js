@@ -9,6 +9,7 @@ const { SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload 
 const { INSTITUTIONAL_CARDS_V098 } = require('./institutional-cards');
 const { FUN_CARDS_V0101 } = require('./content/fun');
 const { captionAnalysis } = require('./caption-policy');
+const { felipeJuanPhone, injectFelipeJuanPhone } = require('./private-content');
 const createMigrationsMixin = require('./database/migrations');
 const createCardsRepositoryMixin = require('./database/cards-repository');
 const createDirectoriesRepositoryMixin = require('./database/directories-repository');
@@ -752,7 +753,7 @@ class Database {
   }
 
 }
-const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, crypto };
+const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, crypto };
 for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;

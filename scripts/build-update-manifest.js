@@ -33,7 +33,7 @@ const manifest = {
   version,
   minimum_updatable_version: '0.4.0',
   update_type: 'application-code',
-  preserves: ['data', '.env', 'node_modules'],
+  preserves: ['data', '.env', 'node_modules', 'private-content.json'],
   files
 };
 fs.writeFileSync(path.join(root, 'UPDATE_MANIFEST.json'), `${JSON.stringify(manifest, null, 2)}\n`);

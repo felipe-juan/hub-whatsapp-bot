@@ -1,16 +1,18 @@
+const { injectFelipeJuanPhone } = require('../private-content');
+
 const COMMUNITY_CARDS = Object.freeze([
   {
     key: 'hub-easter-egg-felipe-juan-v0104',
     message: {
       title: 'Contato — Felipe Juan',
-      response_text: [
+      response_text: injectFelipeJuanPhone([
         '👤 *Felipe Juan*', '',
         'Diretor-geral do Diretório Acadêmico de Sistemas de Informação — *DASI*.', '',
         '🎮 *Para conhecer meus hobbies*',
         'https://linktr.ee/felipojuano', '',
         '💼 *Profissionalmente*',
         'https://www.linkedin.com/in/felipe-juan/'
-      ].join('\n'),
+      ].join('\n')),
       priority: 74,
       active: true,
       archived: false,

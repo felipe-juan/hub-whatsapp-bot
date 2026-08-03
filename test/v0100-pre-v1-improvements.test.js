@@ -102,7 +102,7 @@ test('database and content are split into focused modules', () => {
   assert.ok(fs.statSync(path.join(root, 'src', 'database.js')).size < 70000);
   assert.ok(fs.statSync(path.join(root, 'src', 'institutional-cards.js')).size < 10000);
   assert.ok(fs.statSync(path.join(root, 'public', 'app.js')).size < 40000);
-  assert.equal(INSTITUTIONAL_CARDS_V098.length, 110);
+  assert.equal(INSTITUTIONAL_CARDS_V098.length, 111);
 });
 
 test('historical immutable assets are limited to the immediately previous release', () => {

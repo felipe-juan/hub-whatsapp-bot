@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.6 — 2026-08-03
+
+- adiciona consulta dinâmica de aulas por semestre e dia, usando a data real da mensagem e o fuso `America/Bahia`;
+- reconhece `hoje`, `amanhã`, `depois de amanhã`, dias da semana e pedidos curtos formados apenas por data e semestre;
+- pergunta qual semestre deve ser consultado quando o pedido informa o dia, mas omite o semestre, aceitando a resposta curta no mesmo contexto;
+- limita a resposta da consulta a disciplina, sala e professor, com dados do quadro de horários 2026.2;
+- corrige a sigla exibida de Atividades Curriculares de Extensão de `ACE` para `ACEX`, mantendo `ACE` como alias legado de busca;
+- amplia as variações de elogios, agradecimentos, ofensas e xingamentos reconhecidas pelas reações contextuais;
+- adiciona o contato telefônico privado de Felipe Juan por meio de `private-content.json`, preservado em atualizações e ignorado pelo Git;
+- garante que o pacote público do GitHub não contenha o arquivo privado nem o telefone;
+- preserva banco, sessão do WhatsApp, anexos, configurações e dados privados durante a atualização.
+
 ## 0.10.5 — 2026-08-03
 
 - simplifica a resposta de `!final`, removendo a exibição da MF e deixando somente situação e nota mínima necessária;

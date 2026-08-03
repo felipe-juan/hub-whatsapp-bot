@@ -181,7 +181,7 @@ class AdminServer {
     const analytics = this.cachedStatusPart('analytics30', 60_000, () => this.db.getUsageStats(30));
     const databaseHealth = this.cachedStatusPart('database-health', 60_000, () => this.db.healthCheck());
     return {
-      version: this.updates?.status?.().currentVersion || '0.10.5', whatsapp: this.whatsapp.getStatus(),
+      version: this.updates?.status?.().currentVersion || '0.10.6', whatsapp: this.whatsapp.getStatus(),
       stats,
       analytics,
       health: {

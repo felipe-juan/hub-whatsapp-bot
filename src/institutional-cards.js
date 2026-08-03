@@ -6,7 +6,7 @@ const { BSI_COURSE_CARDS } = require('./content/bsi-course');
 const { TCC_CARDS } = require('./content/tcc');
 const { INTERNSHIP_CARDS } = require('./content/internship');
 const { STUDENT_ASSISTANCE_CARDS } = require('./content/student-assistance');
-const { SCHEDULE_BOARD_V0812 } = require('./content/schedule-board');
+const { SCHEDULE_BOARD_V0812, SEMESTER_DAY_SCHEDULE_CARD_V0106 } = require('./content/schedule-board');
 const { ACADEMIC_LIFE_CARDS } = require('./content/academic-life');
 const { COMMUNITY_CARDS } = require('./content/community');
 const { formatDisciplineNamesInText } = require('./si-professors-2026-2');
@@ -19,6 +19,7 @@ const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...INTERNSHIP_CARDS,
   ...STUDENT_ASSISTANCE_CARDS,
   ...ACADEMIC_LIFE_CARDS,
+  SEMESTER_DAY_SCHEDULE_CARD_V0106,
   ...COMMUNITY_CARDS
 ].map(definition => ({
   ...definition,

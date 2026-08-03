@@ -1,20 +1,14 @@
-HUB WhatsApp Bot v0.10.5 — Fedora GNOME
+HUB WhatsApp Bot v0.10.6 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.10.5
-- A calculadora da final mostra somente a nota mínima necessária e usa bolinhas coloridas por faixa.
-- Agradecimentos dirigidos ao bot recebem ❤️; ofensas dirigidas ao bot recebem 😔.
-- O card de Felipe Juan aceita “juan” e perguntas sobre o criador.
-- Disciplinas aparecem como SIGLA - Nome completo nos cards docentes.
-- Somente o comando !final permanece ativo.
-- Um valor após !final é tratado como a média das unidades; vários valores são primeiro promediados.
-- O bot informa aprovação por média, direito à final ou reprovação e mostra somente a PF mínima quando aplicável.
-- Todos os cards docentes de BSI 2026.2 passam a mostrar a sala de cada disciplina.
-- Os cards docentes foram reorganizados para leitura rápida, com um emoji por tópico.
-- Consultas por sala, onde, laboratório e lab reconhecem os cards docentes.
-- Foram adicionados o card oficial de trancamento, o contato de Felipe Juan e o Bar do Benjamin.
-- Em grupos, escrever “bot” não ativa a ajuda; somente uma menção real por @ faz isso.
-- Anexos, banco, sessão e configurações continuam preservados na atualização.
+ATUALIZAÇÃO v0.10.6
+- Consulta aulas por dia e semestre: hoje, amanhã, depois de amanhã ou qualquer dia da semana.
+- A resposta da consulta contém somente disciplina, sala e professor.
+- Se o dia for informado sem o semestre, o bot pergunta qual semestre consultar.
+- Formas curtas como “amanhã terceiro semestre” também funcionam.
+- A sigla correta passa a ser ACEX; ACE permanece aceito apenas como alias antigo.
+- Foram ampliadas as variantes de elogios, agradecimentos, ofensas e xingamentos para reações.
+- O telefone privado de Felipe Juan é lido de private-content.json, preservado nas atualizações e ignorado pelo Git.
 
 INSTALAÇÃO
 1. Extraia o ZIP.

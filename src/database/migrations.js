@@ -1,5 +1,5 @@
 module.exports = function createMixin(deps) {
-  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, crypto } = deps;
+  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, crypto } = deps;
 
   const professorContactValue = response => {
     const lines = String(response || '').split('\n');
@@ -239,6 +239,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.seedFunCardsV0103();
     if (seedBundledContent) this.migrateContentV0104();
     if (seedBundledContent) this.migrateContentV0105();
+    if (seedBundledContent) this.migrateContentV0106();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -953,6 +954,117 @@ module.exports = function createMixin(deps) {
 
     this.invalidate('settings', 'activeMessages', 'conflictReport');
     this.cache.calculators = null;
+  }
+
+  migrateContentV0106() {
+    if (asBool(this.getSetting('content_v0106_private_schedule_acex_reactions', 'false'), false)) return;
+    const scheduleDefinition = INSTITUTIONAL_CARDS_V098.find(item => item.key === 'hub-bsi-aulas-semestre-dia-v0106');
+    const juanDefinition = INSTITUTIONAL_CARDS_V098.find(item => item.key === 'hub-easter-egg-felipe-juan-v0104');
+    const privatePhone = felipeJuanPhone();
+
+    if (scheduleDefinition) this.stagePackageAutomaticMessage(scheduleDefinition.key, scheduleDefinition.message);
+
+    this.db.exec('BEGIN');
+    try {
+      const items = [...SI_PROFESSORS_2026_2, SI_PENDING_2026_2];
+      const findEmail = value => String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || '';
+      for (const item of items) {
+        const title = item.pending ? 'Pendência — Meio Ambiente (docente substituto)' : `Professor — ${item.name}`;
+        const row = this.db.prepare('SELECT id,draft_json FROM automatic_messages WHERE lower(title)=lower(?)').get(title);
+        if (!row) continue;
+        const current = this.getAutomaticMessage(row.id);
+        if (!current) continue;
+        const email = item.pending ? '' : (findEmail(current.response_text) || item.email || '');
+        const nextResponse = buildSiProfessorResponse(item, email);
+        let draftJson = row.draft_json || '';
+        if (draftJson) {
+          const draft = parseJson(draftJson, null);
+          if (draft && typeof draft === 'object') {
+            const draftEmail = item.pending ? '' : (findEmail(draft.response_text) || email);
+            draft.response_text = buildSiProfessorResponse(item, draftEmail);
+            draftJson = JSON.stringify(draft);
+          }
+        }
+        if (nextResponse !== current.response_text || draftJson !== (row.draft_json || '')) {
+          this.archiveAutomaticMessage(current, 'v0.10.6-acex-disciplinas');
+          this.db.prepare('UPDATE automatic_messages SET response_text=?,draft_json=?,updated_at=? WHERE id=?')
+            .run(nextResponse, draftJson, nowIso(), Number(row.id));
+        }
+      }
+
+      for (const shared of buildSharedDisciplineCards2026_2()) {
+        const row = this.db.prepare('SELECT id,draft_json FROM automatic_messages WHERE lower(title)=lower(?)').get(shared.title);
+        if (!row) continue;
+        const current = this.getAutomaticMessage(row.id);
+        if (!current) continue;
+        let draftJson = row.draft_json || '';
+        if (draftJson) {
+          const draft = parseJson(draftJson, null);
+          if (draft && typeof draft === 'object') { draft.response_text = shared.response_text; draftJson = JSON.stringify(draft); }
+        }
+        if (current.response_text !== shared.response_text || draftJson !== (row.draft_json || '')) {
+          this.archiveAutomaticMessage(current, 'v0.10.6-acex-disciplinas-compartilhadas');
+          this.db.prepare('UPDATE automatic_messages SET response_text=?,draft_json=?,updated_at=? WHERE id=?')
+            .run(shared.response_text, draftJson, nowIso(), Number(row.id));
+        }
+      }
+
+      const allCards = this.db.prepare('SELECT id,response_text,details_text,draft_json,package_snapshot_json,pending_package_json FROM automatic_messages').all();
+      for (const row of allCards) {
+        const nextResponse = formatDisciplineNamesInText(row.response_text || '');
+        const nextDetails = formatDisciplineNamesInText(row.details_text || '');
+        let draftJson = row.draft_json || '';
+        let packageSnapshotJson = row.package_snapshot_json || '';
+        let pendingPackageJson = row.pending_package_json || '';
+        for (const [field, value] of [['draft', draftJson], ['package', packageSnapshotJson], ['pending', pendingPackageJson]]) {
+          if (!value) continue;
+          const object = parseJson(value, null);
+          if (!object || typeof object !== 'object') continue;
+          object.response_text = formatDisciplineNamesInText(object.response_text || '');
+          object.details_text = formatDisciplineNamesInText(object.details_text || '');
+          const encoded = JSON.stringify(object);
+          if (field === 'draft') draftJson = encoded;
+          else if (field === 'package') packageSnapshotJson = encoded;
+          else pendingPackageJson = encoded;
+        }
+        if (nextResponse === row.response_text && nextDetails === row.details_text && draftJson === (row.draft_json || '') && packageSnapshotJson === (row.package_snapshot_json || '') && pendingPackageJson === (row.pending_package_json || '')) continue;
+        const current = this.getAutomaticMessage(row.id);
+        if (current) this.archiveAutomaticMessage(current, 'v0.10.6-acex-em-todos-os-cards');
+        this.db.prepare('UPDATE automatic_messages SET response_text=?,details_text=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?')
+          .run(nextResponse, nextDetails, draftJson, packageSnapshotJson, pendingPackageJson, nowIso(), Number(row.id));
+      }
+
+      if (juanDefinition && privatePhone) {
+        const row = this.db.prepare('SELECT id,draft_json,package_snapshot_json,pending_package_json FROM automatic_messages WHERE package_key=? OR lower(title)=lower(?) ORDER BY package_key=? DESC LIMIT 1')
+          .get(juanDefinition.key, juanDefinition.message.title, juanDefinition.key);
+        if (row) {
+          const current = this.getAutomaticMessage(row.id);
+          const nextResponse = injectFelipeJuanPhone(current?.response_text || juanDefinition.message.response_text, privatePhone);
+          let draftJson = row.draft_json || '';
+          let packageSnapshotJson = row.package_snapshot_json || '';
+          let pendingPackageJson = row.pending_package_json || '';
+          for (const [field, value] of [['draft', draftJson], ['package', packageSnapshotJson], ['pending', pendingPackageJson]]) {
+            if (!value) continue;
+            const object = parseJson(value, null);
+            if (!object || typeof object !== 'object') continue;
+            object.response_text = injectFelipeJuanPhone(object.response_text || nextResponse, privatePhone);
+            const encoded = JSON.stringify(object);
+            if (field === 'draft') draftJson = encoded;
+            else if (field === 'package') packageSnapshotJson = encoded;
+            else pendingPackageJson = encoded;
+          }
+          if (current && (nextResponse !== current.response_text || draftJson !== (row.draft_json || '') || packageSnapshotJson !== (row.package_snapshot_json || '') || pendingPackageJson !== (row.pending_package_json || ''))) {
+            this.archiveAutomaticMessage(current, 'v0.10.6-contato-privado-felipe-juan');
+            this.db.prepare('UPDATE automatic_messages SET response_text=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?')
+              .run(nextResponse, draftJson, packageSnapshotJson, pendingPackageJson, nowIso(), Number(row.id));
+          }
+        }
+      }
+
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0106_private_schedule_acex_reactions','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.db.exec('COMMIT');
+    } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 
   seedStructuredSectorsV098() {

@@ -158,7 +158,7 @@ NODE
 }
 clean_code() {
   find "$ROOT" -mindepth 1 -maxdepth 1 \\
-    ! -name data ! -name node_modules ! -name .env \\
+    ! -name data ! -name node_modules ! -name .env ! -name private-content.json \\
     -exec rm -rf -- {} +
 }
 preserve_dependencies() {

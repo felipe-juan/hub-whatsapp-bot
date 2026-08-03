@@ -764,10 +764,10 @@ const SI_DISCIPLINE_CODES_2026_2 = Object.freeze({
   'Algoritmo e Programação': 'AP',
   'Análise e Modelagem de Sistemas': 'AMS',
   'Arquitetura de Software': 'AS',
-  'Atividades Curriculares de Extensão I': 'ACE I',
-  'Atividades Curriculares de Extensão II': 'ACE II',
-  'Atividades Curriculares de Extensão III': 'ACE III',
-  'Atividades Curriculares de Extensão IV': 'ACE IV',
+  'Atividades Curriculares de Extensão I': 'ACEX I',
+  'Atividades Curriculares de Extensão II': 'ACEX II',
+  'Atividades Curriculares de Extensão III': 'ACEX III',
+  'Atividades Curriculares de Extensão IV': 'ACEX IV',
   'Banco de Dados I': 'BDI',
   'Banco de Dados II': 'BDII',
   'Complexidade de Algoritmos': 'CA',
@@ -828,14 +828,16 @@ function formatDisciplineLabel(discipline) {
 function formatDisciplineNamesInText(value) {
   const text = String(value || '');
   const names = Object.keys(SI_DISCIPLINE_CODES_2026_2).sort((a, b) => b.length - a.length);
-  const alternatives = names.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-  if (!alternatives) return text;
-  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives})(?![\\p{L}\\p{N}])`, 'gu');
-  return text.replace(pattern, (match, offset, whole) => {
-    const code = SI_DISCIPLINE_CODES_2026_2[match];
-    const prefix = String(whole).slice(Math.max(0, offset - code.length - 3), offset);
-    return prefix === `${code} - ` ? match : `${code} - ${match}`;
-  });
+  if (!names.length) return text;
+  const escape = input => String(input).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const nameAlternatives = names.map(escape).join('|');
+  const codes = [...new Set([
+    ...Object.values(SI_DISCIPLINE_CODES_2026_2),
+    'ACE I', 'ACE II', 'ACE III', 'ACE IV'
+  ])].sort((a, b) => b.length - a.length);
+  const codeAlternatives = codes.map(escape).join('|');
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])(?:(?:(?:${codeAlternatives})\\s*-\\s*)*)(${nameAlternatives})(?![\\p{L}\\p{N}])`, 'gu');
+  return text.replace(pattern, (_match, fullName) => `${SI_DISCIPLINE_CODES_2026_2[fullName]} - ${fullName}`);
 }
 
 const SI_PROFESSOR_TRIGGER_ALIASES_2026_2 = Object.freeze({
@@ -878,10 +880,10 @@ const SI_DISCIPLINE_ALIASES_2026_2 = Object.freeze({
   'Algoritmo e Programação': ['AP', 'algoritmos e programação'],
   'Análise e Modelagem de Sistemas': ['AMS'],
   'Arquitetura de Software': ['arquitetura software', 'arq software'],
-  'Atividades Curriculares de Extensão I': ['ACE I', 'ACE1', 'ACE 1'],
-  'Atividades Curriculares de Extensão II': ['ACE II', 'ACE2', 'ACE 2'],
-  'Atividades Curriculares de Extensão III': ['ACE III', 'ACE3', 'ACE 3'],
-  'Atividades Curriculares de Extensão IV': ['ACE IV', 'ACE4', 'ACE 4'],
+  'Atividades Curriculares de Extensão I': ['ACEX I', 'ACEX1', 'ACEX 1', 'ACE I', 'ACE1', 'ACE 1'],
+  'Atividades Curriculares de Extensão II': ['ACEX II', 'ACEX2', 'ACEX 2', 'ACE II', 'ACE2', 'ACE 2'],
+  'Atividades Curriculares de Extensão III': ['ACEX III', 'ACEX3', 'ACEX 3', 'ACE III', 'ACE3', 'ACE 3'],
+  'Atividades Curriculares de Extensão IV': ['ACEX IV', 'ACEX4', 'ACEX 4', 'ACE IV', 'ACE4', 'ACE 4'],
   'Banco de Dados I': ['BD I', 'BDI', 'BD1', 'BD 1'],
   'Banco de Dados II': ['BD II', 'BDII', 'BD2', 'BD 2'],
   'Complexidade de Algoritmos': ['complexidade', 'comp algoritmos'],

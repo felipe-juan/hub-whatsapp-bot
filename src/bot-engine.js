@@ -33,6 +33,12 @@ const { menuCandidates, formatMenu } = require('./help-menu');
 const { progressiveMenuFor } = require('./progressive-menus');
 const { semanticQuestionAssessment, implicitQuestionStructure } = require('./semantic-question');
 const { classifyBotReaction } = require('./reactions');
+const {
+  SEMESTER_SCHEDULE_CARD_TITLE,
+  classifySemesterScheduleRequest,
+  formatSemesterScheduleResponse,
+  semesterFromFollowUp
+} = require('./semester-schedule');
 
 function asBool(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -180,6 +186,44 @@ class BotEngine {
     };
   }
 
+  semesterScheduleEnabled({ includeDrafts = false } = {}) {
+    return this.activeContent({ includeDrafts }).messages
+      .some(item => normalizeText(item.title) === normalizeText(SEMESTER_SCHEDULE_CARD_TITLE));
+  }
+
+  semesterScheduleEvaluation(text, context = {}) {
+    if (!this.semesterScheduleEnabled({ includeDrafts: Boolean(context.includeDrafts) })) return null;
+    const request = classifySemesterScheduleRequest(text, { now: context.now || Date.now() });
+    if (!request) return null;
+    const base = {
+      matched: true, candidates: [], conflict: false, redactLog: false,
+      topic: 'Horários de BSI', analysis: [], reasons: ['consulta de aulas por semestre e dia'],
+      context: { ...context }, attachment: null
+    };
+    if (request.kind === 'ask-semester') {
+      return {
+        ...base,
+        type: 'semester_schedule_prompt',
+        text: 'Qual semestre você quer consultar? Informe do 1º ao 8º semestre.',
+        signature: `semester-schedule-prompt:${request.iso}`,
+        matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
+        contextSubject: {
+          kind: 'semester_schedule_prompt',
+          title: SEMESTER_SCHEDULE_CARD_TITLE,
+          targetDate: request.iso,
+          dayIndex: request.dayIndex
+        }
+      };
+    }
+    return {
+      ...base,
+      type: 'semester_schedule',
+      text: request.text,
+      signature: `semester-schedule:${request.iso}:${request.semester}`,
+      matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${request.semester}º semestre`
+    };
+  }
+
   sectorEvaluation(text, context, settings) {
     const sectors = this.db.listSectors({ activeOnly: true });
     const classified = classifySectorRequest(text, sectors);
@@ -285,6 +329,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (!asBool(settings.automatic_messages_enabled, true)) return { ...result, blockedBy: 'messages-disabled', reasons: ['mensagens automáticas desativadas'] };
     if (!this.featureAllowed(context, 'messages', settings)) return { ...result, blockedBy: 'group-messages-disabled', reasons: ['mensagens automáticas desativadas neste grupo'] };
 
+    const semesterSchedule = this.semesterScheduleEvaluation(text, context);
+    if (semesterSchedule) return { ...result, ...semesterSchedule };
+
     const sector = this.sectorEvaluation(text, context, settings);
     if (sector) return { ...result, ...sector };
 
@@ -389,6 +436,21 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const raw = String(body || '').trim();
     const normalized = normalizeText(raw.replace(/[?]+\s*$/, '')).replace(/^(?:e|mas|entao|então)\s+/, '').trim();
     const hasQuestion = /\?\s*$/.test(raw);
+    if (stored.kind === 'semester_schedule_prompt') {
+      const semester = semesterFromFollowUp(raw);
+      if (!semester) return null;
+      const dayIndex = Number(stored.dayIndex);
+      if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return null;
+      return {
+        matched: true,
+        type: 'semester_schedule',
+        text: formatSemesterScheduleResponse(semester, dayIndex),
+        signature: `semester-schedule:${stored.targetDate || 'context'}:${semester}`,
+        matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${semester}º semestre`,
+        topic: 'Horários de BSI', reasons: ['semestre informado como continuação da consulta'],
+        candidates: [], conflict: false, redactLog: false, attachment: null
+      };
+    }
     if (stored.kind === 'sector') {
       if (/^(?:e\s+)?(?:o\s+)?horario(?:\s+de\s+atendimento)?$/u.test(normalized) || /^(?:qual|quais)\s+(?:e|é|sao|são)?\s*o?\s*horario$/u.test(normalized)) {
         const sector = this.db.listSectors({ activeOnly: true }).find(item => Number(item.id) === Number(stored.id));
@@ -649,7 +711,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     }
 
     let evaluation = this.contextualFollowUpEvaluation(message, body, settings)
-      || this.evaluate(body, { isGroup: Boolean(chat.isGroup), groupId });
+      || this.evaluate(body, { isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now() });
     if (!evaluation.matched && !this.isAdminCommand(body) && this.botMentioned(message, body, settings) && this.featureAllowed({ isGroup: Boolean(chat.isGroup), groupId }, 'help', settings)) {
       evaluation = this.unknownMentionEvaluation(settings);
     }

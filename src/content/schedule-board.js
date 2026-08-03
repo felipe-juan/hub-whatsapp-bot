@@ -32,4 +32,35 @@ const SCHEDULE_BOARD_V0812 = Object.freeze({
   "source_title": "Horários de aula — IFBA Vitória da Conquista",
   "verified_at": "2026-08-01"
 });
-module.exports = { SCHEDULE_BOARD_V0812 };
+
+
+const SEMESTER_DAY_SCHEDULE_CARD_V0106 = Object.freeze({
+  key: 'hub-bsi-aulas-semestre-dia-v0106',
+  message: {
+    title: 'BSI — Aulas por semestre e dia',
+    response_text: [
+      '*Aulas de BSI por semestre e dia*', '',
+      'Informe um dia e o semestre para consultar disciplina, sala e professor.', '',
+      'Exemplos:',
+      '• qual é a aula de hoje para o terceiro semestre?',
+      '• aulas de amanhã do 5º semestre',
+      '• o que tem sexta-feira no primeiro semestre?'
+    ].join('\n'),
+    priority: 72,
+    active: true,
+    archived: false,
+    scope: 'both',
+    trigger: {
+      match_mode: 'all',
+      sentences: [
+        'aulas por semestre e dia', 'consultar aulas do semestre',
+        'aula de hoje por semestre', 'horário do semestre por dia'
+      ],
+      keywords: [], required_words: [], excluded_words: [], exact_phrases: [],
+      require_question_mark: true, typo_tolerance: 1, synonym_group_ids: [],
+      negative_examples: [], regex_pattern: '', regex_flags: 'iu'
+    }
+  }
+});
+
+module.exports = { SCHEDULE_BOARD_V0812, SEMESTER_DAY_SCHEDULE_CARD_V0106 };

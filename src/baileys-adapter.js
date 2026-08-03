@@ -81,6 +81,20 @@ function extractMentionedJids(message) {
     .filter(Boolean);
 }
 
+
+function timestampToMilliseconds(value) {
+  if (value === undefined || value === null || value === '') return Date.now();
+  let number = 0;
+  try {
+    if (typeof value === 'bigint') number = Number(value);
+    else if (typeof value === 'number') number = value;
+    else if (typeof value?.toNumber === 'function') number = Number(value.toNumber());
+    else if (typeof value?.toString === 'function') number = Number(value.toString());
+  } catch {}
+  if (!Number.isFinite(number) || number <= 0) return Date.now();
+  return number < 1e12 ? number * 1000 : number;
+}
+
 function disconnectCode(error) {
   const seen = new Set();
   const queue = [error];
@@ -121,6 +135,7 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
   );
   const isGroup = remoteJid.endsWith('@g.us');
   const body = extractText(raw?.message);
+  const timestampMs = timestampToMilliseconds(raw?.messageTimestamp);
   const mentionedJids = extractMentionedJids(raw?.message);
   const contextInfo = extractContextInfo(raw?.message);
   const ownIds = [socket?.user?.id, socket?.user?.lid].filter(Boolean).map(String);
@@ -193,6 +208,7 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     from: remoteJid,
     author: participant,
     body,
+    timestampMs,
     senderName: String(raw?.pushName || cleanAccountNumber(participant) || 'Pessoa'),
     mentionedJids,
     mentionedMe,
@@ -222,4 +238,4 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
   };
 }
 
-module.exports = { unwrapMessage, extractText, extractContextInfo, extractMentionedJids, disconnectCode, cleanAccountNumber, createMessageAdapter };
+module.exports = { unwrapMessage, extractText, extractContextInfo, extractMentionedJids, timestampToMilliseconds, disconnectCode, cleanAccountNumber, createMessageAdapter };
