@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.2 — 2026-08-03
+
+- garante que a resposta ao pedido de semestre seja processada antes de qualquer outro gatilho ou fallback;
+- aceita `5 semestre`, `5º semestre`, `quinto semestre` e apenas `5`, tanto por reply quanto como a próxima mensagem da mesma pessoa;
+- permite essa continuação também em grupos sem reply, mas somente no contexto da pessoa que iniciou a consulta;
+- associa replies ao identificador exato da mensagem enviada pelo bot, evitando perda de contexto quando o WhatsApp alterna entre identificadores PN e LID;
+- passa a guardar todos os aliases disponíveis do participante para manter o contexto entre mensagens do mesmo usuário;
+- quando a resposta não contém um semestre reconhecível, explica os formatos aceitos em vez de cair no menu genérico;
+- adiciona testes de regressão para reply, ausência de reply, troca de identificador do participante e resposta inválida.
+
 ## 0.13.1 — 2026-08-03
 
 - evita que perguntas de confirmação como `hoje tem aula de Pablo?`, `Amanda vai dar aula hoje?` e `vai ter aula com Alexandro amanhã?` ativem o quadro de horários ou o card docente;

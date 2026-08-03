@@ -127,12 +127,14 @@ function cleanAccountNumber(value) {
 
 function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }) {
   const remoteJid = String(raw?.key?.remoteJid || '');
-  const participant = String(
-    raw?.key?.participantPn ||
-    raw?.key?.participantAlt ||
-    raw?.key?.participant ||
-    remoteJid
-  );
+  const directParticipantCandidates = [
+    raw?.key?.participantPn,
+    raw?.key?.participantAlt,
+    raw?.key?.participant
+  ].map(value => String(value || '')).filter(Boolean);
+  const participantCandidates = directParticipantCandidates.length ? directParticipantCandidates : [remoteJid].filter(Boolean);
+  const participant = participantCandidates[0] || remoteJid;
+  const authorAliases = [...new Set(participantCandidates)];
   const isGroup = remoteJid.endsWith('@g.us');
   const body = extractText(raw?.message);
   const timestampMs = timestampToMilliseconds(raw?.messageTimestamp);
@@ -143,6 +145,7 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
   const matchesOwnAccount = jid => ownIds.includes(String(jid || '')) || ownNumbers.has(cleanAccountNumber(jid));
   const mentionedMe = mentionedJids.some(matchesOwnAccount);
   const hasQuotedMessage = Boolean(contextInfo?.quotedMessage || contextInfo?.stanzaId);
+  const quotedMessageId = String(contextInfo?.stanzaId || '');
   const quotedParticipant = String(contextInfo?.participant || contextInfo?.remoteJid || '');
   const quotedFromMe = hasQuotedMessage && (matchesOwnAccount(quotedParticipant) || (!isGroup && !quotedParticipant));
 
@@ -208,12 +211,14 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     messageId: sourceMessageId,
     from: remoteJid,
     author: participant,
+    authorAliases,
     body,
     timestampMs,
     senderName: String(raw?.pushName || cleanAccountNumber(participant) || 'Pessoa'),
     mentionedJids,
     mentionedMe,
     hasQuotedMessage,
+    quotedMessageId,
     quotedFromMe,
     quotedParticipant,
     raw,

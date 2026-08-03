@@ -1,4 +1,4 @@
-# HUB WhatsApp Bot v0.13.1
+# HUB WhatsApp Bot v0.13.2
 
 Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB Arquivos IFBA. Cada automação reúne **gatilhos editáveis** e a **resposta completa** que será enviada.
 
@@ -9,6 +9,15 @@ Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB A
 
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA. Respostas simultâneas são organizadas por conversa, mas nenhuma integração não oficial garante que a conta nunca será restringida.
+
+
+## Continuação garantida do semestre — v0.13.2
+
+- quando o bot pergunta `Qual semestre você quer consultar?`, a próxima mensagem da mesma pessoa é analisada prioritariamente, inclusive em grupos e sem reply;
+- respostas como `5 semestre`, `5º semestre`, `quinto semestre` e apenas `5` são equivalentes;
+- replies usam também o ID exato da mensagem do bot, evitando perda de contexto quando o WhatsApp alterna o participante entre identificadores PN e LID;
+- o contexto é armazenado com todos os aliases conhecidos da pessoa, sem misturar usuários diferentes do mesmo grupo;
+- uma resposta inválida recebe uma orientação específica com exemplos e não aciona o fallback genérico do privado.
 
 
 

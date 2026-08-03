@@ -60,6 +60,7 @@ class BotEngine {
     this.groupTouches = new Map();
     this.pendingChoices = new Map();
     this.conversationContexts = new Map();
+    this.replyContexts = new Map();
     this.outboundGuard = options.outboundGuard || new OutboundGuard();
     this.services = {};
     this.performance = options.performance || new PerformanceMetrics({ maxSamples: 2000 });
@@ -81,7 +82,7 @@ class BotEngine {
   }
 
   setServices(services = {}) { this.services = { ...this.services, ...services }; }
-  getMetrics() { return { ...this.metrics, pendingDisambiguations: this.pendingChoices.size, conversationContexts: this.conversationContexts.size, outboundGuard: this.outboundGuard.stats(), rules: this.ruleStore.stats(), performance: this.performance.snapshot() }; }
+  getMetrics() { return { ...this.metrics, pendingDisambiguations: this.pendingChoices.size, conversationContexts: this.conversationContexts.size, replyContexts: this.replyContexts.size, outboundGuard: this.outboundGuard.stats(), rules: this.ruleStore.stats(), performance: this.performance.snapshot() }; }
   reloadRules(reason = 'manual') { return this.ruleStore.scheduleReload(reason); }
   close() { this.ruleStore.close(); }
 
@@ -581,35 +582,104 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     return { ...evaluation, text };
   }
 
-  conversationKey(message) { return `${message.from || ''}|${message.author || message.from || ''}`; }
+  conversationKeys(message) {
+    const chat = String(message?.from || '');
+    const isGroup = chat.endsWith('@g.us') || Boolean(message?.isGroup);
+    const aliases = [message?.author, ...(Array.isArray(message?.authorAliases) ? message.authorAliases : [])]
+      .map(value => String(value || '').trim()).filter(Boolean);
+    if (!isGroup || !aliases.length) aliases.push(chat);
+    const keys = [];
+    for (const alias of aliases) {
+      keys.push(`${chat}|jid:${alias}`);
+      const number = senderNumber(alias);
+      if (number) keys.push(`${chat}|number:${number}`);
+    }
+    return [...new Set(keys.length ? keys : [`${chat}|jid:${chat}`])];
+  }
+  conversationKey(message) { return this.conversationKeys(message)[0]; }
+  replyContextKey(messageOrChat, messageId = '') {
+    const chat = typeof messageOrChat === 'string' ? messageOrChat : String(messageOrChat?.from || '');
+    const id = String(messageId || '').trim();
+    return id ? `${chat}|${id}` : '';
+  }
+  outboundMessageId(sendResult) {
+    const result = sendResult?.result || sendResult?.textResult || sendResult;
+    return String(result?.key?.id || result?.id || '').trim();
+  }
   cleanConversationContexts() {
     const now = Date.now();
     for (const [key, context] of this.conversationContexts) if (Number(context.expiresAt || 0) <= now) this.conversationContexts.delete(key);
-    if (this.conversationContexts.size > 500) {
+    for (const [key, context] of this.replyContexts) if (Number(context.expiresAt || 0) <= now) this.replyContexts.delete(key);
+    if (this.conversationContexts.size > 1500) {
       const ordered = [...this.conversationContexts.entries()].sort((a, b) => Number(a[1].expiresAt || 0) - Number(b[1].expiresAt || 0));
-      for (const [key] of ordered.slice(0, this.conversationContexts.size - 500)) this.conversationContexts.delete(key);
+      for (const [key] of ordered.slice(0, this.conversationContexts.size - 1500)) this.conversationContexts.delete(key);
+    }
+    if (this.replyContexts.size > 1000) {
+      const ordered = [...this.replyContexts.entries()].sort((a, b) => Number(a[1].expiresAt || 0) - Number(b[1].expiresAt || 0));
+      for (const [key] of ordered.slice(0, this.replyContexts.size - 1000)) this.replyContexts.delete(key);
     }
   }
-  rememberConversationContext(message, evaluation, settings = this.db.getSettings()) {
+  forgetConversationContext(message, stored = null) {
+    for (const key of this.conversationKeys(message)) {
+      if (!stored || this.conversationContexts.get(key) === stored) this.conversationContexts.delete(key);
+    }
+    if (stored) for (const [key, value] of this.replyContexts) if (value === stored) this.replyContexts.delete(key);
+  }
+  rememberConversationContext(message, evaluation, settings = this.db.getSettings(), sendResult = null) {
     if (!evaluation?.matched || evaluation.type === 'disambiguation') return;
     const subject = evaluation.contextSubject;
     if (!subject || typeof subject !== 'object') return;
     const ttlSeconds = Math.max(60, Math.min(900, Number(settings.contextual_followup_seconds || 300)));
     this.cleanConversationContexts();
-    this.conversationContexts.set(this.conversationKey(message), { ...subject, expiresAt: Date.now() + ttlSeconds * 1000 });
+    const entry = {
+      ...subject,
+      awaitingNextSenderMessage: subject.kind === 'semester_schedule_prompt',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + ttlSeconds * 1000
+    };
+    for (const key of this.conversationKeys(message)) this.conversationContexts.set(key, entry);
+    const outboundId = this.outboundMessageId(sendResult);
+    const replyKey = this.replyContextKey(message, outboundId);
+    if (replyKey) this.replyContexts.set(replyKey, entry);
   }
   contextualFollowUpEvaluation(message, body, settings) {
     this.cleanConversationContexts();
-    const stored = this.conversationContexts.get(this.conversationKey(message));
+    const quotedKey = this.replyContextKey(message, message?.quotedMessageId);
+    let stored = quotedKey ? this.replyContexts.get(quotedKey) : null;
+    if (!stored) {
+      for (const key of this.conversationKeys(message)) {
+        stored = this.conversationContexts.get(key);
+        if (stored) break;
+      }
+    }
     if (!stored) return null;
     const raw = String(body || '').trim();
     const normalized = normalizeText(raw.replace(/[?]+\s*$/, '')).replace(/^(?:e|mas|entao|então)\s+/, '').trim();
     const hasQuestion = /\?\s*$/.test(raw);
     const isGroup = String(message?.from || '').endsWith('@g.us') || Boolean(message?.isGroup);
     if (stored.kind === 'semester_schedule_prompt') {
-      if (isGroup && !message.quotedFromMe) return null;
+      // Este é um passo explícito de diálogo: a próxima mensagem da mesma
+      // pessoa deve ser interpretada antes de qualquer outro gatilho, mesmo em
+      // grupos e mesmo sem reply. Quando houver reply, o ID da mensagem do bot
+      // também recupera o contexto, evitando falhas por alternância PN/LID.
       const semester = semesterFromFollowUp(raw);
-      if (!semester) return null;
+      if (!semester) {
+        return {
+          matched: true,
+          type: 'semester_schedule_prompt_invalid',
+          text: [
+            'Não consegui identificar o semestre.',
+            '',
+            'Responda, por exemplo: `5º semestre`, `5 semestre`, `quinto semestre` ou apenas `5`.'
+          ].join('\n'),
+          signature: `semester-schedule-prompt-invalid:${stored.targetDate || 'context'}`,
+          matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
+          topic: 'Horários de BSI', reasons: ['resposta ao pedido de semestre não pôde ser interpretada'],
+          candidates: [], conflict: false, redactLog: false, attachment: null,
+          contextSubject: { kind: 'semester_schedule_prompt', title: SEMESTER_SCHEDULE_CARD_TITLE,
+            targetDate: stored.targetDate || '', dayIndex: Number(stored.dayIndex) }
+        };
+      }
       const dayIndex = Number(stored.dayIndex);
       if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return null;
       const academicPeriod = String(settings.current_academic_period || '2026.2');
@@ -617,6 +687,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       const calendarEvents = this.db.listAcademicCalendarEvents?.({ activeOnly: true, course: 'bsi' }) || [];
       const targetDate = stored.targetDate ? new Date(`${stored.targetDate}T12:00:00Z`) : null;
       const target = { dayIndex, iso: stored.targetDate || '', date: targetDate };
+      this.forgetConversationContext(message, stored);
       return {
         matched: true,
         type: 'semester_schedule',
@@ -870,7 +941,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       if (this.services.writeQueue?.recordUsage) this.services.writeQueue.recordUsage(evaluation.topic || evaluation.matchedItem || 'Outros', evaluation.type);
       else this.db.recordUsage(evaluation.topic || evaluation.matchedItem || 'Outros', evaluation.type);
     }
-    this.rememberConversationContext(message, evaluation, settings);
+    this.rememberConversationContext(message, evaluation, settings, sendResult);
 
     if (asBool(settings.log_matched_messages, true)) {
       const logEntry = {

@@ -1,9 +1,14 @@
-HUB WhatsApp Bot v0.13.1 — Fedora GNOME
+HUB WhatsApp Bot v0.13.2 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.13.1
+ATUALIZAÇÃO v0.13.2
 
 NOVIDADES PRINCIPAIS
+- Resposta de semestre priorizada como próxima etapa do diálogo, com ou sem reply.
+- Aceita 5 semestre, 5º semestre, quinto semestre ou apenas 5.
+- Replies recuperam o contexto pelo ID exato da mensagem enviada pelo bot.
+- Identificadores PN/LID do mesmo participante são tratados como aliases do mesmo usuário.
+- Respostas inválidas recebem exemplos claros, sem cair no fallback genérico.
 - Contexto de aulas sem reply no privado e com reply obrigatório em grupos.
 - Área Sistema e manutenção com saúde da Oracle, logs e teste de envio.
 - Atualização pelo painel com backup, testes e rollback.
