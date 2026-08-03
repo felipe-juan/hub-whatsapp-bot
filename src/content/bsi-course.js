@@ -417,6 +417,51 @@ const BSI_COURSE_CARDS = Object.freeze([
     "legacyGroup": "bsi"
   },
   {
+    "key": "hub-bsi-contato-coordenacao-v0107",
+    "message": {
+      "title": "BSI — Contato da coordenação",
+      "response_text": "*Contato da Coordenação de BSI*\n\n👤 *Coordenador*\nCláudio Rodolfo Sousa de Oliveira\n\n📧 *E-mail*\ncsi.vdc@ifba.edu.br\n\n☎️ *Telefone*\n0800 077 0084 — ramal 1261\n\n📍 *Localização*\nSala H410",
+      "priority": 95,
+      "active": true,
+      "archived": false,
+      "scope": "both",
+      "tags": ["bsi", "coordenacao", "contato"],
+      "trigger": {
+        "match_mode": "all",
+        "sentences": [
+          "contato da coordenação de bsi",
+          "contato da coordenação de sistemas de informação",
+          "qual o contato da coordenação de bsi",
+          "qual é o contato da coordenação de sistemas de informação",
+          "qual o email da coordenação de bsi",
+          "qual é o e-mail da coordenação de bsi",
+          "email da coordenação de sistemas de informação",
+          "telefone da coordenação de bsi",
+          "ramal da coordenação de bsi",
+          "como falar com a coordenação de bsi",
+          "como entrar em contato com a coordenação de sistemas de informação",
+          "contato csi",
+          "coordenação bsi contato"
+        ],
+        "keywords": [],
+        "required_words": [],
+        "excluded_words": [],
+        "exact_phrases": [],
+        "require_question_mark": true,
+        "regex_pattern": "",
+        "regex_flags": "iu",
+        "typo_tolerance": 1,
+        "synonym_group_ids": [],
+        "negative_examples": []
+      },
+      "source_url": "https://portal.ifba.edu.br/conquista/capas-e-paginas-menu-cursos/sistemas-de-informacao",
+      "source_title": "Página oficial do IFBA",
+      "verified_at": "2026-08-01",
+      "details_text": ""
+    },
+    "legacyGroup": "bsi"
+  },
+  {
     "key": "ifba-bsi-v095-bsi-localizacao-da-coordenacao",
     "message": {
       "title": "BSI — Localização da coordenação",

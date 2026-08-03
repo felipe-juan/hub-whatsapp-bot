@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.7 — 2026-08-03
+
+- cria o card oficial **BSI — Contato da coordenação**, com coordenador, e-mail, telefone, ramal e sala;
+- faz toda resposta dinâmica de aulas começar pelo título `Aula de <Dia da Semana> - <Semestre>`;
+- aceita formas equivalentes como `2 semestre`, `2º semestre`, `2° semestre`, `2o semestre`, `segundo semestre` e `semestre 2`;
+- permite respostas curtas de continuação como `2`, `2º`, `segundo` ou `2 semestre`;
+- melhora a pergunta de semestre ausente, informando o dia consultado e mostrando exemplos de resposta;
+- amplia a intenção de consulta para matéria, cadeira e componente curricular, além de aula, horário e disciplina;
+- reconhece expressões como `segunda que vem` sem confundir o semestre informado;
+- evita falsos positivos em comentários como `aula normal hoje né?`, `só quinta que não teremos` e `a semana toda é aula normal`;
+- preserva banco, sessão do WhatsApp, anexos, configurações, conteúdo privado e personalizações durante a atualização.
+
 ## 0.10.6 — 2026-08-03
 
 - adiciona consulta dinâmica de aulas por semestre e dia, usando a data real da mensagem e o fuso `America/Bahia`;

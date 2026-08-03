@@ -115,8 +115,8 @@ test('painel usa assets novos e oferece revisão explícita de entregas incertas
   const root = path.join(__dirname, '..');
   const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
   const app = readAdminJs(root);
-  assert.match(html, /app\.css\?v=0\.10\.6/);
-  assert.match(html, /app\.js\?v=0\.10\.6/);
+  assert.match(html, /app\.css\?v=0\.10\.7/);
+  assert.match(html, /app\.js\?v=0\.10\.7/);
   assert.match(app, /\/api\/outbound\/uncertain/);
   assert.match(app, /Reenviar manualmente/);
   assert.match(app, /pendingLateSendCount/);

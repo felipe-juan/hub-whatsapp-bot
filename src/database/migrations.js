@@ -240,6 +240,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0104();
     if (seedBundledContent) this.migrateContentV0105();
     if (seedBundledContent) this.migrateContentV0106();
+    if (seedBundledContent) this.migrateContentV0107();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -1064,6 +1065,19 @@ module.exports = function createMixin(deps) {
       this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0106_private_schedule_acex_reactions','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
       this.db.exec('COMMIT');
     } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
+  migrateContentV0107() {
+    if (asBool(this.getSetting('content_v0107_coordination_schedule_titles', 'false'), false)) return;
+    const keys = new Set([
+      'hub-bsi-aulas-semestre-dia-v0106',
+      'hub-bsi-contato-coordenacao-v0107'
+    ]);
+    for (const definition of INSTITUTIONAL_CARDS_V098.filter(item => keys.has(item.key))) {
+      this.stagePackageAutomaticMessage(definition.key, definition.message);
+    }
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0107_coordination_schedule_titles','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
     this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 

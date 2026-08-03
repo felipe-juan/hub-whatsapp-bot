@@ -1,14 +1,14 @@
-HUB WhatsApp Bot v0.10.6 — Fedora GNOME
+HUB WhatsApp Bot v0.10.7 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.10.6
-- Consulta aulas por dia e semestre: hoje, amanhã, depois de amanhã ou qualquer dia da semana.
-- A resposta da consulta contém somente disciplina, sala e professor.
-- Se o dia for informado sem o semestre, o bot pergunta qual semestre consultar.
-- Formas curtas como “amanhã terceiro semestre” também funcionam.
-- A sigla correta passa a ser ACEX; ACE permanece aceito apenas como alias antigo.
-- Foram ampliadas as variantes de elogios, agradecimentos, ofensas e xingamentos para reações.
-- O telefone privado de Felipe Juan é lido de private-content.json, preservado nas atualizações e ignorado pelo Git.
+ATUALIZAÇÃO v0.10.7
+- Adiciona o card oficial de contato da Coordenação de BSI.
+- Toda consulta de aulas começa com o dia da semana e o semestre usados.
+- Aceita 2 semestre, 2º semestre, 2° semestre, 2o semestre, segundo semestre e semestre 2.
+- Quando falta o semestre, a pergunta informa o dia consultado e mostra exemplos de resposta.
+- Comentários como “aula normal hoje” não abrem indevidamente a pergunta de semestre.
+- Consultas também aceitam matéria, disciplina, cadeira, componente, horário e dia + semestre.
+- O telefone privado de Felipe Juan continua fora do pacote público do GitHub.
 
 INSTALAÇÃO
 1. Extraia o ZIP.

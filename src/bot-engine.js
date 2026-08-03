@@ -37,6 +37,7 @@ const {
   SEMESTER_SCHEDULE_CARD_TITLE,
   classifySemesterScheduleRequest,
   formatSemesterScheduleResponse,
+  formatSemesterSchedulePrompt,
   semesterFromFollowUp
 } = require('./semester-schedule');
 
@@ -204,7 +205,7 @@ class BotEngine {
       return {
         ...base,
         type: 'semester_schedule_prompt',
-        text: 'Qual semestre você quer consultar? Informe do 1º ao 8º semestre.',
+        text: formatSemesterSchedulePrompt(request.dayIndex),
         signature: `semester-schedule-prompt:${request.iso}`,
         matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
         contextSubject: {
@@ -229,6 +230,17 @@ class BotEngine {
     const classified = classifySectorRequest(text, sectors);
     if (!classified.matched || !classified.sector) return null;
     const sector = classified.sector; const intent = classified.intent || 'contact';
+    // A Coordenação de BSI possui um card de contato completo com o nome do
+    // coordenador. Para essa intenção específica, o card tem precedência sobre
+    // a resposta resumida do diretório estruturado.
+    if (normalizeText(sector.acronym || '') === 'csi' && intent === 'contact') {
+      const normalizedRequest = normalizeText(text);
+      const asksCoordinationOffice = /\b(?:coordenacao|csi)\b/u.test(normalizedRequest)
+        && !/\bcoordenador(?:a)?\b/u.test(normalizedRequest);
+      const hasCoordinationCard = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) }).messages
+        .some(item => normalizeText(item.title) === normalizeText('BSI — Contato da coordenação'));
+      if (asksCoordinationOffice && hasCoordinationCard) return null;
+    }
     if (/\?\s*$/.test(String(text || '')) || implicitQuestionStructure(text)) {
       const intentLabel = intent === 'location' ? 'onde fica' : intent === 'services' ? 'o que resolve' : intent === 'source' ? 'qual a fonte' : 'contato';
       const semantic = semanticQuestionAssessment(text, [`${intentLabel} ${sector.acronym || sector.name}`, sector.name, sector.acronym || '']);

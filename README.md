@@ -1,5 +1,15 @@
 # HUB WhatsApp Bot
 
+## Novidades da v0.10.7
+
+- adiciona o card oficial de contato da Coordenação de BSI;
+- inicia toda consulta dinâmica com um título que confirma dia da semana e semestre;
+- aceita formas equivalentes como `2 semestre`, `2º semestre`, `2° semestre`, `2o semestre`, `segundo semestre` e `semestre 2`;
+- melhora a pergunta quando o semestre está ausente, com o dia consultado e exemplos de resposta;
+- aceita respostas curtas de continuação como `2`, `2º` e `segundo`;
+- amplia consultas para aula, matéria, disciplina, cadeira, componente e horário.
+- evita falsos positivos em comentários como `aula normal hoje né?` e avisos de dias sem aula.
+
 ## Novidades da v0.10.6
 
 - consulta aulas de BSI por dia e semestre, reconhecendo `hoje`, `amanhã`, `depois de amanhã` e dias da semana;
@@ -65,7 +75,7 @@ Principais objetivos:
 
 ## Estado do projeto
 
-Versão atual: **0.10.6**
+Versão atual: **0.10.7**
 
 O projeto ainda está em preparação para a versão 1.0. Apesar da suíte automatizada e dos testes realizados pelo mantenedor, ele deve ser considerado experimental.
 

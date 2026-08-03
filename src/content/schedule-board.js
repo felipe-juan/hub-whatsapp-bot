@@ -41,10 +41,12 @@ const SEMESTER_DAY_SCHEDULE_CARD_V0106 = Object.freeze({
     response_text: [
       '*Aulas de BSI por semestre e dia*', '',
       'Informe um dia e o semestre para consultar disciplina, sala e professor.', '',
+      'O semestre pode ser escrito como `2 semestre`, `2º semestre` ou `segundo semestre`.', '',
       'Exemplos:',
       '• qual é a aula de hoje para o terceiro semestre?',
       '• aulas de amanhã do 5º semestre',
-      '• o que tem sexta-feira no primeiro semestre?'
+      '• segunda-feira 2 semestre',
+      '• qual matéria tem sexta-feira no primeiro semestre?'
     ].join('\n'),
     priority: 72,
     active: true,
