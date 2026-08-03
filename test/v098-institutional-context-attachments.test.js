@@ -141,8 +141,8 @@ test('admin asset exposes sector editor and separated source fields', () => {
   assert.match(app, /editableTitle/);
   assert.match(app, /source_url/);
   assert.match(app, /verified_at/);
-  assert.match(index, /app\.js\?v=0\.10\.4/);
-  assert.match(index, /js\/sectors\.js\?v=0\.10\.4/);
+  assert.match(index, /app\.js\?v=0\.10\.5/);
+  assert.match(index, /js\/sectors\.js\?v=0\.10\.5/);
 });
 
 test('institutional migration does not falsely verify administrator cards', () => {

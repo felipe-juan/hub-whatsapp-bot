@@ -32,6 +32,7 @@ const { classifyGuidedFlow, formatFlowMenu } = require('./guided-flows');
 const { menuCandidates, formatMenu } = require('./help-menu');
 const { progressiveMenuFor } = require('./progressive-menus');
 const { semanticQuestionAssessment, implicitQuestionStructure } = require('./semantic-question');
+const { classifyBotReaction } = require('./reactions');
 
 function asBool(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -53,7 +54,7 @@ class BotEngine {
     this.metrics = {
       startedAt: new Date().toISOString(), lastMessageAt: '', lastReplyAt: '', totalProcessed: 0,
       totalReplies: 0, lastMatchType: '', lastMatchedItem: '', disambiguations: 0, adminCommands: 0, rateLimitedReplies: 0,
-      ruleSnapshotReloads: 0, lastRuleReloadAt: ''
+      ruleSnapshotReloads: 0, lastRuleReloadAt: '', reactions: 0
     };
     this.ruleStore = new AtomicRuleStore(database, {
       snapshotPath: options.ruleSnapshotPath || '',
@@ -513,6 +514,28 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     return this.db.setSettings(values);
   }
 
+  async handleContextualReaction(message, body, chat, settings) {
+    const reaction = classifyBotReaction(message, body);
+    if (!reaction || typeof message.react !== 'function') return false;
+    try {
+      await message.react(reaction.emoji);
+      this.metrics.reactions = Number(this.metrics.reactions || 0) + 1;
+      this.diagnostic({
+        type: 'reaction', outcome: 'responded', matchedItem: reaction.kind === 'thanks' ? 'Agradecimento ao bot' : 'Ofensa ao bot',
+        reply: reaction.emoji, summary: `Reação ${reaction.emoji} enviada (${reaction.reason}).`,
+        chatType: chat.isGroup ? 'group' : 'private', chatName: chat.name || (chat.isGroup ? 'Grupo' : 'Conversa privada'), message: body
+      }, settings);
+      return true;
+    } catch (error) {
+      this.diagnostic({
+        type: 'error', outcome: 'error', matchedItem: 'Reação contextual',
+        summary: `Falha ao reagir: ${error.message}`,
+        chatType: chat.isGroup ? 'group' : 'private', chatName: chat.name || (chat.isGroup ? 'Grupo' : 'Conversa privada'), message: body
+      }, settings);
+      return false;
+    }
+  }
+
   adminNumbers(settings) { return new Set(parseList(String(settings.admin_numbers || '').replace(/\s+/g, ',' )).map(senderNumber).filter(Boolean)); }
   isAdmin(message, settings) { const candidate = senderNumber(message.author || message.from); return candidate && this.adminNumbers(settings).has(candidate); }
   isAdminCommand(body) { return normalizeText(body).startsWith('bot ') && String(body).trim().startsWith('!'); }
@@ -614,6 +637,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       this.diagnostic({ type: 'ignored', outcome: 'ignored', summary: 'Bot pausado nas configurações.', ...diagnosticBase }, settings);
       return;
     }
+    if (await this.handleContextualReaction(message, body, chat, settings)) return;
 
     const pending = this.pendingEvaluation(message, body, settings);
     const chosen = pending ? this.renderEvaluation(pending, message, chat) : null;

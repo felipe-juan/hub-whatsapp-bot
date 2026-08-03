@@ -1,10 +1,14 @@
-HUB WhatsApp Bot v0.10.4 — Fedora GNOME
+HUB WhatsApp Bot v0.10.5 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.10.4
+ATUALIZAÇÃO v0.10.5
+- A calculadora da final mostra somente a nota mínima necessária e usa bolinhas coloridas por faixa.
+- Agradecimentos dirigidos ao bot recebem ❤️; ofensas dirigidas ao bot recebem 😔.
+- O card de Felipe Juan aceita “juan” e perguntas sobre o criador.
+- Disciplinas aparecem como SIGLA - Nome completo nos cards docentes.
 - Somente o comando !final permanece ativo.
 - Um valor após !final é tratado como a média das unidades; vários valores são primeiro promediados.
-- O bot informa aprovação por média, direito à final ou reprovação e calcula a PF mínima quando aplicável.
+- O bot informa aprovação por média, direito à final ou reprovação e mostra somente a PF mínima quando aplicável.
 - Todos os cards docentes de BSI 2026.2 passam a mostrar a sala de cada disciplina.
 - Os cards docentes foram reorganizados para leitura rápida, com um emoji por tópico.
 - Consultas por sala, onde, laboratório e lab reconhecem os cards docentes.
@@ -58,11 +62,11 @@ PROFESSORES — SISTEMAS DE INFORMAÇÃO 2026.2
 - Cada disciplina mostra dia, faixa de horário e sala do quadro versão 2 de 28/07/2026.
 - No desktop, a quantidade de colunas pode ser dinâmica ou escolhida entre 1 e 4.
 
-MEDIA FINAL
+CALCULADORA DA FINAL
 - !final: mostra a explicação completa.
 - !final 6,9: considera 6,9 como a média das unidades e calcula a PF mínima.
 - !final 5,0 6,0 7,0: calcula a média das unidades e depois a PF mínima.
-- A aprovação direta exige MP >= 7,0; após a final, MF = (2×MP + PF) ÷ 3 e MF >= 5,0.
+- A aprovação direta exige média >= 7,0; entre 2,5 e 6,9, o bot mostra a nota mínima necessária na prova final.
 
 ORIGEM DOS CARTÕES
 - O painel identifica conteúdo do pacote, importado ou criado localmente.

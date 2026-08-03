@@ -9,6 +9,7 @@ const { STUDENT_ASSISTANCE_CARDS } = require('./content/student-assistance');
 const { SCHEDULE_BOARD_V0812 } = require('./content/schedule-board');
 const { ACADEMIC_LIFE_CARDS } = require('./content/academic-life');
 const { COMMUNITY_CARDS } = require('./content/community');
+const { formatDisciplineNamesInText } = require('./si-professors-2026-2');
 
 const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...CAMPUS_CARDS,
@@ -19,7 +20,14 @@ const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...STUDENT_ASSISTANCE_CARDS,
   ...ACADEMIC_LIFE_CARDS,
   ...COMMUNITY_CARDS
-]);
+].map(definition => ({
+  ...definition,
+  message: {
+    ...definition.message,
+    response_text: formatDisciplineNamesInText(definition.message?.response_text || ''),
+    details_text: formatDisciplineNamesInText(definition.message?.details_text || '')
+  }
+})));
 
 function automaticMessagePayload(item) {
   return {

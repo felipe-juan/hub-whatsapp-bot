@@ -47,6 +47,22 @@ function extractText(message) {
 }
 
 
+
+function extractContextInfo(message) {
+  const content = unwrapMessage(message);
+  return [
+    content.extendedTextMessage?.contextInfo,
+    content.imageMessage?.contextInfo,
+    content.videoMessage?.contextInfo,
+    content.documentMessage?.contextInfo,
+    content.audioMessage?.contextInfo,
+    content.buttonsResponseMessage?.contextInfo,
+    content.listResponseMessage?.contextInfo,
+    content.templateButtonReplyMessage?.contextInfo,
+    content.interactiveResponseMessage?.contextInfo
+  ].find(context => context && (context.quotedMessage || context.stanzaId || context.participant || context.remoteJid)) || null;
+}
+
 function extractMentionedJids(message) {
   const content = unwrapMessage(message);
   const contexts = [
@@ -106,9 +122,14 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
   const isGroup = remoteJid.endsWith('@g.us');
   const body = extractText(raw?.message);
   const mentionedJids = extractMentionedJids(raw?.message);
+  const contextInfo = extractContextInfo(raw?.message);
   const ownIds = [socket?.user?.id, socket?.user?.lid].filter(Boolean).map(String);
   const ownNumbers = new Set(ownIds.map(cleanAccountNumber).filter(Boolean));
-  const mentionedMe = mentionedJids.some(jid => ownIds.includes(jid) || ownNumbers.has(cleanAccountNumber(jid)));
+  const matchesOwnAccount = jid => ownIds.includes(String(jid || '')) || ownNumbers.has(cleanAccountNumber(jid));
+  const mentionedMe = mentionedJids.some(matchesOwnAccount);
+  const hasQuotedMessage = Boolean(contextInfo?.quotedMessage || contextInfo?.stanzaId);
+  const quotedParticipant = String(contextInfo?.participant || contextInfo?.remoteJid || '');
+  const quotedFromMe = hasQuotedMessage && (matchesOwnAccount(quotedParticipant) || (!isGroup && !quotedParticipant));
 
   const groupName = () => metadataCache.get(remoteJid)?.subject || raw?.pushName || 'Grupo sem nome';
   const options = quoted => quoted ? { quoted: raw } : undefined;
@@ -130,6 +151,12 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     { text: String(text || '') },
     options(quoted),
     { priority: 100, kind: 'text', attachment: false }
+  );
+  const react = async emoji => dispatch(
+    remoteJid,
+    { react: { text: String(emoji || ''), key: raw.key } },
+    undefined,
+    { priority: 120, kind: 'reaction', attachment: false }
   );
   const sendResponse = async ({ text = '', attachment = null, attachmentPath = null } = {}, quoted = false) => {
     if (!attachment || !attachmentPath) return send(text, quoted);
@@ -169,7 +196,11 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     senderName: String(raw?.pushName || cleanAccountNumber(participant) || 'Pessoa'),
     mentionedJids,
     mentionedMe,
+    hasQuotedMessage,
+    quotedFromMe,
+    quotedParticipant,
     raw,
+    async react(emoji) { return react(emoji); },
     async reply(text) { return send(text, true); },
     async sendResponse(payload, quoted = true) { return sendResponse(payload, quoted); },
     async getChat() {
@@ -191,4 +222,4 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
   };
 }
 
-module.exports = { unwrapMessage, extractText, extractMentionedJids, disconnectCode, cleanAccountNumber, createMessageAdapter };
+module.exports = { unwrapMessage, extractText, extractContextInfo, extractMentionedJids, disconnectCode, cleanAccountNumber, createMessageAdapter };

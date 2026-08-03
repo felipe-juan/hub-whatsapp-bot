@@ -18,11 +18,19 @@ const COMMUNITY_CARDS = Object.freeze([
       trigger: {
         match_mode: 'all',
         sentences: [
-          'felipe juan', 'contato felipe juan', 'quem é felipe juan', 'quem e felipe juan',
+          'juan', 'felipe juan', 'felipo juano',
+          'contato juan', 'contato do juan', 'qual contato do juan', 'qual o contato do juan',
+          'contato felipe juan', 'contato do felipe juan', 'qual contato do felipe juan',
+          'quem é juan', 'quem e juan', 'quem é felipe juan', 'quem e felipe juan',
           'diretor do dasi', 'diretor geral do dasi', 'diretor-geral do dasi',
-          'presidente do dasi', 'linktree felipe juan', 'linkedin felipe juan'
+          'presidente do dasi', 'linktree juan', 'linktree felipe juan',
+          'linkedin juan', 'linkedin felipe juan',
+          'quem é o seu criador', 'quem e o seu criador', 'quem é seu criador', 'quem e seu criador',
+          'quem te criou', 'quem criou você', 'quem criou voce', 'quem criou vc',
+          'quem criou o bot', 'quem é o criador do bot', 'quem e o criador do bot',
+          'quem criou o escravo do juan', 'criador do escravo do juan'
         ],
-        keywords: [], required_words: [], excluded_words: [], exact_phrases: [],
+        keywords: [], required_words: [], excluded_words: [], exact_phrases: ['juan'],
         require_question_mark: true, typo_tolerance: 1, synonym_group_ids: [],
         negative_examples: [], regex_pattern: '', regex_flags: 'iu'
       }

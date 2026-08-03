@@ -1,6 +1,7 @@
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { normalizeText } = require('./text');
+const { formatDisciplineLabel } = require('./si-professors-2026-2');
 
 function detectDelimiter(line) {
   const candidates = [',', ';', '\t'];
@@ -226,7 +227,7 @@ function buildProfessorScheduleResponse(record, publishedAt = new Date()) {
     `🗓️ *Horários e salas — ${period}*`,
     ...(record.classes || []).flatMap(entry => [
       '',
-      `*${entry.discipline}* — ${entry.semester}`,
+      `*${formatDisciplineLabel(entry.discipline)}* — ${entry.semester}`,
       `${entry.day}, ${entry.hours}`,
       `Sala: *${entry.room || 'não informada'}*`
     ]),

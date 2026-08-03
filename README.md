@@ -1,5 +1,15 @@
 # HUB WhatsApp Bot
 
+## Novidades da v0.10.5
+
+- `!final` agora mostra somente a situação e a nota mínima necessária, sem exibir a MF;
+- a faixa da média aparece com 🟢, 🔵, 🟡, 🟠 ou 🔴, seguindo a tabela da prova final;
+- agradecimentos e elogios dirigidos ao bot recebem ❤️; ofensas dirigidas ao bot recebem 😔;
+- a reação ocorre ao responder uma mensagem do bot, mencioná-lo por `@` ou citar `bot`, `Escravo do Juan` e variantes;
+- o card de Felipe Juan aceita `juan`, consultas de contato e perguntas sobre quem criou o bot;
+- os cards docentes e cards de disciplinas compartilhadas exibem `SIGLA - Nome completo`;
+- preserva banco, sessão, anexos, configurações e personalizações durante a atualização.
+
 ## Novidades da v0.10.4
 
 - mantém somente o comando `!final`; os comandos antigos de média, frequência, horas e média ponderada foram removidos;
@@ -44,7 +54,7 @@ Principais objetivos:
 
 ## Estado do projeto
 
-Versão atual: **0.10.4**
+Versão atual: **0.10.5**
 
 O projeto ainda está em preparação para a versão 1.0. Apesar da suíte automatizada e dos testes realizados pelo mantenedor, ele deve ser considerado experimental.
 

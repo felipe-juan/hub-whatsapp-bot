@@ -759,6 +759,85 @@ const SI_PENDING_2026_2 = Object.freeze({
   "pending": true
 });
 
+const SI_DISCIPLINE_CODES_2026_2 = Object.freeze({
+  'Administração': 'ADM',
+  'Algoritmo e Programação': 'AP',
+  'Análise e Modelagem de Sistemas': 'AMS',
+  'Arquitetura de Software': 'AS',
+  'Atividades Curriculares de Extensão I': 'ACE I',
+  'Atividades Curriculares de Extensão II': 'ACE II',
+  'Atividades Curriculares de Extensão III': 'ACE III',
+  'Atividades Curriculares de Extensão IV': 'ACE IV',
+  'Banco de Dados I': 'BDI',
+  'Banco de Dados II': 'BDII',
+  'Complexidade de Algoritmos': 'CA',
+  'Computador, Ética e Sociedade': 'CES',
+  'Comércio Eletrônico': 'CE',
+  'Contabilidade Geral e Custos': 'CGC',
+  'Cálculo Diferencial Aplicado à Computação': 'CDAC',
+  'Direito Cibernético': 'DC',
+  'Economia': 'ECO',
+  'Empreendedorismo': 'EMP',
+  'Engenharia de Software': 'ES',
+  'Estruturas de Dados': 'ED',
+  'Estágio Supervisionado': 'EST',
+  'Fundamentos de Sistemas de Informação': 'FSI',
+  'Gestão de Projetos': 'GP',
+  'Gestão e Governança de TI': 'GGTI',
+  'Inglês Aplicado à Computação': 'IAC',
+  'Inteligência Artificial': 'IA',
+  'Inteligência do Negócio': 'BI',
+  'Interface Homem Máquina': 'IHM',
+  'Introdução à Ciência da Computação': 'ICC',
+  'Leitura e Produção de Gêneros Acadêmicos': 'LPGA',
+  'Linguagem Brasileira de Sinais - Libras': 'LIBRAS',
+  'Linguagem de Programação I': 'LPI',
+  'Linguagem de Programação II': 'LPII',
+  'Matemática Discreta I': 'MDI',
+  'Matemática Discreta II': 'MDII',
+  'Meio Ambiente': 'MA',
+  'Metodologia da Pesquisa Científica': 'MPC',
+  'Organização e Arquitetura de Computadores': 'OAC',
+  'Organização, Sistemas e Métodos': 'OSM',
+  'Paradigmas de Linguagens de Programação': 'PLP',
+  'Probabilidade e Estatística': 'PE',
+  'Processo de Desenvolvimento de Software': 'PDS',
+  'Programação Web': 'PW',
+  'Programação Web I': 'PWI',
+  'Programação Web II': 'PWII',
+  'Programação para Dispositivos Móveis': 'PDM',
+  'Projeto e Administração de Redes': 'PAR',
+  'Qualidade de Software': 'QS',
+  'Redes de Computadores': 'RC',
+  'Segurança da Informação': 'SI',
+  'Segurança de Redes de Computadores': 'SRC',
+  'Segurança e Auditoria de Sistemas': 'SAS',
+  'Sistemas Distribuídos': 'SD',
+  'Sistemas Operacionais': 'SO',
+  'Sistemas de Apoio à Decisão': 'SAD',
+  'Trabalho de Conclusão de Curso I': 'TCCI',
+  'Trabalho de Conclusão de Curso II': 'TCCII'
+});
+
+function formatDisciplineLabel(discipline) {
+  const fullName = String(discipline || '').trim();
+  const code = SI_DISCIPLINE_CODES_2026_2[fullName];
+  return code ? `${code} - ${fullName}` : fullName;
+}
+
+function formatDisciplineNamesInText(value) {
+  const text = String(value || '');
+  const names = Object.keys(SI_DISCIPLINE_CODES_2026_2).sort((a, b) => b.length - a.length);
+  const alternatives = names.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  if (!alternatives) return text;
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])(?:${alternatives})(?![\\p{L}\\p{N}])`, 'gu');
+  return text.replace(pattern, (match, offset, whole) => {
+    const code = SI_DISCIPLINE_CODES_2026_2[match];
+    const prefix = String(whole).slice(Math.max(0, offset - code.length - 3), offset);
+    return prefix === `${code} - ` ? match : `${code} - ${match}`;
+  });
+}
+
 const SI_PROFESSOR_TRIGGER_ALIASES_2026_2 = Object.freeze({
   "Alexandro dos Santos Silva": ["alexandro"],
   "Allan de Sousa Soares": ["allan"],
@@ -972,7 +1051,7 @@ function buildSharedDisciplineCards2026_2() {
   return Object.entries(SI_SHARED_DISCIPLINES_2026_2).map(([discipline, config]) => {
     const professors = config.professorNames.map(name => professorByName.get(name)).filter(Boolean);
     const responseLines = [
-      `*${discipline}*`, '',
+      `*${formatDisciplineLabel(discipline)}*`, '',
       '📧 *Docentes e contatos*',
       ...professors.map(item => `• *${item.name}* — ${item.email}`), '',
       `📚 *Semestre*\n${config.semester}`, '',
@@ -1006,7 +1085,7 @@ function buildSiProfessorResponse(item, emailOverride = '') {
     ? '[IDENTIFICAR DOCENTE E ADICIONAR E-MAIL]'
     : (emailOverride || item.email || '[ADICIONAR NO PAINEL]');
   const classLines = (item.classes || []).flatMap(([discipline, semester, classDays, hours, room]) => [
-    `*${discipline}* — ${semester}`,
+    `*${formatDisciplineLabel(discipline)}* — ${semester}`,
     `${classDays}, ${hours}`,
     `Sala: *${room || 'não informada'}*`,
     ''
@@ -1027,8 +1106,11 @@ module.exports = {
   SI_PROFESSORS_2026_2,
   SI_PENDING_2026_2,
   SI_PROFESSOR_TRIGGER_ALIASES_2026_2,
+  SI_DISCIPLINE_CODES_2026_2,
   SI_DISCIPLINE_ALIASES_2026_2,
   SI_SHARED_DISCIPLINES_2026_2,
+  formatDisciplineLabel,
+  formatDisciplineNamesInText,
   buildDisciplineTriggerSentences,
   buildSharedDisciplineCards2026_2,
   buildSiProfessorNameTriggerSentences,

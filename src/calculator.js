@@ -5,7 +5,7 @@ const FALLBACK_CALCULATORS = Object.freeze([
     key: 'final',
     enabled: true,
     command: '!final',
-    label: 'Média e nota necessária na final',
+    label: 'Calculadora da prova final',
     config: { approval_average: 7, final_minimum_average: 2.5, final_target: 5 }
   }
 ]);
@@ -103,19 +103,20 @@ function finalHelpText(definition = {}) {
   const target = Number(config.final_target ?? 5);
   const command = aliases(definition)[0] || '!final';
   return [
-    '🧮 *Cálculo da prova final*',
+    '🧮 *Calculadora da prova final*',
     '',
     '*Como usar*',
     `• \`${command} 6,9\` — considera 6,9 como a média de todas as unidades.`,
     `• \`${command} 5,0 6,0 7,0\` — calcula a média das unidades informadas.`,
     '',
-    '*Regras do IFBA*',
-    `• MP ≥ ${formatGrade(approval)}: aprovado por média, sem prova final.`,
-    `• ${formatGrade(minimum)} ≤ MP < ${formatGrade(approval)}: tem direito à prova final.`,
-    `• MP < ${formatGrade(minimum)}: reprovado sem direito à final.`,
-    `• Após a prova: MF = (2×MP + PF) ÷ 3; para aprovação, MF ≥ ${formatGrade(target)}.`,
+    '*Faixas da tabela da final*',
+    `• 🟢 ${formatGrade(6)} a ${formatGrade(approval - 0.1)} de média`,
+    `• 🔵 ${formatGrade(5)} a ${formatGrade(5.9)} de média`,
+    `• 🟡 ${formatGrade(4)} a ${formatGrade(4.9)} de média`,
+    `• 🟠 ${formatGrade(3)} a ${formatGrade(3.9)} de média`,
+    `• 🔴 ${formatGrade(minimum)} a ${formatGrade(2.9)} de média`,
     '',
-    '_MP = média parcial; PF = nota da prova final; MF = média final._'
+    `Média a partir de ${formatGrade(approval)} aprova diretamente. Abaixo de ${formatGrade(minimum)}, não há direito à prova final.`
   ].join('\n');
 }
 
@@ -127,13 +128,23 @@ function isCommandHelpRequest(text, definition) {
   });
 }
 
+function finalRangeEmoji(mp) {
+  const value = Number(mp);
+  if (value >= 6) return '🟢';
+  if (value >= 5) return '🔵';
+  if (value >= 4) return '🟡';
+  if (value >= 3) return '🟠';
+  return '🔴';
+}
+
 function formatRequiredFinalResult(result, singleValue = false) {
-  const lines = ['🧮 *Cálculo da prova final*', ''];
+  const lines = ['🧮 *Calculadora da prova final*', ''];
+  const rangeEmoji = finalRangeEmoji(result.mp);
   if (singleValue) {
-    lines.push(`Média das unidades informada: *${formatGrade(result.mp)}*`);
+    lines.push(`${rangeEmoji} Média das unidades informada: *${formatGrade(result.mp)}*`);
   } else {
     lines.push(`Notas das unidades: ${result.grades.map(formatGrade).join(' + ')}`);
-    lines.push(`Média das unidades (MP): *${formatGrade(result.mp)}*`);
+    lines.push(`${rangeEmoji} Média das unidades: *${formatGrade(result.mp)}*`);
   }
   lines.push(`Situação: *${result.situation.label}*`);
   if (result.situation.code === 'approved') {
@@ -142,9 +153,7 @@ function formatRequiredFinalResult(result, singleValue = false) {
     lines.push('', `Como a MP ficou abaixo de ${formatGrade(2.5)}, não há direito à prova final.`);
   } else {
     lines.push('', `Nota mínima necessária na prova final: *${formatGrade(Math.max(0, result.requiredFinal))}*`);
-    lines.push(`Com essa nota, MF = (2×${formatGrade(result.mp)} + ${formatGrade(result.requiredFinal)}) ÷ 3 = *${formatGrade(result.target)}*.`);
   }
-  lines.push('', '_A nota necessária segue PF = 15 − 2×MP, pois a aprovação após a final exige MF ≥ 5,0._');
   return lines.join('\n');
 }
 
@@ -156,13 +165,13 @@ function helpText(calculators) {
 function handleCalculator(text, calculators) {
   const selected = commandFor(text, calculators);
   if (!selected) return null;
-  if (isCommandHelpRequest(text, selected)) return { type: 'calculator-final-help', topic: selected.label || 'Média final', text: finalHelpText(selected) };
+  if (isCommandHelpRequest(text, selected)) return { type: 'calculator-final-help', topic: selected.label || 'Calculadora da prova final', text: finalHelpText(selected) };
   const grades = extractGrades(text);
-  if (!grades.length) return { type: 'calculator-final-help', topic: selected.label || 'Média final', text: finalHelpText(selected) };
+  if (!grades.length) return { type: 'calculator-final-help', topic: selected.label || 'Calculadora da prova final', text: finalHelpText(selected) };
   const result = calculateAverage(grades, selected.config || {});
   return {
     type: 'calculator-final',
-    topic: selected.label || 'Média final',
+    topic: selected.label || 'Calculadora da prova final',
     text: formatRequiredFinalResult(result, grades.length === 1)
   };
 }
@@ -170,5 +179,5 @@ function handleCalculator(text, calculators) {
 module.exports = {
   extractGrades, extractNumbers, classifyMp, requiredFinalGrade, calculateAverage, calculateFinal,
   calculateAttendance, calculateHours, calculateWeightedAverage, commandFor, looksLikeCalculator,
-  handleCalculator, formatGrade, helpText, finalHelpText, isCommandHelpRequest, FALLBACK_CALCULATORS
+  handleCalculator, formatGrade, finalRangeEmoji, helpText, finalHelpText, isCommandHelpRequest, FALLBACK_CALCULATORS
 };

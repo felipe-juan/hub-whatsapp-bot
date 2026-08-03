@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.5 — 2026-08-03
+
+- simplifica a resposta de `!final`, removendo a exibição da MF e deixando somente situação e nota mínima necessária;
+- renomeia a mensagem para **Calculadora da prova final** e identifica a faixa da média com as bolinhas 🟢, 🔵, 🟡, 🟠 e 🔴 da tabela;
+- amplia o easter egg de Felipe Juan para `juan`, consultas de contato e perguntas sobre quem criou o bot;
+- reage com ❤️ a agradecimentos e elogios dirigidos ao bot e com 😔 a ofensas dirigidas ao bot;
+- reconhece esse contexto quando a pessoa responde a uma mensagem do bot, menciona-o por `@` ou cita `bot`, `Escravo do Juan` e variantes;
+- padroniza disciplinas nos cards docentes e compartilhados como `SIGLA - Nome completo`, por exemplo `LPI - Linguagem de Programação I`;
+- preserva banco, sessão do WhatsApp, anexos, configurações e personalizações durante a atualização.
+
 ## 0.10.4 — 2026-08-03
 
 - mantém somente a calculadora `!final` e remove os comandos antigos;
