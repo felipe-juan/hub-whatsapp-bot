@@ -241,6 +241,8 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0105();
     if (seedBundledContent) this.migrateContentV0106();
     if (seedBundledContent) this.migrateContentV0107();
+    if (seedBundledContent) this.migrateContentV0108();
+    if (seedBundledContent) this.migrateContentV0109();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -1078,6 +1080,96 @@ module.exports = function createMixin(deps) {
       this.stagePackageAutomaticMessage(definition.key, definition.message);
     }
     this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0107_coordination_schedule_titles','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
+  migrateContentV0108() {
+    if (asBool(this.getSetting('content_v0108_current_bsi_coordinator', 'false'), false)) return;
+    const keys = new Set([
+      'ifba-bsi-v095-bsi-coordenador-atual',
+      'hub-bsi-contato-coordenacao-v0107'
+    ]);
+    const patchText = (value) => String(value || '')
+      .replaceAll('Cláudio Rodolfo Sousa de Oliveira', 'Pablo Freire Matos')
+      .replace(/\n\nNomeação indicada na página: Portaria nº 743\/2025\/Reitoria, de 26 de fevereiro de 2025\./gu, '');
+    this.db.exec('BEGIN');
+    try {
+      for (const definition of INSTITUTIONAL_CARDS_V098.filter(item => keys.has(item.key))) {
+        this.stagePackageAutomaticMessage(definition.key, definition.message);
+        this.invalidate('activeMessages');
+        const row = this.db.prepare('SELECT id,response_text,draft_json,package_snapshot_json,pending_package_json FROM automatic_messages WHERE package_key=? OR lower(title)=lower(?) ORDER BY package_key=? DESC LIMIT 1')
+          .get(definition.key, definition.message.title, definition.key);
+        if (!row) continue;
+        const current = this.getAutomaticMessage(row.id);
+        let draftJson = row.draft_json || '';
+        let packageSnapshotJson = row.package_snapshot_json || '';
+        let pendingPackageJson = row.pending_package_json || '';
+        for (const [field, value] of [['draft', draftJson], ['package', packageSnapshotJson], ['pending', pendingPackageJson]]) {
+          if (!value) continue;
+          const object = parseJson(value, null);
+          if (!object || typeof object !== 'object') continue;
+          object.response_text = patchText(object.response_text);
+          const encoded = JSON.stringify(object);
+          if (field === 'draft') draftJson = encoded;
+          else if (field === 'package') packageSnapshotJson = encoded;
+          else pendingPackageJson = encoded;
+        }
+        const nextResponse = patchText(current?.response_text || definition.message.response_text);
+        if (current && (nextResponse !== current.response_text || draftJson !== (row.draft_json || '') || packageSnapshotJson !== (row.package_snapshot_json || '') || pendingPackageJson !== (row.pending_package_json || ''))) {
+          this.archiveAutomaticMessage(current, 'v0.10.8-correcao-coordenador-bsi');
+          this.db.prepare('UPDATE automatic_messages SET response_text=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,verified_at=?,updated_at=? WHERE id=?')
+            .run(nextResponse, draftJson, packageSnapshotJson, pendingPackageJson, '2026-08-03', nowIso(), Number(row.id));
+        }
+      }
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0108_current_bsi_coordinator','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.db.exec('COMMIT');
+    } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
+  migrateContentV0109() {
+    if (asBool(this.getSetting('content_v0109_professor_schedule_private_reactions', 'false'), false)) return;
+    const items = [...SI_PROFESSORS_2026_2, SI_PENDING_2026_2];
+    const select = this.db.prepare('SELECT id,draft_json,package_snapshot_json,pending_package_json FROM automatic_messages WHERE lower(title)=lower(?)');
+    const update = this.db.prepare('UPDATE automatic_messages SET trigger_json=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?');
+    this.db.exec('BEGIN');
+    try {
+      for (const item of items) {
+        const title = item.pending ? 'Pendência — Meio Ambiente (docente substituto)' : `Professor — ${item.name}`;
+        const row = select.get(title);
+        if (!row) continue;
+        const current = this.getAutomaticMessage(row.id);
+        if (!current) continue;
+        const sentences = buildSiProfessorTriggerSentences(item);
+        const nextTrigger = normalizeTriggerRules({
+          ...(current.trigger || {}), match_mode: 'all', sentences, keywords: [], required_words: []
+        });
+        let draftJson = row.draft_json || '';
+        let packageSnapshotJson = row.package_snapshot_json || '';
+        let pendingPackageJson = row.pending_package_json || '';
+        for (const [field, value] of [['draft', draftJson], ['package', packageSnapshotJson], ['pending', pendingPackageJson]]) {
+          if (!value) continue;
+          const object = parseJson(value, null);
+          if (!object || typeof object !== 'object') continue;
+          object.trigger = normalizeTriggerRules({
+            ...(object.trigger || current.trigger || {}), match_mode: 'all', sentences, keywords: [], required_words: []
+          });
+          const encoded = JSON.stringify(object);
+          if (field === 'draft') draftJson = encoded;
+          else if (field === 'package') packageSnapshotJson = encoded;
+          else pendingPackageJson = encoded;
+        }
+        const changed = JSON.stringify(nextTrigger) !== JSON.stringify(current.trigger || {})
+          || draftJson !== (row.draft_json || '')
+          || packageSnapshotJson !== (row.package_snapshot_json || '')
+          || pendingPackageJson !== (row.pending_package_json || '');
+        if (!changed) continue;
+        this.archiveAutomaticMessage(current, 'v0.10.9-perguntas-dias-materias-docentes');
+        update.run(JSON.stringify(nextTrigger), draftJson, packageSnapshotJson, pendingPackageJson, nowIso(), Number(row.id));
+      }
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0109_professor_schedule_private_reactions','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.db.exec('COMMIT');
+    } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
     this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 

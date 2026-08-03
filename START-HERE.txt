@@ -1,8 +1,11 @@
-HUB WhatsApp Bot v0.10.7 — Fedora GNOME
+HUB WhatsApp Bot v0.10.9 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.10.7
-- Adiciona o card oficial de contato da Coordenação de BSI.
+ATUALIZAÇÃO v0.10.9
+- Perguntas sobre dias, horários e matérias de um professor abrem o card docente completo.
+- No privado, agradecimentos, elogios e ofensas geram reação mesmo sem reply ou menção.
+- Em grupos, as reações continuam exigindo reply, menção real ou identificação explícita do bot.
+- Mantém o card oficial de contato da Coordenação de BSI.
 - Toda consulta de aulas começa com o dia da semana e o semestre usados.
 - Aceita 2 semestre, 2º semestre, 2° semestre, 2o semestre, segundo semestre e semestre 2.
 - Quando falta o semestre, a pergunta informa o dia consultado e mostra exemplos de resposta.

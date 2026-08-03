@@ -41,7 +41,7 @@ test('card de contato da Coordenação de BSI reúne os dados oficiais do HUB', 
   try {
     const card = holder.db.listAutomaticMessages().find(item => item.title === 'BSI — Contato da coordenação');
     assert.ok(card);
-    assert.match(card.response_text, /Cláudio Rodolfo Sousa de Oliveira/u);
+    assert.match(card.response_text, /Pablo Freire Matos/u);
     assert.match(card.response_text, /csi\.vdc@ifba\.edu\.br/u);
     assert.match(card.response_text, /0800 077 0084 — ramal 1261/u);
     assert.match(card.response_text, /Sala H410/u);
@@ -56,7 +56,7 @@ test('perguntas de contato usam o card completo da Coordenação de BSI', async 
     const result = await engine.simulate('qual o contato da coordenação de bsi', { isGroup: true });
     assert.equal(result.type, 'message');
     assert.equal(result.matchedItem, 'BSI — Contato da coordenação');
-    assert.match(result.text, /Cláudio Rodolfo Sousa de Oliveira/u);
+    assert.match(result.text, /Pablo Freire Matos/u);
     engine.close();
   } finally { holder.close(); }
 });

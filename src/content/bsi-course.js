@@ -379,7 +379,7 @@ const BSI_COURSE_CARDS = Object.freeze([
     "key": "ifba-bsi-v095-bsi-coordenador-atual",
     "message": {
       "title": "BSI — Coordenador atual",
-      "response_text": "*Coordenação de BSI*\n\nCoordenador publicado atualmente: *Cláudio Rodolfo Sousa de Oliveira*.\n\nNomeação indicada na página: Portaria nº 743/2025/Reitoria, de 26 de fevereiro de 2025.",
+      "response_text": "*Coordenação de BSI*\n\nCoordenador atual: *Pablo Freire Matos*.",
       "priority": 91,
       "active": true,
       "archived": false,
@@ -410,8 +410,8 @@ const BSI_COURSE_CARDS = Object.freeze([
         "negative_examples": []
       },
       "source_url": "https://portal.ifba.edu.br/conquista/capas-e-paginas-menu-cursos/sistemas-de-informacao",
-      "source_title": "Página oficial do IFBA",
-      "verified_at": "2026-08-01",
+      "source_title": "HUB Arquivos IFBA e informação atualizada da coordenação",
+      "verified_at": "2026-08-03",
       "details_text": ""
     },
     "legacyGroup": "bsi"
@@ -420,7 +420,7 @@ const BSI_COURSE_CARDS = Object.freeze([
     "key": "hub-bsi-contato-coordenacao-v0107",
     "message": {
       "title": "BSI — Contato da coordenação",
-      "response_text": "*Contato da Coordenação de BSI*\n\n👤 *Coordenador*\nCláudio Rodolfo Sousa de Oliveira\n\n📧 *E-mail*\ncsi.vdc@ifba.edu.br\n\n☎️ *Telefone*\n0800 077 0084 — ramal 1261\n\n📍 *Localização*\nSala H410",
+      "response_text": "*Contato da Coordenação de BSI*\n\n👤 *Coordenador*\nPablo Freire Matos\n\n📧 *E-mail*\ncsi.vdc@ifba.edu.br\n\n☎️ *Telefone*\n0800 077 0084 — ramal 1261\n\n📍 *Localização*\nSala H410",
       "priority": 95,
       "active": true,
       "archived": false,
@@ -455,8 +455,8 @@ const BSI_COURSE_CARDS = Object.freeze([
         "negative_examples": []
       },
       "source_url": "https://portal.ifba.edu.br/conquista/capas-e-paginas-menu-cursos/sistemas-de-informacao",
-      "source_title": "Página oficial do IFBA",
-      "verified_at": "2026-08-01",
+      "source_title": "HUB Arquivos IFBA e informação atualizada da coordenação",
+      "verified_at": "2026-08-03",
       "details_text": ""
     },
     "legacyGroup": "bsi"

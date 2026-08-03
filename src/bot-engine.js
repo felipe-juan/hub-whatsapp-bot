@@ -589,7 +589,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   }
 
   async handleContextualReaction(message, body, chat, settings) {
-    const reaction = classifyBotReaction(message, body);
+    const reaction = classifyBotReaction(message, body, { isPrivate: !chat.isGroup });
     if (!reaction || typeof message.react !== 'function') return false;
     try {
       await message.react(reaction.emoji);

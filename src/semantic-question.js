@@ -12,6 +12,7 @@ const DIRECT_AFTER_REPORT = /\b(?:mas|entao|então|por isso|nesse caso|neste cas
 const COURTESY_PREFIX = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|por favor|por gentileza|favor|pfv)\b\s*)+/u;
 const LEADING_INTERROGATIVE = /^(?:qual|quais|onde|como|quando|quem|quanto|quantos|quanta|quantas|que\s+dia|o\s+que|por\s+que)\b/u;
 const LEADING_REQUEST = /^(?:(?:eu|voce|voces|alguem)\s+)?(?:posso|podemos|preciso|precisamos|existe|existem|tem|sabe|sabem|pode|podem|poderia|poderiam|devo|devemos|consegue|conseguem|conseguiria|conseguiriam|gostaria\s+de\s+saber|quero\s+saber|queria\s+saber|me\s+(?:diga|informe|mande|envie|mostre|passe)|informe|diga)\b/u;
+const TEACHER_SCHEDULE_QUESTION = /^(?:professor|professora|prof|profa|docente)\s+[a-z0-9' -]{2,90}\b(?:da\s+aula|ensina|ministra|leciona)\b.{0,90}\b(?:qual|quais|que\s+dia|quando|horario|materia|materias|disciplina|disciplinas)\b/u;
 const COVERAGE_IGNORED = new Set(['a','ao','aos','as','da','das','de','do','dos','e','em','na','nas','no','nos','o','os','para','por','pra','pro','que','um','uma','uns','umas','voce','você','voces','vocês','me','porfavor','favor']);
 
 
@@ -29,7 +30,7 @@ function implicitQuestionStructure(value) {
   if (tokens.length < 3) return false;
   const reported = REPORTED_SPEECH.some(pattern => pattern.test(text));
   if (reported && !DIRECT_AFTER_REPORT.test(text)) return false;
-  return LEADING_INTERROGATIVE.test(text) || LEADING_REQUEST.test(text);
+  return LEADING_INTERROGATIVE.test(text) || LEADING_REQUEST.test(text) || TEACHER_SCHEDULE_QUESTION.test(text);
 }
 
 function questionIntent(value) {

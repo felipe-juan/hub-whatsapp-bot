@@ -128,11 +128,12 @@ function classifySentiment(text) {
   return null;
 }
 
-function classifyBotReaction(message, text = message?.body || '') {
+function classifyBotReaction(message, text = message?.body || '', { isPrivate = false } = {}) {
   const sentiment = classifySentiment(text);
   if (!sentiment) return null;
   const repliedToBot = Boolean(message?.quotedFromMe);
   const explicitlyAddressed = !message?.hasQuotedMessage && (Boolean(message?.mentionedMe) || addressesBot(text));
+  if (isPrivate) return { ...sentiment, reason: 'private-conversation' };
   if (!repliedToBot && !explicitlyAddressed) return null;
   return { ...sentiment, reason: repliedToBot ? 'reply-to-bot' : 'bot-addressed' };
 }

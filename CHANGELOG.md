@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.9 — 2026-08-03
+
+- amplia os gatilhos dos cards docentes para perguntas sobre dias de aula, matérias e disciplinas, incluindo construções como `quais os dias de aula da prof Amanda` e `professora Amanda dá aula em quais dias e para quais matérias`;
+- reconhece perguntas docentes cuja palavra interrogativa aparece depois do nome do professor, mesmo sem `?` no final;
+- em conversas privadas, reage com ❤️ ou 😔 a agradecimentos, elogios e ofensas mesmo sem reply, menção por `@` ou referência textual ao bot;
+- em grupos, mantém a regra segura: a reação exige reply à mensagem do bot, menção real ou identificação explícita do bot;
+- migra os gatilhos dos cards docentes já existentes, preservando respostas, contatos, salas, anexos e demais personalizações.
+
+## 0.10.8 — 2026-08-03
+
+- Corrige o coordenador atual do Bacharelado em Sistemas de Informação para **Pablo Freire Matos**.
+- Atualiza os cards “BSI — Coordenador atual” e “BSI — Contato da coordenação”.
+- Inclui migração específica para corrigir bancos já existentes sem apagar anexos, gatilhos ou outras personalizações.
+
 ## 0.10.7 — 2026-08-03
 
 - cria o card oficial **BSI — Contato da coordenação**, com coordenador, e-mail, telefone, ramal e sala;
