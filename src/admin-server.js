@@ -181,7 +181,7 @@ class AdminServer {
     const analytics = this.cachedStatusPart('analytics30', 60_000, () => this.db.getUsageStats(30));
     const databaseHealth = this.cachedStatusPart('database-health', 60_000, () => this.db.healthCheck());
     return {
-      version: this.updates?.status?.().currentVersion || '0.10.9', whatsapp: this.whatsapp.getStatus(),
+      version: this.updates?.status?.().currentVersion || '0.11.0', whatsapp: this.whatsapp.getStatus(),
       stats,
       analytics,
       health: {
@@ -464,6 +464,20 @@ Allan de Sousa Soares,allansoares@ifba.edu.br,Matemática Discreta I,1º semestr
     if (route === '/api/import/messages-csv' && req.method === 'POST') { const body = await readBody(req, 5 * 1024 * 1024); const result = this.writeQueue?.importMessagesCsv ? await this.writeQueue.importMessagesCsv(body.csv || '', { publish: body.publish !== false }) : importAutomaticMessagesCsv(this.db, body.csv || '', { publish: body.publish !== false }); await this.refreshAfterExternalTask('messages-import'); return json(res, 200, result); }
     if (route === '/api/templates/messages.csv' && req.method === 'GET') return text(res, 200, 'title,scope,sentences,keywords,require_question_mark,response_text,priority,active,publish\nContato de Bruno,both,"qual o contato de bruno|email do professor bruno","bruno|contato",true,"📧 contato.bruno@example.invalid",50,true,true\n', 'text/csv; charset=utf-8', { 'Content-Disposition': 'attachment; filename="mensagens-modelo.csv"' });
 
+    if (route === '/api/professor-schedule-entries' && req.method === 'GET') return json(res, 200, this.db.listProfessorScheduleEntries({
+      academicPeriod: url.searchParams.get('period') || this.db.getSetting('current_academic_period', '2026.2'),
+      semester: url.searchParams.get('semester') || 0,
+      dayOfWeek: url.searchParams.has('day') ? Number(url.searchParams.get('day')) : null,
+      professor: url.searchParams.get('professor') || '', discipline: url.searchParams.get('discipline') || ''
+    }));
+    if (route === '/api/academic-calendar' && req.method === 'GET') return json(res, 200, this.db.listAcademicCalendarEvents({
+      startDate: url.searchParams.get('start') || '', endDate: url.searchParams.get('end') || '',
+      activeOnly: url.searchParams.get('all') !== '1', course: url.searchParams.get('course') || ''
+    }));
+    if (route === '/api/academic-calendar' && req.method === 'POST') return json(res, 201, await this.mutateDatabase('saveAcademicCalendarEvent', [await readBody(req)], { reason: 'academic-calendar-created', reloadRules: false }));
+    const academicCalendarMatch = route.match(/^\/api\/academic-calendar\/(\d+)$/);
+    if (academicCalendarMatch && req.method === 'PUT') return json(res, 200, await this.mutateDatabase('saveAcademicCalendarEvent', [await readBody(req), academicCalendarMatch[1]], { reason: 'academic-calendar-updated', reloadRules: false }));
+    if (academicCalendarMatch && req.method === 'DELETE') return json(res, 200, { deleted: await this.mutateDatabase('deleteAcademicCalendarEvent', [academicCalendarMatch[1]], { reason: 'academic-calendar-deleted', reloadRules: false }) });
     if (route === '/api/teachers' && req.method === 'GET') return json(res, 200, this.db.listTeachers({ search: url.searchParams.get('q') || '' }));
     if (route === '/api/teachers' && req.method === 'POST') return json(res, 201, await this.mutateDatabase('saveTeacher', [await readBody(req)], { reason: 'teacher-created', reloadRules: true }));
     const teacherMatch = route.match(/^\/api\/teachers\/(\d+)$/);

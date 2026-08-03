@@ -70,6 +70,11 @@ function addCalendarDays(date, amount) {
 function dateIso(date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 }
+function dateDisplay(dateOrIso) {
+  const value = typeof dateOrIso === 'string' ? new Date(`${dateOrIso}T12:00:00Z`) : dateOrIso;
+  if (!(value instanceof Date) || !Number.isFinite(value.getTime())) return '';
+  return `${String(value.getUTCDate()).padStart(2, '0')}/${String(value.getUTCMonth() + 1).padStart(2, '0')}/${value.getUTCFullYear()}`;
+}
 
 function parseSemester(text) {
   const source = String(text || '');
@@ -89,7 +94,6 @@ function parseSemester(text) {
     }
   }
 
-  // Formas naturais como “para o terceiro”, “turma do 3º” e “pro quinto”.
   const contextual = normalized.match(/\b(?:para|pro|pra|do|da|turma)\s+(?:o|a)?\s*(1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])\b/u)?.[1] || '';
   return contextual ? semesterNumberForAlias(contextual) : 0;
 }
@@ -98,8 +102,6 @@ function hasScheduleIntent(text) {
   const normalized = normalizeText(text);
   if (!normalized) return false;
 
-  // Menções narrativas sobre haver ou não aula não são consultas ao quadro.
-  // Exemplos: “aula normal hoje né?”, “só quinta não teremos aula”.
   if (/\b(?:aula|aulas) normal(?:mente)?\b/u.test(normalized)
     || /\b(?:nao|nunca) (?:vai ter|tera|tem|teremos) aula\b/u.test(normalized)
     || /\b(?:so|apenas|menos) (?:na |no )?(?:segunda|terca|quarta|quinta|sexta|sabado|domingo)\b.*\b(?:nao|sem) (?:teremos )?aula\b/u.test(normalized)
@@ -108,15 +110,11 @@ function hasScheduleIntent(text) {
   const subject = '(?:aula|aulas|horario|horarios|grade|disciplina|disciplinas|materia|materias|cadeira|cadeiras|componente|componentes)';
   const date = '(?:hoje|amanha|depois de amanha|ontem|domingo|segunda(?:-feira| feira)?|terca(?:-feira| feira)?|quarta(?:-feira| feira)?|quinta(?:-feira| feira)?|sexta(?:-feira| feira)?|sabado)';
 
-  // Perguntas explícitas: “qual matéria tem hoje?”, “o que tem sexta?”.
   if (new RegExp(`\\b(?:qual|quais)(?:\\s+e)?(?:\\s+(?:o|a|os|as))?\\s+${subject}\\b`, 'u').test(normalized)) return true;
   if (/\b(?:o que|que) (?:tem|tera|vai ter)\b/u.test(normalized)) return true;
   if (new RegExp(`\\b(?:me diga|me fala|informe|quero saber|queria saber|gostaria de saber)\\b.*\\b${subject}\\b`, 'u').test(normalized)) return true;
-
-  // Consultas nominais curtas: “aulas de amanhã”, “horário de sexta”.
   if (new RegExp(`(?:^|\\s)${subject}\\s+(?:de|do|da|para|na|no)?\\s*${date}(?:$|\\s)`, 'u').test(normalized)) return true;
   if (new RegExp(`(?:^|\\s)${date}\\s+(?:tem|tera|vai ter)?\\s*${subject}(?:$|\\s)`, 'u').test(normalized)) return true;
-
   return false;
 }
 
@@ -131,9 +129,7 @@ function parseTargetDate(text, now = Date.now(), timeZone = DEFAULT_TIME_ZONE) {
     const date = addCalendarDays(base, 1);
     return { matched: true, date, iso: dateIso(date), dayIndex: date.getUTCDay(), expression: 'amanhã' };
   }
-  if (/\bhoje\b/u.test(normalized)) {
-    return { matched: true, date: base, iso: dateIso(base), dayIndex: base.getUTCDay(), expression: 'hoje' };
-  }
+  if (/\bhoje\b/u.test(normalized)) return { matched: true, date: base, iso: dateIso(base), dayIndex: base.getUTCDay(), expression: 'hoje' };
   if (/\bontem\b/u.test(normalized)) {
     const date = addCalendarDays(base, -1);
     return { matched: true, date, iso: dateIso(date), dayIndex: date.getUTCDay(), expression: 'ontem' };
@@ -163,7 +159,7 @@ function firstMinutes(hours) {
   return match ? Number(match[1]) * 60 + Number(match[2]) : 9999;
 }
 
-function classesForSemesterAndDay(semester, dayIndex) {
+function classesFromBundled(semester, dayIndex) {
   const records = [];
   for (const professor of [...SI_PROFESSORS_2026_2, SI_PENDING_2026_2]) {
     for (const entry of professor.classes || []) {
@@ -171,80 +167,168 @@ function classesForSemesterAndDay(semester, dayIndex) {
       if (!String(semesterLabel || '').startsWith(`${semester}º`)) continue;
       if (!dayMatches(classDays, dayIndex)) continue;
       records.push({
-        discipline: formatDisciplineLabel(discipline),
-        room: String(room || 'não informada').trim(),
-        professor: professor.name,
-        hours: String(hours || ''),
-        order: firstMinutes(hours)
+        discipline: formatDisciplineLabel(discipline), disciplineCode: '', disciplineName: discipline,
+        room: String(room || 'não informada').trim(), professor: professor.name,
+        hours: String(hours || ''), order: firstMinutes(hours), end: null
       });
     }
   }
+  return records;
+}
+
+function classesFromStructured(semester, dayIndex, scheduleEntries = []) {
+  return scheduleEntries.filter(entry => Number(entry.semester_number) === Number(semester) && Number(entry.day_of_week) === Number(dayIndex) && entry.active !== false)
+    .map(entry => ({
+      discipline: entry.discipline_label || formatDisciplineLabel(entry.discipline_name),
+      disciplineCode: String(entry.discipline_code || ''), disciplineName: String(entry.discipline_name || ''),
+      room: String(entry.room || 'não informada').trim(), professor: String(entry.professor_name || '').trim(),
+      hours: String(entry.hours_label || ''), order: Number.isInteger(Number(entry.start_minutes)) ? Number(entry.start_minutes) : firstMinutes(entry.hours_label),
+      end: entry.end_minutes === null || entry.end_minutes === undefined ? null : Number(entry.end_minutes)
+    }));
+}
+
+function deduplicateClasses(records) {
   const seen = new Set();
-  return records
-    .sort((a, b) => a.order - b.order || a.discipline.localeCompare(b.discipline) || a.professor.localeCompare(b.professor))
+  return records.sort((a, b) => a.order - b.order || a.discipline.localeCompare(b.discipline) || a.professor.localeCompare(b.professor))
     .filter(item => {
-      const key = `${item.discipline}|${item.room}|${item.professor}`;
+      const key = `${item.discipline}|${item.room}|${item.professor}|${item.order}`;
       if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+      seen.add(key); return true;
     });
 }
 
-function semesterScheduleTitle(semester, dayIndex) {
-  return `*Aula de ${DAY_DISPLAY_NAMES[dayIndex]} - ${semester}º Semestre*`;
+function classesForSemesterAndDay(semester, dayIndex, scheduleEntries = null) {
+  const records = Array.isArray(scheduleEntries) && scheduleEntries.length
+    ? classesFromStructured(semester, dayIndex, scheduleEntries)
+    : classesFromBundled(semester, dayIndex);
+  return deduplicateClasses(records);
 }
 
-function formatSemesterScheduleResponse(semester, dayIndex) {
-  const title = semesterScheduleTitle(semester, dayIndex);
-  const classes = classesForSemesterAndDay(semester, dayIndex);
-  if (!classes.length) return `${title}\n\nNenhuma aula cadastrada para esse dia no quadro 2026.2.`;
-  const body = classes.map(item => [
+function eventApplies(event, semester, iso) {
+  if (event.active === false || String(event.start_date || '') > iso || String(event.end_date || event.start_date || '') < iso) return false;
+  const semesters = Array.isArray(event.semester_numbers) ? event.semester_numbers.map(Number) : [];
+  return !semesters.length || semesters.includes(Number(semester));
+}
+
+function effectiveScheduleDay(dayIndex, events = []) {
+  const replacement = events.find(event => ['replacement_day','class_replacement'].includes(event.event_type) && Number.isInteger(Number(event.replacement_day_of_week)));
+  return replacement ? Number(replacement.replacement_day_of_week) : dayIndex;
+}
+
+function eventMatchesClass(event, item) {
+  const code = normalizeText(event.discipline_code || '');
+  const professor = normalizeText(event.professor_name || '');
+  const oldRoom = normalizeText(event.old_room || '');
+  if (code && code !== normalizeText(item.disciplineCode) && !normalizeText(item.discipline).startsWith(`${code} `)) return false;
+  if (professor && !normalizeText(item.professor).includes(professor)) return false;
+  if (oldRoom && normalizeText(item.room) !== oldRoom) return false;
+  return true;
+}
+
+function applyCalendarExceptions(classes, events = []) {
+  let output = classes.map(item => ({ ...item }));
+  const notices = [];
+  const blockers = events.filter(event => ['no_classes','recess'].includes(event.event_type));
+  if (blockers.length) {
+    for (const event of blockers) notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+    return { classes: [], notices, blocked: true };
+  }
+
+  for (const event of events) {
+    if (event.event_type === 'partial_no_classes') {
+      const start = event.start_minutes === null || event.start_minutes === undefined ? Number.NEGATIVE_INFINITY : Number(event.start_minutes);
+      const end = event.end_minutes === null || event.end_minutes === undefined ? Number.POSITIVE_INFINITY : Number(event.end_minutes);
+      output = output.filter(item => {
+        const classStart = Number.isFinite(Number(item.order)) ? Number(item.order) : 0;
+        const classEnd = Number.isFinite(Number(item.end)) ? Number(item.end) : classStart;
+        const overlapsSuspension = classEnd > start && classStart < end;
+        return !overlapsSuspension;
+      });
+      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+    } else if (event.event_type === 'room_change') {
+      let changed = 0;
+      output = output.map(item => {
+        if (!eventMatchesClass(event, item) || !event.new_room) return item;
+        changed += 1; return { ...item, room: event.new_room };
+      });
+      if (changed) notices.push(`⚠️ *Mudança excepcional de sala:* ${event.title}${event.description ? `\n${event.description}` : ''}`);
+    } else if (event.event_type === 'warning') {
+      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+    } else if (['replacement_day','class_replacement'].includes(event.event_type)) {
+      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+    }
+  }
+  return { classes: deduplicateClasses(output), notices, blocked: false };
+}
+
+function semesterScheduleTitle(semester, dayIndex, date = null) {
+  const datePart = date ? `, ${dateDisplay(date)}` : '';
+  return `*Aulas de ${DAY_DISPLAY_NAMES[dayIndex]}${datePart} — ${semester}º Semestre*`;
+}
+
+function formatSemesterScheduleResponse(semester, targetOrDayIndex, { scheduleEntries = null, calendarEvents = [], academicPeriod = '2026.2' } = {}) {
+  const target = typeof targetOrDayIndex === 'number'
+    ? { dayIndex: targetOrDayIndex, date: null, iso: '' }
+    : targetOrDayIndex;
+  const events = (calendarEvents || []).filter(event => eventApplies(event, semester, target.iso || dateIso(target.date)));
+  const scheduleDay = effectiveScheduleDay(target.dayIndex, events);
+  const title = semesterScheduleTitle(semester, target.dayIndex, target.date);
+  const regular = classesForSemesterAndDay(semester, scheduleDay, scheduleEntries);
+  const applied = applyCalendarExceptions(regular, events);
+  const noticeText = applied.notices.length ? `${applied.notices.join('\n\n')}\n\n` : '';
+  if (!applied.classes.length) {
+    const message = applied.blocked
+      ? 'O quadro semanal regular foi suspenso para esta data.'
+      : `Nenhuma aula cadastrada para esse dia no quadro ${academicPeriod}.`;
+    return `${title}\n\n${noticeText}${message}`.trim();
+  }
+  const body = applied.classes.map(item => [
     `*${item.discipline}*`,
     `Sala: ${item.room}`,
     `Professor: ${item.professor}`
   ].join('\n')).join('\n\n');
-  return `${title}\n\n${body}`;
+  return `${title}\n\n${noticeText}${body}`.trim();
 }
 
-function formatSemesterSchedulePrompt(dayIndex) {
+function formatSemesterSchedulePrompt(dayIndex, date = null) {
+  const datePart = date ? `, ${dateDisplay(date)}` : '';
   return [
-    `Qual semestre você quer consultar para ${DAY_DISPLAY_NAMES[dayIndex]}?`,
+    `Qual semestre você quer consultar para ${DAY_DISPLAY_NAMES[dayIndex]}${datePart}?`,
     '',
     'Exemplo: responda `3º semestre`, `3 semestre` ou `terceiro semestre`.'
   ].join('\n');
 }
 
-function classifySemesterScheduleRequest(text, { now = Date.now(), timeZone = DEFAULT_TIME_ZONE } = {}) {
+function classifySemesterScheduleRequest(text, {
+  now = Date.now(), timeZone = DEFAULT_TIME_ZONE, scheduleEntries = null, calendarEvents = [], academicPeriod = '2026.2'
+} = {}) {
   const target = parseTargetDate(text, now, timeZone);
   if (!target.matched) return null;
   const semester = parseSemester(text);
   const scheduleIntent = hasScheduleIntent(text);
-  // Data + semestre já formam um pedido suficientemente específico, mesmo sem a palavra “aula”.
   if (!scheduleIntent && !semester) return null;
   if (!semester) return { kind: 'ask-semester', ...target };
+  const events = (calendarEvents || []).filter(event => eventApplies(event, semester, target.iso));
+  const scheduleDay = effectiveScheduleDay(target.dayIndex, events);
   return {
     kind: 'schedule', semester, ...target,
-    classes: classesForSemesterAndDay(semester, target.dayIndex),
-    text: formatSemesterScheduleResponse(semester, target.dayIndex)
+    classes: classesForSemesterAndDay(semester, scheduleDay, scheduleEntries),
+    events,
+    text: formatSemesterScheduleResponse(semester, target, { scheduleEntries, calendarEvents, academicPeriod })
   };
 }
 
 function semesterFromFollowUp(text) {
   const normalized = normalizeText(text);
   if (!normalized) return 0;
-  const compact = normalized
-    .replace(/^(?:o|a)\s+/u, '')
-    .replace(/\s+(?:por favor)$/u, '')
-    .trim();
+  const compact = normalized.replace(/^(?:o|a)\s+/u, '').replace(/\s+(?:por favor)$/u, '').trim();
   const direct = compact.match(/^(1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])(?:\s+(?:semestre|sem|periodo))?$/u)?.[1] || '';
   if (direct) return semesterNumberForAlias(direct);
-
   const semester = parseSemester(text);
   if (!semester) return 0;
   const residue = normalized
     .replace(/\b(?:1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])\b/gu, '')
-    .replace(/\b(?:semestre|sem|periodo|o|a|do|da)\b/gu, '')
-    .trim();
+    .replace(/\b(?:semestre|sem|periodo|o|a|do|da)\b/gu, '').trim();
   return residue ? 0 : semester;
 }
 
@@ -263,5 +347,8 @@ module.exports = {
   classifySemesterScheduleRequest,
   semesterFromFollowUp,
   zonedCalendarDate,
-  dateIso
+  dateIso,
+  dateDisplay,
+  applyCalendarExceptions,
+  effectiveScheduleDay
 };

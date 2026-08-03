@@ -22,6 +22,7 @@ const { PerformanceMetrics } = require('./performance-metrics');
 const {
   LOCATION_CARD_TITLE,
   classifyProfessorLocationRequest,
+  findTeacherMatches: findProfessorDirectoryMatches,
   formatProfessorLocationResponse,
   formatAskProfessorNameResponse,
   formatClassroomResponse,
@@ -187,6 +188,41 @@ class BotEngine {
     };
   }
 
+  professorCardIntent(text) {
+    const normalized = normalizeText(text);
+    if (!normalized) return false;
+    const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas)\b/u.test(normalized);
+    if (!topic) return false;
+    if (implicitQuestionStructure(text)) return true;
+    if (/^(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|sala|laboratorio|lab)\b/u.test(normalized)) return true;
+    return /\b(?:da|dar|dá|ministra|ensina|leciona) aula\b[\s\S]{0,80}\b(?:quais|qual|quando|onde|dias|materias|disciplinas|sala)\b/u.test(String(text || '').toLowerCase());
+  }
+
+  professorCardEvaluation(text, context = {}) {
+    if (!this.professorCardIntent(text)) return null;
+    const teachers = this.db.listTeachers({ activeOnly: true });
+    const matches = findProfessorDirectoryMatches(normalizeText(text), teachers);
+    if (matches.length !== 1) return null;
+    const teacher = matches[0].teacher;
+    const title = `Professor — ${teacher.name}`;
+    const { messages } = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) });
+    const card = messages.find(item => normalizeText(item.title) === normalizeText(title));
+    if (!card || !card.response_text) return null;
+    const scope = card.scope || 'both';
+    if (context.isGroup && scope === 'private') return null;
+    if (!context.isGroup && scope === 'group') return null;
+    return {
+      matched: true, type: 'message', text: card.response_text,
+      signature: `message:${card.id}`, matchedItem: card.title, topic: card.topic || card.title,
+      attachment: card.attachment || null, details_text: card.details_text || '', source_url: card.source_url || '',
+      source_title: card.source_title || '', verified_at: card.verified_at || '', conflict: false, redactLog: false,
+      reasons: ['nome do professor reconhecido com tolerância contextual de digitação'], candidates: [{ kind: 'message', id: card.id, title: card.title }],
+      analysis: [], context: { ...context },
+      contextSubject: { kind: 'message', id: Number(card.id || 0), title: card.title, topic: card.topic || card.title,
+        details_text: card.details_text || '', source_url: card.source_url || '', source_title: card.source_title || '', verified_at: card.verified_at || '' }
+    };
+  }
+
   semesterScheduleEnabled({ includeDrafts = false } = {}) {
     return this.activeContent({ includeDrafts }).messages
       .some(item => normalizeText(item.title) === normalizeText(SEMESTER_SCHEDULE_CARD_TITLE));
@@ -194,7 +230,13 @@ class BotEngine {
 
   semesterScheduleEvaluation(text, context = {}) {
     if (!this.semesterScheduleEnabled({ includeDrafts: Boolean(context.includeDrafts) })) return null;
-    const request = classifySemesterScheduleRequest(text, { now: context.now || Date.now() });
+    const settings = this.db.getSettings();
+    const academicPeriod = String(settings.current_academic_period || '2026.2');
+    const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, activeOnly: true }) || [];
+    const calendarEvents = this.db.listAcademicCalendarEvents?.({ activeOnly: true, course: 'bsi' }) || [];
+    const request = classifySemesterScheduleRequest(text, {
+      now: context.now || Date.now(), scheduleEntries, calendarEvents, academicPeriod
+    });
     if (!request) return null;
     const base = {
       matched: true, candidates: [], conflict: false, redactLog: false,
@@ -205,7 +247,7 @@ class BotEngine {
       return {
         ...base,
         type: 'semester_schedule_prompt',
-        text: formatSemesterSchedulePrompt(request.dayIndex),
+        text: formatSemesterSchedulePrompt(request.dayIndex, request.date),
         signature: `semester-schedule-prompt:${request.iso}`,
         matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
         contextSubject: {
@@ -353,6 +395,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const professorLocation = this.professorLocationEvaluation(text, context, settings);
     if (professorLocation) return { ...result, ...professorLocation };
 
+    const professorCard = this.professorCardEvaluation(text, context);
+    if (professorCard) return { ...result, ...professorCard };
+
     let analysis;
     const finishTriggerEvaluation = this.performance.timer('trigger_evaluation_ms');
     if (context.includeDrafts) {
@@ -453,10 +498,15 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       if (!semester) return null;
       const dayIndex = Number(stored.dayIndex);
       if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return null;
+      const academicPeriod = String(settings.current_academic_period || '2026.2');
+      const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, activeOnly: true }) || [];
+      const calendarEvents = this.db.listAcademicCalendarEvents?.({ activeOnly: true, course: 'bsi' }) || [];
+      const targetDate = stored.targetDate ? new Date(`${stored.targetDate}T12:00:00Z`) : null;
+      const target = { dayIndex, iso: stored.targetDate || '', date: targetDate };
       return {
         matched: true,
         type: 'semester_schedule',
-        text: formatSemesterScheduleResponse(semester, dayIndex),
+        text: formatSemesterScheduleResponse(semester, target, { scheduleEntries, calendarEvents, academicPeriod }),
         signature: `semester-schedule:${stored.targetDate || 'context'}:${semester}`,
         matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${semester}º semestre`,
         topic: 'Horários de BSI', reasons: ['semestre informado como continuação da consulta'],

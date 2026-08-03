@@ -6,8 +6,10 @@ module.exports = function createMixin(deps) {
     this.db.exec('BEGIN');
     try {
       const payload = {
-        format: 'hub-whatsapp-bot-backup', version: 10, exported_at: nowIso(), settings: this.getSettings(),
+        format: 'hub-whatsapp-bot-backup', version: 11, exported_at: nowIso(), settings: this.getSettings(),
         teachers: this.listTeachers(), sectors: this.listSectors(),
+        professor_schedule_entries: this.listProfessorScheduleEntries({ activeOnly: false }),
+        academic_calendar_events: this.listAcademicCalendarEvents({ activeOnly: false }),
         automatic_messages: this.listAutomaticMessages(),
         automatic_message_history: this.db.prepare('SELECT id,message_id,action,snapshot_json,created_at FROM automatic_message_history ORDER BY message_id,id').all()
           .map(row => ({ id: row.id, message_id: row.message_id, action: row.action, snapshot: parseJson(row.snapshot_json, {}), created_at: row.created_at })),
@@ -32,6 +34,30 @@ module.exports = function createMixin(deps) {
       if (Array.isArray(payload.sectors)) {
         this.db.prepare('DELETE FROM sectors').run();
         for (const sector of payload.sectors) this.saveSector(sector);
+      }
+      if (Array.isArray(payload.professor_schedule_entries)) {
+        this.db.prepare('DELETE FROM professor_schedule_entries').run();
+        const findTeacher = this.db.prepare('SELECT id FROM teachers WHERE lower(email)=lower(?) OR lower(name)=lower(?) ORDER BY lower(email)=lower(?) DESC LIMIT 1');
+        const scheduleStmt = this.db.prepare(`INSERT INTO professor_schedule_entries(
+          teacher_id,professor_name,professor_email,discipline_name,discipline_code,semester_number,semester_label,
+          day_of_week,day_label,start_minutes,end_minutes,hours_label,room,academic_period,source_title,source_version,source_date,active,created_at,updated_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        for (const entry of payload.professor_schedule_entries) {
+          const timestamp = String(entry.updated_at || entry.created_at || nowIso());
+          const teacher = findTeacher.get(String(entry.professor_email || ''), String(entry.professor_name || ''), String(entry.professor_email || ''));
+          scheduleStmt.run(
+            teacher?.id || null, String(entry.professor_name || ''), String(entry.professor_email || ''), String(entry.discipline_name || ''),
+            String(entry.discipline_code || ''), Number(entry.semester_number || 0), String(entry.semester_label || ''), Number(entry.day_of_week || 0),
+            String(entry.day_label || ''), entry.start_minutes === null || entry.start_minutes === undefined ? null : Number(entry.start_minutes),
+            entry.end_minutes === null || entry.end_minutes === undefined ? null : Number(entry.end_minutes), String(entry.hours_label || ''),
+            String(entry.room || ''), String(entry.academic_period || ''), String(entry.source_title || ''), String(entry.source_version || ''),
+            String(entry.source_date || ''), boolToDb(entry.active !== false), String(entry.created_at || timestamp), timestamp
+          );
+        }
+      }
+      if (Array.isArray(payload.academic_calendar_events)) {
+        this.db.prepare('DELETE FROM academic_calendar_events').run();
+        for (const event of payload.academic_calendar_events) this.saveAcademicCalendarEvent({ ...event, package_key: event.package_key || event.key || '' });
       }
       const importedMessageIds = new Map();
       for (const item of payload.automatic_messages || []) {

@@ -47,8 +47,11 @@ module.exports = function createMixin(deps) {
     }
     schedule = (Array.isArray(schedule) ? schedule : []).slice(0, 100).map(entry => {
       if (entry && typeof entry === 'object') return {
-        discipline: String(entry.discipline || '').trim(), semester: String(entry.semester || '').trim(),
-        day: String(entry.day || '').trim(), hours: String(entry.hours || '').trim(),
+        discipline: String(entry.discipline || '').trim(), discipline_code: String(entry.discipline_code || '').trim(),
+        semester: String(entry.semester || '').trim(), day: String(entry.day || '').trim(),
+        hours: String(entry.hours || '').trim(), room: String(entry.room || '').trim(),
+        start_minutes: entry.start_minutes === null || entry.start_minutes === undefined || entry.start_minutes === '' ? null : Number(entry.start_minutes),
+        end_minutes: entry.end_minutes === null || entry.end_minutes === undefined || entry.end_minutes === '' ? null : Number(entry.end_minutes),
         description: String(entry.description || '').trim()
       };
       return { description: String(entry || '').trim() };

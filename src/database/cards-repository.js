@@ -348,7 +348,7 @@ module.exports = function createMixin(deps) {
     const disciplines = [...new Set((record.classes || []).map(entry => String(entry.discipline || '').trim()).filter(Boolean))];
     const schedule = (record.classes || []).map(entry => ({
       discipline: String(entry.discipline || '').trim(), semester: String(entry.semester || '').trim(),
-      day: String(entry.day || '').trim(), hours: String(entry.hours || '').trim(),
+      day: String(entry.day || '').trim(), hours: String(entry.hours || '').trim(), room: String(entry.room || '').trim(),
       description: String(entry.room || '').trim() ? `Sala: ${String(entry.room).trim()}` : ''
     }));
     return this.saveTeacher({
@@ -407,6 +407,12 @@ module.exports = function createMixin(deps) {
           report.created += 1;
         }
         this.syncStructuredTeacherFromSchedule(record);
+        this.syncProfessorScheduleRecord(record, {
+          academic_period: record.academic_period || '',
+          source_title: record.source_title || 'Quadro docente importado pelo painel',
+          source_version: record.source_version || '',
+          source_date: record.source_date || new Date().toISOString().slice(0, 10)
+        });
       } catch (error) { report.errors.push({ professor: record?.name || '', error: error.message }); }
     }
     this.invalidate('activeMessages', 'conflictReport');

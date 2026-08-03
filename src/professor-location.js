@@ -1,5 +1,5 @@
 const { normalizeText, containsPhrase, tokenize } = require('./text');
-const { endsWithQuestionMark } = require('./trigger-rules');
+const { endsWithQuestionMark, levenshteinWithin } = require('./trigger-rules');
 const { implicitQuestionStructure } = require('./semantic-question');
 
 const LOCATION_CARD_TITLE = 'Onde está o professor — salas do IFBA';
@@ -101,13 +101,39 @@ function exactDirectTeacherMatches(normalized, teachers) {
   return matches;
 }
 
+function professorNameTolerance(expected, actual, configured = 2) {
+  const limit = Math.max(0, Math.min(2, Number(configured || 0)));
+  if (!limit || expected.length < 4 || actual.length < 4) return 0;
+  return expected.length >= 7 && actual.length >= 5 ? limit : Math.min(1, limit);
+}
+
+function fuzzyAliasInMessage(normalized, alias, tolerance = 2) {
+  const messageTokens = tokenize(normalized);
+  const aliasTokens = tokenize(alias);
+  if (!aliasTokens.length || messageTokens.length < aliasTokens.length) return false;
+  for (let start = 0; start <= messageTokens.length - aliasTokens.length; start += 1) {
+    let okay = true;
+    for (let offset = 0; offset < aliasTokens.length; offset += 1) {
+      const expected = aliasTokens[offset]; const actual = messageTokens[start + offset];
+      if (actual === expected) continue;
+      const effective = professorNameTolerance(expected, actual, tolerance);
+      if (!effective || !levenshteinWithin(actual, expected, effective)) { okay = false; break; }
+    }
+    if (okay) return true;
+  }
+  return false;
+}
+
 function findTeacherMatches(normalized, teachers) {
   const matches = [];
   for (const teacher of teachers || []) {
     if (teacher?.active === false) continue;
-    const alias = teacherAliases(teacher).find(candidate => containsPhrase(normalized, candidate));
-    if (!alias) continue;
-    matches.push({ teacher, alias, specificity: tokenize(alias).length });
+    const aliases = teacherAliases(teacher);
+    const alias = aliases.find(candidate => containsPhrase(normalized, candidate));
+    const fuzzyAlias = alias ? '' : aliases.find(candidate => fuzzyAliasInMessage(normalized, candidate, 2));
+    const matchedAlias = alias || fuzzyAlias;
+    if (!matchedAlias) continue;
+    matches.push({ teacher, alias: matchedAlias, specificity: tokenize(matchedAlias).length, fuzzy: Boolean(fuzzyAlias) });
   }
   if (matches.length <= 1) return matches;
   const maxSpecificity = Math.max(...matches.map(item => item.specificity));
@@ -228,6 +254,8 @@ module.exports = {
   GENERIC_DIRECT_REQUESTS,
   teacherAliases,
   directPhrasesForAlias,
+  fuzzyAliasInMessage,
+  professorNameTolerance,
   findTeacherMatches,
   classifyProfessorLocationRequest,
   validIsoDate,

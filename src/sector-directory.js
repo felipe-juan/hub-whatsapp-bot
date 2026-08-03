@@ -1,4 +1,5 @@
-const { normalizeText, containsPhrase } = require('./text');
+const { normalizeText, containsPhrase, tokenize } = require('./text');
+const { levenshteinWithin } = require('./trigger-rules');
 const { implicitQuestionStructure } = require('./semantic-question');
 
 const SECTOR_CARD_TITLE = 'Consulta estruturada — setores do IFBA';
@@ -28,10 +29,18 @@ function aliasList(sector) {
 }
 function findSector(text, sectors = []) {
   const normalized = normalizeText(text);
+  const messageTokens = tokenize(normalized);
   const matches = [];
   for (const sector of sectors) {
-    const alias = aliasList(sector).find(value => containsPhrase(normalized, value));
-    if (alias) matches.push({ sector, alias });
+    let alias = aliasList(sector).find(value => containsPhrase(normalized, value));
+    let fuzzy = false;
+    if (!alias) {
+      const acronym = normalizeText(sector.acronym || '');
+      // Siglas institucionais aceitam somente um erro curto, inclusive troca
+      // de letras adjacentes. Nomes genéricos e aliases longos continuam exatos.
+      if (acronym.length >= 4 && messageTokens.some(token => levenshteinWithin(token, acronym, 1))) { alias = acronym; fuzzy = true; }
+    }
+    if (alias) matches.push({ sector, alias, fuzzy });
   }
   matches.sort((a, b) => b.alias.length - a.alias.length || String(a.sector.name).localeCompare(String(b.sector.name)));
   return matches;
@@ -82,8 +91,9 @@ function classifySectorRequest(text, sectors = []) {
   const asksForNonPhysicalResource = intent === 'location'
     && NON_PHYSICAL_RESOURCE_TERMS.some(value => containsPhrase(clean, normalizeText(value)));
   if (asksForNonPhysicalResource) return { matched: false, deferredToCards: true };
-  if (!hasQuestionStructure && !directPhrasesFor(best.sector).has(clean)) return { matched: false };
-  return { matched: true, intent, sector: best.sector, alias: best.alias, ambiguous: matches.filter(item => item.alias.length === best.alias.length).length > 1 };
+  const fuzzyDirect = best.fuzzy && /^(?:contato|email|e mail|whatsapp|whats|zap|telefone|fone|numero|ramal|ctt|onde fica|localizacao|servicos)(?:\s+(?:da|do|de|a|o))?\s+[a-z0-9]+$/u.test(clean);
+  if (!hasQuestionStructure && !directPhrasesFor(best.sector).has(clean) && !fuzzyDirect) return { matched: false };
+  return { matched: true, intent, sector: best.sector, alias: best.alias, fuzzy: best.fuzzy, ambiguous: matches.filter(item => item.alias.length === best.alias.length).length > 1 };
 }
 function classifySectorFollowUp(text) {
   const raw = String(text || '').trim();

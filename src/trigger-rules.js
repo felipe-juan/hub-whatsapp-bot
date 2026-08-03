@@ -7,6 +7,22 @@ const { semanticQuestionAssessment, intentsCompatible, implicitQuestionStructure
 // também reconhece “como passar em cálculo”.
 const OPTIONAL_CONNECTORS = new Set(['a','ao','aos','as','da','das','de','do','dos','em','na','nas','no','nos','para','pra','pro','por']);
 const VERSION_MARKERS = new Set(['i','ii','iii','iv','v','1','2','3','4','5']);
+const GENERIC_NO_FUZZY_TOKENS = new Set([
+  'aula','aulas','contato','contatos','sala','salas','horario','horarios','professor','professora','prof','profa','docente',
+  'materia','materias','disciplina','disciplinas','curso','semestre','periodo','email','telefone','onde','como','qual','quais','quem'
+]);
+const SMALL_TOLERANCE_ACRONYMS = new Set([
+  'caens','cores','acex','capne','csi','dasi','ifba','bsi','tcc','tcci','tccii','lpi','lpii','mdi','mdii','pwi','pwii',
+  'bdi','bdii','oac','iam','ihm','fsi','icc','lpga','cdac','ggti','sad','src','sas','par','pdm','plp','pds'
+]);
+function tokenTolerance(expected, configured = 0) {
+  const token = String(expected || '');
+  const limit = Math.max(0, Math.min(2, Number(configured || 0)));
+  if (!limit || GENERIC_NO_FUZZY_TOKENS.has(token)) return 0;
+  if (SMALL_TOLERANCE_ACRONYMS.has(token) || versionedAcronym(token)) return Math.min(1, limit);
+  if (token.length < 4) return 0;
+  return limit;
+}
 
 const DEFAULT_TRIGGER_RULES = Object.freeze({
   match_mode: 'any',
@@ -53,16 +69,21 @@ function validateRegex(pattern, flags = 'i') {
 function levenshteinWithin(a, b, limit) {
   if (a === b) return true;
   if (!limit || Math.abs(a.length - b.length) > limit) return false;
+  // Distância de edição com transposição adjacente. Para o usuário, trocar
+  // duas letras vizinhas (Amanda → Amnada, CORES → COERS) é um único erro.
+  let previousPrevious = null;
   let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
   for (let i = 1; i <= a.length; i += 1) {
     const current = [i];
-    let rowMin = current[0];
     for (let j = 1; j <= b.length; j += 1) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      const value = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + cost);
-      current.push(value); rowMin = Math.min(rowMin, value);
+      let value = Math.min(current[j - 1] + 1, previous[j] + 1, previous[j - 1] + cost);
+      if (previousPrevious && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        value = Math.min(value, previousPrevious[j - 2] + 1);
+      }
+      current.push(value);
     }
-    if (rowMin > limit) return false;
+    previousPrevious = previous;
     previous = current;
   }
   return previous[b.length] <= limit;
@@ -76,6 +97,7 @@ function versionedAcronym(token) {
 
 function tokenMatches(actual, expected, tolerance = 0) {
   if (actual === expected) return { matched: true, fuzzy: false };
+  const effectiveTolerance = tokenTolerance(expected, tolerance);
   const actualVersion = versionedAcronym(actual);
   const expectedVersion = versionedAcronym(expected);
   // Siglas versionadas não aceitam aproximação entre versões distintas.
@@ -83,8 +105,8 @@ function tokenMatches(actual, expected, tolerance = 0) {
   if (actualVersion && expectedVersion && actualVersion.base === expectedVersion.base && actualVersion.version !== expectedVersion.version) {
     return { matched: false, fuzzy: false };
   }
-  if (!tolerance || actual.length < 4 || expected.length < 4) return { matched: false, fuzzy: false };
-  return { matched: levenshteinWithin(actual, expected, tolerance), fuzzy: true };
+  if (!effectiveTolerance) return { matched: false, fuzzy: false };
+  return { matched: levenshteinWithin(actual, expected, effectiveTolerance), fuzzy: true };
 }
 
 function orderedSentenceMatch(messageTokens, phraseTokens, tolerance = 0) {
@@ -208,13 +230,34 @@ function exactConfiguredPhrase(normalizedMessage, sentences = [], exactPhrases =
   return null;
 }
 
+function approximateConfiguredPhrase(normalizedMessage, sentences = [], exactPhrases = [], tolerance = 0) {
+  if (!normalizedMessage || !tolerance) return null;
+  const messageTokens = canonicalDirectTokens(tokenize(normalizedMessage));
+  for (const [kind, values] of [['sentence', sentences], ['exact', exactPhrases]]) {
+    for (const value of values) {
+      const raw = typeof value === 'string' ? value : value?.raw;
+      for (const tokens of directPhraseTokenVariants(value)) {
+        if (tokens.length < 2 || tokens.length !== messageTokens.length) continue;
+        let fuzzy = false; let matched = true;
+        for (let index = 0; index < tokens.length; index += 1) {
+          const comparison = tokenMatches(messageTokens[index], tokens[index], tolerance);
+          if (!comparison.matched) { matched = false; break; }
+          fuzzy = fuzzy || comparison.fuzzy;
+        }
+        if (matched && fuzzy) return { kind, raw, tokens, derived: normalizeText(raw) !== normalizedMessage, fuzzy: true };
+      }
+    }
+  }
+  return null;
+}
+
 function endsWithQuestionMark(value) { return /\?\s*$/u.test(String(value || '')); }
 
 function applyDirectExactMatch(result, directMatch) {
   if (!directMatch) return false;
   const specificity = Math.min(18, Math.max(1, directMatch.tokens?.length || 1) * 2);
   result.score += 20 + specificity;
-  result.reasons.push(`${directMatch.derived ? 'forma direta da sentença' : 'mensagem direta completa'} sem interrogação: ${directMatch.raw}`);
+  result.reasons.push(`${directMatch.fuzzy ? 'mensagem direta aproximada' : directMatch.derived ? 'forma direta da sentença' : 'mensagem direta completa'} sem interrogação: ${directMatch.raw}`);
   result.matched = true;
   return true;
 }
@@ -304,7 +347,7 @@ function evaluateTrigger(message, { title = '', keywords = [], trigger = {} } = 
   const units = rules.keywords.map(keyword => ({ label: `palavra-chave “${keyword}”`, terms: [keyword] }))
     .concat(synonymUnits(rules, synonymGroups));
   if (directOnly) {
-    const directMatch = exactConfiguredPhrase(normalizedMessage, rules.sentences, rules.exact_phrases);
+    const directMatch = exactConfiguredPhrase(normalizedMessage, rules.sentences, rules.exact_phrases) || approximateConfiguredPhrase(normalizedMessage, rules.sentences, rules.exact_phrases, rules.typo_tolerance);
     if (applyDirectExactMatch(result, directMatch)) return result;
     const directUnits = units.map(unit => evaluateUnit(rawMessage, unit, 0));
     const requiredTerms = rules.required_words.map(raw => ({ raw, tokens: tokenize(raw) }));
@@ -495,7 +538,7 @@ function evaluateCompiledTrigger(message, compiledTrigger, hints = null) {
   }
 
   if (directOnly) {
-    const directMatch = exactConfiguredPhrase(prepared.normalized, compiled.sentences, compiled.exactPhrases);
+    const directMatch = exactConfiguredPhrase(prepared.normalized, compiled.sentences, compiled.exactPhrases) || approximateConfiguredPhrase(prepared.normalized, compiled.sentences, compiled.exactPhrases, rules.typo_tolerance);
     if (applyDirectExactMatch(result, directMatch)) return result;
     const directUnits = compiled.units.map(unit => evaluateCompiledUnit(prepared, unit, 0));
     if (applyDirectKeywordMatch(result, directUnits, compiled.required, rules.match_mode, prepared.tokens)) return result;
@@ -586,6 +629,7 @@ module.exports = {
   DEFAULT_TRIGGER_RULES,
   normalizeTriggerRules,
   validateRegex,
+  tokenTolerance,
   levenshteinWithin,
   phraseMatch,
   phraseMatchPrepared,

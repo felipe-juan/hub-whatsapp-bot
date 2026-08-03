@@ -1,4 +1,4 @@
-# HUB WhatsApp Bot v0.10.9
+# HUB WhatsApp Bot v0.11.0
 
 Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB Arquivos IFBA. Cada automação reúne **gatilhos editáveis** e a **resposta completa** que será enviada.
 
@@ -11,6 +11,16 @@ Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB A
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA. Respostas simultâneas são organizadas por conversa, mas nenhuma integração não oficial garante que a conta nunca será restringida.
 
 
+
+## Quadro estruturado, calendário e tolerância contextual — v0.11.0
+
+- o quadro 2026.2 passa a ser armazenado em campos próprios: professor, e-mail, disciplina, sigla, semestre, dia, início, fim, sala, período e fonte;
+- consultas como `aulas de amanhã do 3º semestre` usam esses registros estruturados e começam com dia, data e semestre;
+- o painel possui **Calendário e exceções**, onde podem ser cadastrados feriados, recessos, suspensões, sábados letivos, reposições e mudanças temporárias de sala;
+- exceções alteram somente a resposta da data correspondente e preservam o quadro semanal original;
+- nomes docentes aceitam erro moderado; siglas institucionais aceitam um erro curto; palavras genéricas como `aula`, `contato` e `sala` não recebem aproximação;
+- trocas adjacentes como `Amnada` e `COERS` são tratadas como um único erro de digitação;
+- o backup JSON v11 preserva também o quadro estruturado e as exceções acadêmicas criadas no painel.
 
 ## Consultas docentes e reações privadas — v0.10.9
 

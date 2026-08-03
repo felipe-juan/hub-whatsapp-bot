@@ -70,7 +70,7 @@ test('semestres numéricos, ordinais e por extenso são equivalentes', () => {
 
 test('resposta de aulas começa pelo dia da semana e semestre usados no cálculo', () => {
   const text = formatSemesterScheduleResponse(3, 1);
-  assert.ok(text.startsWith('*Aula de Segunda-Feira - 3º Semestre*'));
+  assert.ok(text.startsWith('*Aulas de Segunda-Feira — 3º Semestre*'));
   assert.match(text, /\*LPII - Linguagem de Programação II\*\nSala: H108\nProfessor: Alexandro dos Santos Silva/u);
   assert.doesNotMatch(text, /18h|Fonte/u);
 });
@@ -87,7 +87,7 @@ test('consultas de matéria aceitam variações de semestre e próxima ocorrênc
     const result = classifySemesterScheduleRequest(value, { now });
     assert.equal(result?.kind, 'schedule', value);
     assert.equal(result.semester, 3, value);
-    assert.ok(result.text.startsWith('*Aula de Segunda-Feira - 3º Semestre*'), value);
+    assert.ok(result.text.startsWith('*Aulas de Segunda-Feira, 03/08/2026 — 3º Semestre*'), value);
   }
   const nextMonday = classifySemesterScheduleRequest('segunda que vem 3º semestre', { now });
   assert.equal(nextMonday.iso, '2026-08-10');
@@ -107,7 +107,7 @@ test('pergunta de semestre ausente informa o dia e exemplos de resposta', async 
 
     const second = fakeMessage('3');
     await engine.handle(second.message);
-    assert.ok(second.replies[0].startsWith('*Aula de Terça-Feira - 3º Semestre*'));
+    assert.ok(second.replies[0].startsWith('*Aulas de Terça-Feira, 04/08/2026 — 3º Semestre*'));
     engine.close();
   } finally { holder.close(); }
 });

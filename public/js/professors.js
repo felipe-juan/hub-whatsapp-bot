@@ -1,6 +1,6 @@
 'use strict';
 
-function teacherScheduleLines(item){return(item.schedule||[]).map(entry=>entry.description||[entry.discipline,entry.semester,entry.day,entry.hours].filter(Boolean).join(' — ')).filter(Boolean).join('\n');}
+function teacherScheduleLines(item){return(item.schedule||[]).map(entry=>{const discipline=[entry.discipline_code,entry.discipline].filter(Boolean).join(' - ');const structured=[discipline,entry.semester,entry.day,entry.hours,entry.room?`Sala ${entry.room}`:''].filter(Boolean).join(' — ');return structured||entry.description||'';}).filter(Boolean).join('\n');}
 async function openTeacherDirectory(){
   const teachers=await api('/api/teachers');
   const rows=teachers.map(item=>`<tr><td><strong>${esc(item.name)}</strong><br><small>${esc(item.email)}</small></td><td>${item.room?`${esc(item.room)}${item.building?` · ${esc(item.building)}`:''}`:'<span class="muted">Não confirmada</span>'}</td><td>${item.room_confirmed_at?esc(item.room_confirmed_at.split('-').reverse().join('/')):'—'}</td><td><div class="actions"><button type="button" class="button small edit-teacher" data-id="${Number(item.id)}">✏️ Editar</button><button type="button" class="button small danger delete-teacher" data-id="${Number(item.id)}">🗑️</button></div></td></tr>`).join('');

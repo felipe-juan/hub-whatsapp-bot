@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.0 — 2026-08-03
+
+- transforma o quadro docente em dados estruturados por professor, e-mail, disciplina, sigla, semestre, dia, início, fim, sala, período letivo e fonte;
+- faz a consulta dinâmica de aulas usar o quadro estruturado e exibir a data explícita no título;
+- adiciona um calendário de exceções editável no painel para feriados, recessos, suspensões totais ou parciais, sábados letivos, reposições e mudanças temporárias de sala;
+- aplica automaticamente exceções ativas à resposta de aulas, sem alterar o quadro semanal original;
+- inclui eventos oficiais já verificados e mantém pontos facultativos como aviso quando ainda dependem de confirmação do campus;
+- diferencia a tolerância a digitação: moderada em nomes docentes, pequena em siglas institucionais e desativada para palavras genéricas como aula, contato e sala;
+- reconhece transposição de letras adjacentes como um único erro, por exemplo Amanda/Amnada e CORES/COERS;
+- adiciona APIs e gestão visual do calendário e do quadro estruturado no Admin Center;
+- preserva o quadro estruturado e as exceções acadêmicas personalizadas no backup JSON v11;
+- exibe disciplina, semestre, dia, horário e sala de modo estruturado também no editor do cadastro docente.
+
 ## 0.10.9 — 2026-08-03
 
 - amplia os gatilhos dos cards docentes para perguntas sobre dias de aula, matérias e disciplinas, incluindo construções como `quais os dias de aula da prof Amanda` e `professora Amanda dá aula em quais dias e para quais matérias`;

@@ -1,17 +1,14 @@
-HUB WhatsApp Bot v0.10.9 — Fedora GNOME
+HUB WhatsApp Bot v0.11.0 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.10.9
-- Perguntas sobre dias, horários e matérias de um professor abrem o card docente completo.
-- No privado, agradecimentos, elogios e ofensas geram reação mesmo sem reply ou menção.
-- Em grupos, as reações continuam exigindo reply, menção real ou identificação explícita do bot.
-- Mantém o card oficial de contato da Coordenação de BSI.
-- Toda consulta de aulas começa com o dia da semana e o semestre usados.
-- Aceita 2 semestre, 2º semestre, 2° semestre, 2o semestre, segundo semestre e semestre 2.
-- Quando falta o semestre, a pergunta informa o dia consultado e mostra exemplos de resposta.
-- Comentários como “aula normal hoje” não abrem indevidamente a pergunta de semestre.
-- Consultas também aceitam matéria, disciplina, cadeira, componente, horário e dia + semestre.
-- O telefone privado de Felipe Juan continua fora do pacote público do GitHub.
+ATUALIZAÇÃO v0.11.0
+- O quadro docente é armazenado em campos estruturados, incluindo sigla, semestre, dia, início, fim e sala.
+- A consulta de aulas mostra dia, data e semestre no título.
+- O painel inclui “Calendário e exceções” para feriados, recessos, suspensões, reposições, sábados letivos e mudanças de sala.
+- Exceções alteram a resposta de uma data sem sobrescrever o quadro semanal.
+- Nomes docentes aceitam erro moderado; siglas aceitam um erro curto; palavras genéricas não usam aproximação excessiva.
+- Transposição de letras adjacentes é reconhecida, como Amanda/Amnada e CORES/COERS.
+- O backup JSON preserva o quadro estruturado e as exceções acadêmicas cadastradas.
 
 INSTALAÇÃO
 1. Extraia o ZIP.
@@ -30,6 +27,7 @@ PAINEL
 - Em Mensagens automáticas, escolha cards ou lista, selecione de 1 a 4 colunas e use seleção múltipla para ações em lote.
 - Use “Cadastro docente” para registrar sala, bloco, fonte e data de confirmação.
 - Use “Atualizar quadro docente” para importar CSV, TSV ou XLSX sem perder gatilhos personalizados nem salas confirmadas.
+- Use “Calendário e exceções” para registrar suspensão de aulas, recesso, sábado letivo, reposição ou mudança temporária de sala.
 - Mensagens podem ser ativas, inativas ou arquivadas.
 
 EDITOR

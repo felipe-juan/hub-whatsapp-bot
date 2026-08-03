@@ -15,6 +15,7 @@ const createCardsRepositoryMixin = require('./database/cards-repository');
 const createDirectoriesRepositoryMixin = require('./database/directories-repository');
 const createDeliveriesRepositoryMixin = require('./database/deliveries-repository');
 const createBackupsRepositoryMixin = require('./database/backups-repository');
+const createScheduleRepositoryMixin = require('./database/schedule-repository');
 
 const DEFAULT_SETTINGS = {
   bot_name: 'HUB Bot',
@@ -92,7 +93,9 @@ const DEFAULT_SETTINGS = {
   ignored_message_prefixes: '[BOT]|[HUBBOT]',
   dashboard_cards: 'connection,messages,queue,last_reply,top_rules,errors,memory',
   dashboard_stale_minutes: '120',
-  professor_room_stale_days: '180'
+  professor_room_stale_days: '180',
+  current_academic_period: '2026.2',
+  content_v0110_structured_schedule_calendar_typos: 'false'
 };
 
 const DEFAULT_LINKS = [
@@ -754,7 +757,7 @@ class Database {
 
 }
 const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, crypto };
-for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin]) {
+for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;
   Object.defineProperties(Database.prototype, descriptors);

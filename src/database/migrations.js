@@ -1,3 +1,8 @@
+'use strict';
+
+const { ACADEMIC_CALENDAR_EVENTS_2026 } = require('../content/academic-calendar-2026');
+const { SI_SCHEDULE_SOURCE_2026_2 } = require('../si-professors-2026-2');
+
 module.exports = function createMixin(deps) {
   const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, crypto } = deps;
 
@@ -116,6 +121,22 @@ module.exports = function createMixin(deps) {
       CREATE TABLE IF NOT EXISTS admin_auth (
         id INTEGER PRIMARY KEY CHECK(id=1), salt TEXT NOT NULL, password_hash TEXT NOT NULL, updated_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS professor_schedule_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, teacher_id INTEGER, professor_name TEXT NOT NULL, professor_email TEXT NOT NULL DEFAULT '',
+        discipline_name TEXT NOT NULL, discipline_code TEXT NOT NULL DEFAULT '', semester_number INTEGER NOT NULL, semester_label TEXT NOT NULL DEFAULT '',
+        day_of_week INTEGER NOT NULL, day_label TEXT NOT NULL DEFAULT '', start_minutes INTEGER, end_minutes INTEGER, hours_label TEXT NOT NULL DEFAULT '',
+        room TEXT NOT NULL DEFAULT '', academic_period TEXT NOT NULL DEFAULT '', source_title TEXT NOT NULL DEFAULT '', source_version TEXT NOT NULL DEFAULT '',
+        source_date TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY(teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+      );
+      CREATE TABLE IF NOT EXISTS academic_calendar_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, package_key TEXT NOT NULL DEFAULT '', event_type TEXT NOT NULL,
+        start_date TEXT NOT NULL, end_date TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', course TEXT NOT NULL DEFAULT 'todos',
+        semester_numbers_json TEXT NOT NULL DEFAULT '[]', discipline_code TEXT NOT NULL DEFAULT '', professor_name TEXT NOT NULL DEFAULT '',
+        old_room TEXT NOT NULL DEFAULT '', new_room TEXT NOT NULL DEFAULT '', replacement_day_of_week INTEGER, start_minutes INTEGER, end_minutes INTEGER,
+        source_url TEXT NOT NULL DEFAULT '', source_title TEXT NOT NULL DEFAULT '', verified_at TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
       CREATE INDEX IF NOT EXISTS idx_logs_created_at ON message_logs(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_teachers_active ON teachers(active);
       CREATE INDEX IF NOT EXISTS idx_sectors_active ON sectors(active,name);
@@ -133,6 +154,10 @@ module.exports = function createMixin(deps) {
       CREATE INDEX IF NOT EXISTS idx_outbound_state_due ON outbound_deliveries(state,next_attempt_at,id);
       CREATE INDEX IF NOT EXISTS idx_outbound_conversation ON outbound_deliveries(conversation_id,state,id);
       CREATE INDEX IF NOT EXISTS idx_admin_tasks_state ON admin_task_runs(state,created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_professor_schedule_lookup ON professor_schedule_entries(academic_period,semester_number,day_of_week,active,start_minutes);
+      CREATE INDEX IF NOT EXISTS idx_professor_schedule_professor ON professor_schedule_entries(professor_name,academic_period,active);
+      CREATE INDEX IF NOT EXISTS idx_academic_calendar_date ON academic_calendar_events(start_date,end_date,active);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_academic_calendar_package_key ON academic_calendar_events(package_key) WHERE package_key<>'';
     `);
 
     this.ensureColumn('outbound_deliveries', 'idempotency_key', "TEXT NOT NULL DEFAULT ''");
@@ -243,6 +268,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0107();
     if (seedBundledContent) this.migrateContentV0108();
     if (seedBundledContent) this.migrateContentV0109();
+    if (seedBundledContent) this.migrateContentV0110();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -1173,6 +1199,66 @@ module.exports = function createMixin(deps) {
     this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 
+  migrateContentV0110() {
+    if (asBool(this.getSetting('content_v0110_structured_schedule_calendar_typos', 'false'), false)) return;
+    const professorItems = [...SI_PROFESSORS_2026_2, SI_PENDING_2026_2];
+    const records = professorItems.map(item => ({
+      name: item.name,
+      email: item.email || '',
+      academic_period: '2026.2',
+      classes: (item.classes || []).map(([discipline, semester, day, hours, room]) => ({ discipline, semester, day, hours, room }))
+    }));
+    this.db.exec('BEGIN');
+    try {
+      this.db.prepare('DELETE FROM professor_schedule_entries WHERE academic_period=?').run('2026.2');
+      this.db.exec('COMMIT');
+    } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+    this.replaceProfessorScheduleEntries(records, {
+      academicPeriod: '2026.2',
+      source: {
+        file: SI_SCHEDULE_SOURCE_2026_2.file,
+        version: SI_SCHEDULE_SOURCE_2026_2.version,
+        published_at: SI_SCHEDULE_SOURCE_2026_2.published_at
+      }
+    });
+
+    for (const event of ACADEMIC_CALENDAR_EVENTS_2026) {
+      const existing = this.db.prepare('SELECT id FROM academic_calendar_events WHERE package_key=?').get(event.key);
+      if (!existing) this.saveAcademicCalendarEvent({ ...event, package_key: event.key, active: true });
+    }
+
+    const rows = this.db.prepare("SELECT id,title,trigger_json,draft_json,package_snapshot_json,pending_package_json FROM automatic_messages").all();
+    const update = this.db.prepare('UPDATE automatic_messages SET trigger_json=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?');
+    const acronymPattern = /\b(?:caens|cores|acex)\b/u;
+    const professorByTitle = new Map(professorItems.map(item => [normalizeText(item.pending ? 'Pendência — Meio Ambiente (docente substituto)' : `Professor — ${item.name}`), item]));
+    for (const row of rows) {
+      const liveTrigger = parseJson(row.trigger_json || '{}', {});
+      const professorItem = professorByTitle.get(normalizeText(row.title));
+      const patchSnapshot = (value, transform) => {
+        if (!value) return value || '';
+        const object = parseJson(value, null);
+        if (!object || typeof object !== 'object') return value;
+        if (object.trigger) object.trigger = transform(object.trigger);
+        return JSON.stringify(object);
+      };
+      if (professorItem) {
+        const officialSentences = buildSiProfessorTriggerSentences(professorItem);
+        const mergeProfessorTrigger = trigger => normalizeTriggerRules({
+          ...trigger, typo_tolerance: 0,
+          sentences: [...new Set([...(trigger?.sentences || []), ...officialSentences])]
+        });
+        const trigger = mergeProfessorTrigger(liveTrigger);
+        update.run(JSON.stringify(trigger), patchSnapshot(row.draft_json, mergeProfessorTrigger), patchSnapshot(row.package_snapshot_json, mergeProfessorTrigger), patchSnapshot(row.pending_package_json, mergeProfessorTrigger), nowIso(), Number(row.id));
+        continue;
+      }
+      if (!acronymPattern.test(normalizeText(JSON.stringify(liveTrigger)))) continue;
+      const acronymTrigger = trigger => normalizeTriggerRules({ ...trigger, typo_tolerance: 1 });
+      update.run(JSON.stringify(acronymTrigger(liveTrigger)), patchSnapshot(row.draft_json, acronymTrigger), patchSnapshot(row.package_snapshot_json, acronymTrigger), patchSnapshot(row.pending_package_json, acronymTrigger), nowIso(), Number(row.id));
+    }
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0110_structured_schedule_calendar_typos','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
   seedStructuredSectorsV098() {
     if (asBool(this.getSetting('structured_sectors_v098_seeded', 'false'), false)) return;
     const sectors = [
@@ -1212,6 +1298,7 @@ module.exports = function createMixin(deps) {
         const schedule = (item.classes || []).map(entry => ({
           discipline: String(entry?.[0] || '').trim(), semester: String(entry?.[1] || '').trim(),
           day: String(entry?.[2] || '').trim(), hours: String(entry?.[3] || '').trim(),
+          room: String(entry?.[4] || '').trim(),
           description: String(entry?.[4] || '').trim() ? `Sala: ${String(entry?.[4]).trim()}` : ''
         }));
         const existing = findByEmail.get(email);

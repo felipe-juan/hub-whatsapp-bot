@@ -1,5 +1,5 @@
 const { containsPhrase, normalizeText, tokenize } = require('./text');
-const { evaluateTrigger, endsWithQuestionMark } = require('./trigger-rules');
+const { evaluateTrigger, endsWithQuestionMark, levenshteinWithin } = require('./trigger-rules');
 const { implicitQuestionStructure } = require('./semantic-question');
 
 const CONTACT_INTENT = ['email', 'e-mail', 'contato', 'contact', 'como falar', 'falar com', 'entrar em contato'];
@@ -21,8 +21,15 @@ function teacherScore(message, teacher) {
       score += points; reasons.push(`apelido: ${alias}`);
     }
   }
+  const messageTokens = tokenize(normalized);
   const meaningfulTokens = tokenize(teacher.name).filter(token => token.length >= 4);
-  for (const token of meaningfulTokens) if (containsPhrase(normalized, token)) { score += 3; reasons.push(`parte do nome: ${token}`); }
+  for (const token of meaningfulTokens) {
+    if (containsPhrase(normalized, token)) { score += 3; reasons.push(`parte do nome: ${token}`); continue; }
+    const tolerance = token.length >= 7 ? 2 : 1;
+    if (messageTokens.some(actual => actual.length >= 4 && levenshteinWithin(actual, token, tolerance))) {
+      score += 2; reasons.push(`parte aproximada do nome: ${token}`);
+    }
+  }
   return { score, reasons: [...new Set(reasons)] };
 }
 
