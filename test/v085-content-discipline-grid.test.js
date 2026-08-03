@@ -19,17 +19,20 @@ function card(db, title) {
   return db.listAutomaticMessages().find(item => item.title === title);
 }
 
-test('professor replies use only the requested email, calendar and discipline emojis', () => {
+test('professor replies are readable, grouped by topic and include every classroom', () => {
   const { db, dir } = temporaryDatabase();
   try {
     const allan = card(db, 'Professor — Allan de Sousa Soares');
     assert.ok(allan);
-    assert.match(allan.response_text, /📧/);
-    assert.match(allan.response_text, /📚/);
-    assert.match(allan.response_text, /🗓️/);
+    assert.equal((allan.response_text.match(/📧/gu) || []).length, 1);
+    assert.equal((allan.response_text.match(/📚/gu) || []).length, 1);
+    assert.equal((allan.response_text.match(/🗓️/gu) || []).length, 1);
     assert.doesNotMatch(allan.response_text, /👨‍🏫|👩‍🏫|🎓|📍|⚠️/u);
-    assert.match(allan.response_text, /\*Semestre\(s\):\*/);
-    assert.match(allan.response_text, /\*Dias no IFBA:\*/);
+    assert.match(allan.response_text, /📧 \*Contato\*/);
+    assert.match(allan.response_text, /📚 \*Semestres\*/);
+    assert.match(allan.response_text, /🗓️ \*Horários e salas — 2026\.2\*/);
+    assert.match(allan.response_text, /Matemática Discreta I[\s\S]*Sala: \*H204\*/);
+    assert.match(allan.response_text, /Matemática Discreta II[\s\S]*Sala: \*H008\*/);
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -93,7 +96,8 @@ test('final grade card mentions the WhatsApp calculator and help command', () =>
   const { db, dir } = temporaryDatabase();
   try {
     const media = card(db, 'HUB — Média final e tabela da final');
-    assert.match(media.response_text, /!final MP PF/);
+    assert.match(media.response_text, /!final 6,9/);
+    assert.match(media.response_text, /!final 5,0 6,0 7,0/);
     assert.match(media.response_text, /!final help/);
     assert.match(media.response_text, /#media-final/);
   } finally {

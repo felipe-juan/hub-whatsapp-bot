@@ -132,15 +132,17 @@ test('estatísticas anônimas agregam apenas tópico, tipo, dia e contagem', () 
   db.close(); fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('calculadoras adicionais são configuráveis e produzem resultados', () => {
+test('comandos antigos de calculadora permanecem desativados', () => {
   const calculators = [
     { key: 'attendance', enabled: true, command: '!freq|!frequencia', label: 'Frequência', config: { minimum_percent: 75 } },
     { key: 'hours', enabled: true, command: '!horas', label: 'Horas', config: { default_required_hours: 200 } },
-    { key: 'weighted', enabled: true, command: '!mediap', label: 'Ponderada', config: {} }
+    { key: 'weighted', enabled: true, command: '!mediap', label: 'Ponderada', config: {} },
+    { key: 'final', enabled: true, command: '!final', label: 'Final', config: {} }
   ];
-  assert.match(handleCalculator('!freq 60 8', calculators).text, /86,67%/);
-  assert.match(handleCalculator('!horas 150', calculators).text, /50 h/);
-  assert.match(handleCalculator('!mediap 7:2 9:3', calculators).text, /8,2/);
+  assert.equal(handleCalculator('!freq 60 8', calculators), null);
+  assert.equal(handleCalculator('!horas 150', calculators), null);
+  assert.equal(handleCalculator('!mediap 7:2 9:3', calculators), null);
+  assert.match(handleCalculator('!final 6,9', calculators).text, /1,2/);
 });
 
 test('comparação de versões e interface de atualização estão presentes', () => {

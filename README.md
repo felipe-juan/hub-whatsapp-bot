@@ -1,13 +1,26 @@
 # HUB WhatsApp Bot
 
+## Novidades da v0.10.4
+
+- mantém somente o comando `!final`; os comandos antigos de média, frequência, horas e média ponderada foram removidos;
+- com um valor, `!final` considera esse número como a média das unidades e informa a nota mínima necessária na prova final;
+- com vários valores, calcula a média das unidades antes de informar a situação e a nota necessária;
+- atualiza os cards docentes com as salas do quadro 2026.2, versão 2, de 28/07/2026, e melhora a leitura por contato, semestres e horários/salas;
+- reconhece consultas docentes por `sala`, `onde`, `laboratório`, `laboratorio` e `lab`;
+- acrescenta o card oficial de trancamento da graduação, o contato de Felipe Juan e o Bar do Benjamin;
+- a palavra “bot” isolada não ativa mais a ajuda em grupos; a ajuda por menção exige uma menção `@` real do WhatsApp;
+- preserva banco, sessão, anexos, configurações e personalizações durante a atualização.
+
+
+## Preservação e recuperação de anexos — v0.10.3
+
+A v0.10.3 corrige uma regressão específica da atualização anterior: anexos personalizados do card **Como passar em Cálculo?** não podem mais ser confundidos com conteúdo oficial do pacote. Quando a v0.10.2 removeu esse anexo durante a atualização, a v0.10.3 recupera automaticamente os metadados a partir do histórico do próprio card, mantendo o arquivo armazenado em `data/attachments`. Atualizações futuras de cards do pacote também preservam anexos adicionados pelo administrador.
+
+
 > [!IMPORTANT]
-> ## Transparência sobre autoria por inteligência artificial
+> ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
 >
-> **Todo o código deste projeto foi produzido por inteligência artificial generativa, principalmente pelo ChatGPT/OpenAI.** O mantenedor humano não se apresenta como autor manual do código-fonte.
->
-> **Allan de Sousa Soares** foi responsável pela ideia, definição dos requisitos, decisões funcionais, curadoria do conteúdo, testes realizados em seu próprio ambiente, revisão dos resultados, publicação e manutenção do projeto.
->
-> Até o momento, os testes funcionais foram realizados apenas pelo mantenedor. O projeto não passou por auditoria independente de segurança, revisão profissional de código ou validação ampla por terceiros. Quem utilizar, modificar ou implantar este software deve revisar o código e assumir responsabilidade por sua própria instalação.
+> O mantenedor humano atuou principalmente como **idealizador, testador, revisor, curador de conteúdo e validador visual/funcional** do projeto.
 
 > [!WARNING]
 > Este é um projeto **independente e não oficial**. Ele não representa o IFBA, o Campus Vitória da Conquista, o WhatsApp, a Meta ou a OpenAI.
@@ -31,7 +44,7 @@ Principais objetivos:
 
 ## Estado do projeto
 
-Versão atual: **0.10.2**
+Versão atual: **0.10.4**
 
 O projeto ainda está em preparação para a versão 1.0. Apesar da suíte automatizada e dos testes realizados pelo mantenedor, ele deve ser considerado experimental.
 
@@ -44,13 +57,13 @@ Antes de usar em produção:
 5. configure backup e retenção de logs;
 6. mantenha o painel restrito a `localhost`, salvo necessidade específica.
 
-## Novidades da v0.10.2
+## Novidades da v0.10.3
 
-- reconhece perguntas completas mesmo sem `?` no final, desde que tenham ao menos três termos e uma estrutura interrogativa clara;
-- aceita inícios como **como**, **onde**, **qual**, **quem**, **quando**, **posso**, **preciso**, **você sabe**, **gostaria de saber** e equivalentes;
-- aplica a mesma regra a cards automáticos, setores, contatos docentes, horários e localização de professores;
-- mantém bloqueadas menções casuais, frases incompletas e discurso relatado, reduzindo falsos positivos;
-- corrige automaticamente o card **Como passar em Cálculo?** para funcionar com e sem o ponto de interrogação, preservando resposta e anexo personalizados.
+- recupera automaticamente a imagem personalizada do card **Como passar em Cálculo?** quando ela foi removida pela migração da v0.10.2;
+- preserva anexos administrativos em atualizações futuras de cards oficiais do pacote;
+- normaliza snapshots antigos que haviam incorporado anexos do usuário como se fossem conteúdo oficial;
+- mantém o reconhecimento de perguntas completas sem `?` final introduzido na v0.10.2;
+- mantém banco, sessão, anexos, configurações e histórico durante a atualização.
 
 ## Recursos principais
 
@@ -306,7 +319,7 @@ Verificar scripts e indicador do desktop:
 npm run desktop:check
 ```
 
-A versão 0.10.2 foi empacotada após 258 testes automatizados aprovados, executados pela suíte combinada do Node.js. Esse número não substitui revisão independente nem teste em uma conta real diferente.
+A versão 0.10.3 foi empacotada após 260 testes automatizados aprovados, executados pela suíte combinada do Node.js. Esse número não substitui revisão independente nem teste em uma conta real diferente.
 
 ## Variáveis de ambiente
 

@@ -39,18 +39,13 @@ function fakeMessage(body, { mentionedMe = false, isGroup = false } = {}) {
   return { message, replies };
 }
 
-test('menção textual sem gatilho recebe orientação com três exemplos', async t => {
+test('a palavra bot em grupo não é tratada como menção', async t => {
   const { dir, db } = makeDb();
   t.after(() => { db.close(); fs.rmSync(dir, { recursive: true, force: true }); });
   const engine = new BotEngine(db);
-  const { message, replies } = fakeMessage('Bot, você pode me ajudar com isso?');
+  const { message, replies } = fakeMessage('Bot, você pode me ajudar com isso?', { isGroup: true });
   await engine.handle(message);
-  assert.equal(replies.length, 1);
-  assert.match(replies[0], /Não identifiquei nenhum comando/);
-  assert.match(replies[0], /contato do professor Allan/);
-  assert.match(replies[0], /contato da CAENS/);
-  assert.match(replies[0], /fluxograma do curso/);
-  assert.equal((replies[0].match(/^• /gm) || []).length, 3);
+  assert.equal(replies.length, 0);
 });
 
 test('menção real por @ também ativa a orientação', async t => {

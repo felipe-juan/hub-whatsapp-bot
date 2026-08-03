@@ -1,13 +1,16 @@
-HUB WhatsApp Bot v0.10.2 — Fedora GNOME
+HUB WhatsApp Bot v0.10.4 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.10.2
-- Perguntas completas podem funcionar sem ? quando começam com uma estrutura interrogativa clara.
-- São reconhecidos inícios como como, onde, qual, quem, quando, posso, preciso, você sabe e gostaria de saber.
-- A regra vale para cards automáticos, setores, contatos, horários e localização docente.
-- O card “Como passar em Cálculo?” agora responde com ou sem o ponto de interrogação.
-- A atualização preserva resposta e anexo personalizados desse card.
-- Frases incompletas, menções casuais e discurso relatado continuam bloqueados.
+ATUALIZAÇÃO v0.10.4
+- Somente o comando !final permanece ativo.
+- Um valor após !final é tratado como a média das unidades; vários valores são primeiro promediados.
+- O bot informa aprovação por média, direito à final ou reprovação e calcula a PF mínima quando aplicável.
+- Todos os cards docentes de BSI 2026.2 passam a mostrar a sala de cada disciplina.
+- Os cards docentes foram reorganizados para leitura rápida, com um emoji por tópico.
+- Consultas por sala, onde, laboratório e lab reconhecem os cards docentes.
+- Foram adicionados o card oficial de trancamento, o contato de Felipe Juan e o Bar do Benjamin.
+- Em grupos, escrever “bot” não ativa a ajuda; somente uma menção real por @ faz isso.
+- Anexos, banco, sessão e configurações continuam preservados na atualização.
 
 INSTALAÇÃO
 1. Extraia o ZIP.
@@ -51,13 +54,15 @@ PROFESSORES — SISTEMAS DE INFORMAÇÃO 2026.2
 - 28 cartões de professores e 1 pendência são adicionados automaticamente.
 - Pesquise pelo nome do professor, disciplina ou conteúdo da resposta.
 - Os e-mails informados já estão preenchidos, incluindo Luana Bittencourt.
-- Os gatilhos aceitam pedidos por nome ou por disciplina, além de perguntas sobre dias/horários no IFBA.
+- Os gatilhos aceitam nome, disciplina, sala, onde, laboratório e lab.
+- Cada disciplina mostra dia, faixa de horário e sala do quadro versão 2 de 28/07/2026.
 - No desktop, a quantidade de colunas pode ser dinâmica ou escolhida entre 1 e 4.
 
 MEDIA FINAL
 - !final: mostra a explicação completa.
-- !final help: mostra a mesma ajuda.
-- !final MP PF: calcula MF = (MP×2 + PF) ÷ 3.
+- !final 6,9: considera 6,9 como a média das unidades e calcula a PF mínima.
+- !final 5,0 6,0 7,0: calcula a média das unidades e depois a PF mínima.
+- A aprovação direta exige MP >= 7,0; após a final, MF = (2×MP + PF) ÷ 3 e MF >= 5,0.
 
 ORIGEM DOS CARTÕES
 - O painel identifica conteúdo do pacote, importado ou criado localmente.
@@ -85,7 +90,8 @@ CARDS, SETORES, CONTEXTO E ANEXOS — v0.9.8
 LOCALIZAÇÃO E CADASTRO DOCENTE — v0.9.7
 - O card de localização consulta o cadastro estruturado de professores.
 - Salas só são informadas quando há data e fonte de confirmação.
-- Perguntas sobre sala da aula são separadas da sala de atendimento.
+- Perguntas sobre sala da aula de docentes de BSI abrem o card individual com as salas do quadro 2026.2.
+- Quando não existe card docente específico, o bot mantém uma orientação genérica e não inventa a sala.
 - Nomes ambíguos geram escolha por sobrenome.
 
 GATILHOS SEGUROS E CARDS DE BSI — v0.9.5

@@ -149,6 +149,7 @@ function headerKey(value) {
     semestre: 'semester', periodo: 'semester', periodo_curricular: 'semester', turma: 'semester',
     dia: 'day', dias: 'day', dia_da_semana: 'day', dias_da_semana: 'day',
     horario: 'hours', horarios: 'hours', faixa_de_horario: 'hours',
+    sala: 'room', salas: 'room', laboratorio: 'room', laboratorio_sala: 'room', local: 'room', local_da_aula: 'room',
     periodo_letivo: 'academic_period', semestre_letivo: 'academic_period', ano_semestre: 'academic_period'
   };
   return aliases[key] || key;
@@ -174,6 +175,7 @@ function rowsToRecords(rows, options = {}) {
       semester: data.semester,
       day: data.day,
       hours: data.hours,
+      room: data.room || '',
       academic_period: data.academic_period || options.academicPeriod || ''
     });
   });
@@ -183,8 +185,8 @@ function rowsToRecords(rows, options = {}) {
     const current = grouped.get(key) || { name: row.professor, email: row.email, academic_period: row.academic_period, classes: [], source_lines: [] };
     if (!current.email && row.email) current.email = row.email;
     if (!current.academic_period && row.academic_period) current.academic_period = row.academic_period;
-    const classKey = [row.discipline, row.semester, row.day, row.hours].map(normalizeText).join('|');
-    if (!current.classes.some(entry => entry.key === classKey)) current.classes.push({ key: classKey, discipline: row.discipline, semester: row.semester, day: row.day, hours: row.hours });
+    const classKey = [row.discipline, row.semester, row.day, row.hours, row.room].map(normalizeText).join('|');
+    if (!current.classes.some(entry => entry.key === classKey)) current.classes.push({ key: classKey, discipline: row.discipline, semester: row.semester, day: row.day, hours: row.hours, room: row.room || '' });
     current.source_lines.push(row.line);
     grouped.set(key, current);
   }
@@ -210,20 +212,26 @@ function parseProfessorScheduleFile(buffer, fileName, options = {}) {
 
 function buildProfessorScheduleResponse(record, publishedAt = new Date()) {
   const period = String(record.academic_period || 'período importado').trim();
-  const days = [...new Set((record.classes || []).map(entry => entry.day).filter(Boolean))];
   const joinHuman = values => values.length <= 1 ? (values[0] || '') : `${values.slice(0, -1).join(', ')} e ${values.at(-1)}`;
   const date = new Intl.DateTimeFormat('pt-BR').format(publishedAt);
   return [
     `*${record.name}*`,
     '',
-    `📧 *E-mail:* ${record.email || '[ADICIONAR NO PAINEL]'}`,
-    `*Semestre(s):* ${joinHuman(record.semesters || [])}`,
-    `*Dias no IFBA:* ${joinHuman(days)}`,
+    '📧 *Contato*',
+    record.email || '[ADICIONAR NO PAINEL]',
     '',
-    `📚 *Disciplinas e horários — ${period}:*`,
-    ...(record.classes || []).map(entry => `• *${entry.discipline}* — ${entry.semester}\n  🗓️ ${entry.day} — ${entry.hours}`),
+    '📚 *Semestres*',
+    joinHuman(record.semesters || []),
     '',
-    `🗓️ _Horário importado em ${date}._`
+    `🗓️ *Horários e salas — ${period}*`,
+    ...(record.classes || []).flatMap(entry => [
+      '',
+      `*${entry.discipline}* — ${entry.semester}`,
+      `${entry.day}, ${entry.hours}`,
+      `Sala: *${entry.room || 'não informada'}*`
+    ]),
+    '',
+    `_Horário importado em ${date}._`
   ].join('\n');
 }
 

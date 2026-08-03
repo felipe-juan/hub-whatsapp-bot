@@ -39,7 +39,7 @@ function questionIntent(value) {
     || /\b(?:quem da|quem ensina|quem ministra|professor de|professora de|docente de)\b/u.test(text)) return 'teacher';
   if (/\b(?:horario|horário|que horas|qual dia|quais dias|quando tem|quando acontece|dia da aula)\b/u.test(text)) return 'schedule';
   if (/\b(?:pre requisito|pré requisito|prerequisito|pré-requisito|requisito para cursar|depende de|preciso cursar antes|bloqueia)\b/u.test(text)) return 'prerequisite';
-  if (/\b(?:onde fica|onde encontro|localizacao|localização|qual sala|em qual sala|endereco|endereço)\b/u.test(text)) return 'location';
+  if (/\b(?:onde|localizacao|localização|qual sala|em qual sala|endereco|endereço)\b/u.test(text)) return 'location';
   if (/\b(?:contato|email|e mail|whatsapp|telefone|ramal|falar com|entrar em contato)\b/u.test(text)) return 'contact';
   if (/\b(?:como|o que fazer|iniciar|comecar|começar|passar para|entregar|solicitar|documentos|defesa|orientador|orientadora|procedimento|passo a passo)\b/u.test(text)) return 'procedure';
   if (/\b(?:posso|pode|preciso|devo|e obrigatorio|é obrigatório|serve|conta como)\b/u.test(text)) return 'eligibility';

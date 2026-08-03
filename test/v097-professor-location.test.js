@@ -91,15 +91,22 @@ test('generic professor request asks for a name and exclusions protect other car
   } finally { closeAll(engine, db, dir); }
 });
 
-test('classroom request is separated from professor office location', () => {
+test('classroom request resolves to the individual professor card with the current room', () => {
   const { db, dir } = temporaryDatabase();
   const engine = new BotEngine(db);
   try {
-    for (const body of ['qual é a sala da aula do professor Allan?', 'em qual sala é a turma da professora Amanda?']) {
+    for (const [body, expectedTitle] of [
+      ['qual é a sala da aula do professor Allan?', 'Professor — Allan de Sousa Soares'],
+      ['qual é a sala da aula do professor Allan', 'Professor — Allan de Sousa Soares'],
+      ['em qual sala é a turma da professora Amanda?', 'Professor — Amanda Ferraz de Oliveira Passos'],
+      ['em qual sala é a turma da professora Amanda', 'Professor — Amanda Ferraz de Oliveira Passos']
+    ]) {
       const result = engine.evaluate(body, { isGroup: false, ignorePermissions: true });
       assert.equal(result.matched, true, body);
-      assert.equal(result.type, 'professor_classroom', body);
-      assert.match(result.text, /sala de atendimento.*não é necessariamente a sala da turma/is);
+      assert.equal(result.type, 'message', body);
+      assert.equal(result.matchedItem, expectedTitle, body);
+      assert.match(result.text, /Horários e salas — 2026\.2/);
+      assert.match(result.text, /Sala: \*[A-Z]\d{3}\*/);
     }
     const officeQuestion = engine.evaluate('onde encontro o professor Allan para falar sobre a aula?', { isGroup: false, ignorePermissions: true });
     assert.equal(officeQuestion.matched, true);

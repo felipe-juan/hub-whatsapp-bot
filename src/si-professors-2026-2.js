@@ -1,7 +1,16 @@
-// Dados iniciais solicitados para o curso de Sistemas de Informação — 2026.2.
-// E-mails institucionais e horários informados pelo mantenedor para o período 2026.2.
+// Quadro oficial de horários de Sistemas de Informação — 2026.2.
+// Versão 2, publicada em 28/07/2026. Cada aula inclui a sala informada no quadro.
 
-const SI_PROFESSORS_2026_2 = [
+const SI_SCHEDULE_SOURCE_2026_2 = Object.freeze({
+  file: '2026-07-09 - Horários Docentes 2026 (1).csv',
+  version: 'Versão 2',
+  published_at: '2026-07-28',
+  sha256: 'ec6000abd72154f3675147a20b74f0ef02eda5fb7bcea59da8b00fa2fad10f16',
+  professor_cards: 28,
+  class_professor_records: 60
+});
+
+const SI_PROFESSORS_2026_2 = Object.freeze([
   {
     "name": "Alexandro dos Santos Silva",
     "email": "alexandrossilva@ifba.edu.br",
@@ -15,13 +24,15 @@ const SI_PROFESSORS_2026_2 = [
         "Linguagem de Programação II",
         "3º semestre",
         "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H108"
       ],
       [
         "Programação Web II",
         "5º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H205"
       ]
     ]
   },
@@ -38,13 +49,15 @@ const SI_PROFESSORS_2026_2 = [
         "Matemática Discreta I",
         "1º semestre",
         "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H204"
       ],
       [
         "Matemática Discreta II",
         "2º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H008"
       ]
     ]
   },
@@ -60,21 +73,31 @@ const SI_PROFESSORS_2026_2 = [
     "classes": [
       [
         "Gestão de Projetos",
-        "6º semestre, 7º semestre",
+        "6º semestre",
         "quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H213"
       ],
       [
         "Gestão e Governança de TI",
         "7º semestre",
         "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H105"
+      ],
+      [
+        "Gestão de Projetos",
+        "7º semestre",
+        "quarta-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H202"
       ],
       [
         "Sistemas de Apoio à Decisão",
         "8º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H107"
       ]
     ]
   },
@@ -92,19 +115,22 @@ const SI_PROFESSORS_2026_2 = [
         "Atividades Curriculares de Extensão I",
         "4º semestre",
         "quinta-feira e sexta-feira",
-        "16h40–18h20"
-      ],
-      [
-        "Comércio Eletrônico",
-        "6º semestre",
-        "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "16h40–18h20",
+        "H205"
       ],
       [
         "Programação Web",
         "5º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H205"
+      ],
+      [
+        "Comércio Eletrônico",
+        "6º semestre",
+        "quinta-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H214"
       ]
     ]
   },
@@ -119,22 +145,25 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
+        "Programação Web I",
+        "4º semestre",
+        "segunda-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H205"
+      ],
+      [
         "Inteligência Artificial",
         "6º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H212"
       ],
       [
         "Interface Homem Máquina",
         "7º semestre",
         "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
-      ],
-      [
-        "Programação Web I",
-        "4º semestre",
-        "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H212"
       ]
     ]
   },
@@ -149,22 +178,25 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
-        "Atividades Curriculares de Extensão III",
-        "6º semestre",
-        "segunda-feira e terça-feira",
-        "16h40–18h20"
-      ],
-      [
         "Introdução à Ciência da Computação",
         "1º semestre",
         "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H204"
       ],
       [
         "Sistemas Operacionais",
         "3º semestre",
         "sábado",
-        "13h50–16h20 e 16h40–17h30"
+        "13h50–16h20 e 16h40–17h30",
+        "H211"
+      ],
+      [
+        "Atividades Curriculares de Extensão III",
+        "6º semestre",
+        "segunda-feira e terça-feira",
+        "16h40–18h20",
+        "H106"
       ]
     ]
   },
@@ -179,8 +211,16 @@ const SI_PROFESSORS_2026_2 = [
       [
         "Probabilidade e Estatística",
         "3º semestre",
-        "segunda-feira e quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "quarta-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H108"
+      ],
+      [
+        "Probabilidade e Estatística",
+        "3º semestre",
+        "segunda-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H214"
       ]
     ]
   },
@@ -195,22 +235,25 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
-        "Atividades Curriculares de Extensão II",
-        "5º semestre",
-        "segunda-feira e quinta-feira",
-        "16h40–18h20"
+        "Linguagem de Programação I",
+        "2º semestre",
+        "segunda-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H008"
       ],
       [
         "Estruturas de Dados",
         "3º semestre",
         "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H108"
       ],
       [
-        "Linguagem de Programação I",
-        "2º semestre",
-        "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
+        "Atividades Curriculares de Extensão II",
+        "5º semestre",
+        "segunda-feira e quinta-feira",
+        "16h40–18h20",
+        "H214"
       ]
     ]
   },
@@ -225,22 +268,25 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
-        "Arquitetura de Software",
-        "8º semestre",
-        "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
-      ],
-      [
         "Engenharia de Software",
         "6º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H213"
       ],
       [
         "Qualidade de Software",
         "7º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H105"
+      ],
+      [
+        "Arquitetura de Software",
+        "8º semestre",
+        "segunda-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H213"
       ]
     ]
   },
@@ -257,13 +303,15 @@ const SI_PROFESSORS_2026_2 = [
         "Análise e Modelagem de Sistemas",
         "4º semestre",
         "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H205"
       ],
       [
         "Processo de Desenvolvimento de Software",
         "5º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H214"
       ]
     ]
   },
@@ -279,7 +327,8 @@ const SI_PROFESSORS_2026_2 = [
         "Trabalho de Conclusão de Curso I",
         "7º semestre",
         "quarta-feira",
-        "16h40–18h20"
+        "16h40–18h20",
+        "H106"
       ]
     ]
   },
@@ -295,7 +344,8 @@ const SI_PROFESSORS_2026_2 = [
         "Computador, Ética e Sociedade",
         "2º semestre",
         "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H008"
       ]
     ]
   },
@@ -310,22 +360,25 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
-        "Projeto e Administração de Redes",
-        "5º semestre",
-        "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
-      ],
-      [
         "Redes de Computadores",
         "4º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H202"
+      ],
+      [
+        "Projeto e Administração de Redes",
+        "5º semestre",
+        "quinta-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H202"
       ],
       [
         "Segurança e Auditoria de Sistemas",
         "6º semestre",
         "quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H106"
       ]
     ]
   },
@@ -341,7 +394,8 @@ const SI_PROFESSORS_2026_2 = [
         "Leitura e Produção de Gêneros Acadêmicos",
         "1º semestre",
         "sábado",
-        "13h50–16h20 e 16h40–17h30"
+        "13h50–16h20 e 16h40–17h30",
+        "H204"
       ]
     ]
   },
@@ -362,19 +416,22 @@ const SI_PROFESSORS_2026_2 = [
         "Organização e Arquitetura de Computadores",
         "2º semestre",
         "sábado",
-        "13h50–16h20 e 16h40–17h30"
-      ],
-      [
-        "Segurança de Redes de Computadores",
-        "7º semestre",
-        "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "13h50–16h20 e 16h40–17h30",
+        "H008"
       ],
       [
         "Sistemas Distribuídos",
         "6º semestre",
         "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H212"
+      ],
+      [
+        "Segurança de Redes de Computadores",
+        "7º semestre",
+        "terça-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H105"
       ]
     ]
   },
@@ -391,13 +448,15 @@ const SI_PROFESSORS_2026_2 = [
         "Algoritmo e Programação",
         "1º semestre",
         "quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H204"
       ],
       [
         "Trabalho de Conclusão de Curso II",
         "8º semestre",
         "segunda-feira",
-        "16h40–18h20"
+        "16h40–18h20",
+        "H206"
       ]
     ]
   },
@@ -414,13 +473,15 @@ const SI_PROFESSORS_2026_2 = [
         "Administração",
         "2º semestre",
         "quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H008"
       ],
       [
         "Organização, Sistemas e Métodos",
         "3º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H211"
       ]
     ]
   },
@@ -437,13 +498,15 @@ const SI_PROFESSORS_2026_2 = [
         "Complexidade de Algoritmos",
         "5º semestre",
         "quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H205"
       ],
       [
         "Programação para Dispositivos Móveis",
         "6º semestre",
         "sábado",
-        "13h50–16h20 e 16h40–17h30"
+        "13h50–16h20 e 16h40–17h30",
+        "H212"
       ]
     ]
   },
@@ -459,7 +522,8 @@ const SI_PROFESSORS_2026_2 = [
         "Linguagem Brasileira de Sinais - Libras",
         "7º semestre",
         "sábado",
-        "14h40–16h20 e 16h40–18h20"
+        "14h40–16h20 e 16h40–18h20",
+        "H214"
       ]
     ]
   },
@@ -475,7 +539,8 @@ const SI_PROFESSORS_2026_2 = [
         "Direito Cibernético",
         "3º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H214"
       ]
     ]
   },
@@ -490,22 +555,25 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
-        "Atividades Curriculares de Extensão IV",
-        "7º semestre",
-        "segunda-feira e quarta-feira",
-        "16h40–18h20"
-      ],
-      [
         "Banco de Dados I",
         "4º semestre",
         "quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H211"
       ],
       [
         "Banco de Dados II",
         "5º semestre",
         "segunda-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H202"
+      ],
+      [
+        "Atividades Curriculares de Extensão IV",
+        "7º semestre",
+        "segunda-feira e quarta-feira",
+        "16h40–18h20",
+        "H101"
       ]
     ]
   },
@@ -524,7 +592,8 @@ const SI_PROFESSORS_2026_2 = [
         "Cálculo Diferencial Aplicado à Computação",
         "2º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H008"
       ]
     ]
   },
@@ -540,7 +609,8 @@ const SI_PROFESSORS_2026_2 = [
         "Inglês Aplicado à Computação",
         "1º semestre",
         "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H204"
       ]
     ]
   },
@@ -555,22 +625,25 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
-        "Estágio Supervisionado",
-        "7º semestre",
-        "quinta-feira",
-        "16h40–18h20"
-      ],
-      [
         "Paradigmas de Linguagens de Programação",
         "4º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H106"
       ],
       [
         "Segurança da Informação",
         "6º semestre",
         "quinta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H106"
+      ],
+      [
+        "Estágio Supervisionado",
+        "7º semestre",
+        "quinta-feira",
+        "16h40–18h20",
+        "H106"
       ]
     ]
   },
@@ -586,7 +659,8 @@ const SI_PROFESSORS_2026_2 = [
         "Cálculo Diferencial Aplicado à Computação",
         "2º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H202"
       ]
     ]
   },
@@ -600,16 +674,18 @@ const SI_PROFESSORS_2026_2 = [
     ],
     "classes": [
       [
-        "Contabilidade Geral e Custos",
-        "6º semestre",
-        "sexta-feira",
-        "18h30–20h10 e 20h20–22h"
-      ],
-      [
         "Economia",
         "5º semestre",
         "sábado",
-        "13h50–16h20 e 16h40–17h30"
+        "13h50–16h20 e 16h40–17h30",
+        "H202"
+      ],
+      [
+        "Contabilidade Geral e Custos",
+        "6º semestre",
+        "sexta-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H106"
       ]
     ]
   },
@@ -625,7 +701,8 @@ const SI_PROFESSORS_2026_2 = [
         "Empreendedorismo",
         "4º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H212"
       ]
     ]
   },
@@ -643,25 +720,28 @@ const SI_PROFESSORS_2026_2 = [
         "Fundamentos de Sistemas de Informação",
         "1º semestre",
         "terça-feira",
-        "18h30–20h10 e 20h20–22h"
-      ],
-      [
-        "Inteligência do Negócio",
-        "8º semestre",
-        "quarta-feira",
-        "18h30–20h10 e 20h20–22h"
+        "18h30–20h10 e 20h20–22h",
+        "H204"
       ],
       [
         "Metodologia da Pesquisa Científica",
         "4º semestre",
         "sábado",
-        "13h50–16h20 e 16h40–17h30"
+        "13h50–16h20 e 16h40–17h30",
+        "H205"
+      ],
+      [
+        "Inteligência do Negócio",
+        "8º semestre",
+        "quarta-feira",
+        "18h30–20h10 e 20h20–22h",
+        "H214"
       ]
     ]
   }
-];
+]);
 
-const SI_PENDING_2026_2 = {
+const SI_PENDING_2026_2 = Object.freeze({
   "name": "Docente de Meio Ambiente — identificação pendente",
   "identifier": "meio ambiente",
   "semesters": [
@@ -672,11 +752,12 @@ const SI_PENDING_2026_2 = {
       "Meio Ambiente",
       "8º semestre",
       "sexta-feira",
-      "18h30–20h10 e 20h20–22h"
+      "18h30–20h10 e 20h20–22h",
+      "H101"
     ]
   ],
   "pending": true
-};
+});
 
 const SI_PROFESSOR_TRIGGER_ALIASES_2026_2 = Object.freeze({
   "Alexandro dos Santos Silva": ["alexandro"],
@@ -785,7 +866,11 @@ const SI_SHARED_DISCIPLINES_2026_2 = Object.freeze({
     ]),
     semester: '2º semestre',
     days: 'terça-feira',
-    hours: '18h30–20h10 e 20h20–22h'
+    hours: '18h30–20h10 e 20h20–22h',
+    roomsByProfessor: Object.freeze({
+      'Paulo Espinheira Menezes de Melo': 'H008',
+      'Thiago Leonardo Bastos da Silva': 'H202'
+    })
   })
 });
 
@@ -810,6 +895,19 @@ function buildSiProfessorNameTriggerSentences(item) {
     'quando {nome}', 'quando o {nome}', 'quando a {nome}', '{nome} quando',
     'horário {nome}', 'horário do {nome}', 'horário da {nome}', '{nome} horário',
     'horario {nome}', 'horario do {nome}', 'horario da {nome}', '{nome} horario',
+    'sala {nome}', 'sala de {nome}', 'sala do professor {nome}', 'sala da professora {nome}',
+    'sala da aula do professor {nome}', 'sala da aula da professora {nome}',
+    'sala da turma do professor {nome}', 'sala da turma da professora {nome}',
+    'qual sala {nome}', 'qual a sala de {nome}', 'em qual sala {nome}',
+    'qual é a sala da aula do professor {nome}', 'qual e a sala da aula do professor {nome}',
+    'qual é a sala da aula da professora {nome}', 'qual e a sala da aula da professora {nome}',
+    'em qual sala é a aula do professor {nome}', 'em qual sala e a aula do professor {nome}',
+    'em qual sala é a aula da professora {nome}', 'em qual sala e a aula da professora {nome}',
+    'em qual sala é a turma do professor {nome}', 'em qual sala e a turma do professor {nome}',
+    'em qual sala é a turma da professora {nome}', 'em qual sala e a turma da professora {nome}',
+    'onde {nome}', 'onde fica {nome}', 'onde é a aula de {nome}', 'onde e a aula de {nome}',
+    'laboratório {nome}', 'laboratorio {nome}', 'lab {nome}',
+    'laboratório do professor {nome}', 'laboratorio do professor {nome}', 'lab do professor {nome}',
     '{nome} no ifba', '{nome} está no ifba', '{nome} esta no ifba',
     '{nome} vai ao ifba', '{nome} vai pro ifba', '{nome} vai para o ifba'
   ];
@@ -835,7 +933,10 @@ const SI_DISCIPLINE_FULL_NAME_TEMPLATES = Object.freeze([
   'horário professor de {disciplina}', 'horário do professor de {disciplina}',
   'horario professor de {disciplina}', 'horario do professor de {disciplina}',
   'que dia tem {disciplina}', 'quando tem {disciplina}',
-  'horário de {disciplina}', 'horario de {disciplina}'
+  'horário de {disciplina}', 'horario de {disciplina}',
+  'sala de {disciplina}', 'qual a sala de {disciplina}', 'em qual sala tem {disciplina}',
+  'onde tem {disciplina}', 'onde é {disciplina}', 'onde e {disciplina}',
+  'laboratório de {disciplina}', 'laboratorio de {disciplina}', 'lab de {disciplina}'
 ]);
 
 const SI_DISCIPLINE_ABBREVIATION_TEMPLATES = Object.freeze([
@@ -846,7 +947,10 @@ const SI_DISCIPLINE_ABBREVIATION_TEMPLATES = Object.freeze([
   'e-mail de {disciplina}', 'e-mail professor de {disciplina}',
   'quem ensina {disciplina}', 'quem dá {disciplina}', 'quem da {disciplina}',
   'que dia tem {disciplina}', 'quando tem {disciplina}',
-  'horário de {disciplina}', 'horario de {disciplina}'
+  'horário de {disciplina}', 'horario de {disciplina}',
+  'sala de {disciplina}', 'qual a sala de {disciplina}', 'em qual sala tem {disciplina}',
+  'onde tem {disciplina}', 'onde é {disciplina}', 'onde e {disciplina}',
+  'laboratório de {disciplina}', 'laboratorio de {disciplina}', 'lab de {disciplina}'
 ]);
 
 function buildDisciplineTriggerSentences(discipline) {
@@ -868,26 +972,23 @@ function buildSharedDisciplineCards2026_2() {
   return Object.entries(SI_SHARED_DISCIPLINES_2026_2).map(([discipline, config]) => {
     const professors = config.professorNames.map(name => professorByName.get(name)).filter(Boolean);
     const responseLines = [
-      `*${discipline}*`,
-      '',
-      '📧 *Docentes e e-mails:*',
-      ...professors.map(item => `• *${item.name}* — ${item.email}`),
-      '',
-      `📚 *Semestre:* ${config.semester}`,
-      `🗓️ *Horário:* ${config.days} — ${config.hours}`,
-      '',
-      '🗓️ _Horário publicado em 28/07/2026._'
+      `*${discipline}*`, '',
+      '📧 *Docentes e contatos*',
+      ...professors.map(item => `• *${item.name}* — ${item.email}`), '',
+      `📚 *Semestre*\n${config.semester}`, '',
+      '🗓️ *Horário e salas — 2026.2*',
+      ...professors.map(item => `• *${item.name}*\n  ${config.days}, ${config.hours}\n  Sala: *${config.roomsByProfessor?.[item.name] || 'não informada'}*`), '',
+      '_Fonte: quadro de horários versão 2, publicado em 28/07/2026._'
     ];
     return {
       title: config.title,
       discipline,
       response_text: responseLines.join('\n'),
       sentences: buildDisciplineTriggerSentences(discipline),
-      tags: ['disciplina-compartilhada', 'professor', 'si', '2026-2', 'contato', 'horario', 'email']
+      tags: []
     };
   });
 }
-
 function buildSiProfessorTriggerSentences(item) {
   return unique([
     ...buildSiProfessorNameTriggerSentences(item),
@@ -896,9 +997,6 @@ function buildSiProfessorTriggerSentences(item) {
 }
 
 function buildSiProfessorResponse(item, emailOverride = '') {
-  const order = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-  const daysText = (item.classes || []).map(entry => String(entry[2] || '')).join(' ');
-  const days = order.filter(day => daysText.includes(day));
   const joinHuman = values => {
     const clean = unique(values);
     if (clean.length <= 1) return clean[0] || '';
@@ -907,24 +1005,25 @@ function buildSiProfessorResponse(item, emailOverride = '') {
   const email = item.pending
     ? '[IDENTIFICAR DOCENTE E ADICIONAR E-MAIL]'
     : (emailOverride || item.email || '[ADICIONAR NO PAINEL]');
-  const classLines = (item.classes || []).map(([discipline, semester, classDays, hours]) =>
-    `• *${discipline}* — ${semester}\n  🗓️ ${classDays} — ${hours}`);
+  const classLines = (item.classes || []).flatMap(([discipline, semester, classDays, hours, room]) => [
+    `*${discipline}* — ${semester}`,
+    `${classDays}, ${hours}`,
+    `Sala: *${room || 'não informada'}*`,
+    ''
+  ]);
   return [
-    `*${item.name}*`,
-    '',
-    `📧 *E-mail:* ${email}`,
-    `*Semestre(s):* ${joinHuman(item.semesters || [])}`,
-    `*Dias no IFBA:* ${joinHuman(days)}`,
-    '',
-    '📚 *Disciplinas e horários — 2026.2:*',
+    `*${item.name}*`, '',
+    '📧 *Contato*', email, '',
+    '📚 *Semestres*', joinHuman(item.semesters || []), '',
+    '🗓️ *Horários e salas — 2026.2*', '',
     ...classLines,
-    '',
-    '🗓️ _Horário publicado em 28/07/2026._',
-    ...(item.pending ? ['', '*Observação:* no arquivo, o docente aparece apenas como “PROF. SUBSTITUTO DE ENG. AMBIENTAL 1”.'] : [])
-  ].join('\n');
+    '_Fonte: quadro de horários versão 2, publicado em 28/07/2026._',
+    ...(item.pending ? ['', '*Observação:* no quadro, o docente aparece apenas como “PROF. SUBSTITUTO DE ENG. AMBIENTAL 1”.'] : [])
+  ].join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
 module.exports = {
+  SI_SCHEDULE_SOURCE_2026_2,
   SI_PROFESSORS_2026_2,
   SI_PENDING_2026_2,
   SI_PROFESSOR_TRIGGER_ALIASES_2026_2,

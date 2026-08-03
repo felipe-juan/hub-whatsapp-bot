@@ -7,6 +7,8 @@ const { TCC_CARDS } = require('./content/tcc');
 const { INTERNSHIP_CARDS } = require('./content/internship');
 const { STUDENT_ASSISTANCE_CARDS } = require('./content/student-assistance');
 const { SCHEDULE_BOARD_V0812 } = require('./content/schedule-board');
+const { ACADEMIC_LIFE_CARDS } = require('./content/academic-life');
+const { COMMUNITY_CARDS } = require('./content/community');
 
 const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...CAMPUS_CARDS,
@@ -14,7 +16,9 @@ const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...BSI_COURSE_CARDS,
   ...TCC_CARDS,
   ...INTERNSHIP_CARDS,
-  ...STUDENT_ASSISTANCE_CARDS
+  ...STUDENT_ASSISTANCE_CARDS,
+  ...ACADEMIC_LIFE_CARDS,
+  ...COMMUNITY_CARDS
 ]);
 
 function automaticMessagePayload(item) {

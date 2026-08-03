@@ -268,9 +268,11 @@ module.exports = function createMixin(deps) {
     }
     this.archiveAutomaticMessage(current, 'package-update');
     const timestamp = nowIso();
-    this.db.prepare(`UPDATE automatic_messages SET title=?,topic='',response_text=?,details_text=?,source_url=?,source_title=?,verified_at=?,trigger_json=?,priority=?,active=?,archived=?,published=1,published_at=?,draft_json='',scope=?,tags_json=?,attachment_json=?,source_type='hub_package',package_key=?,package_snapshot_json=?,pending_package_json='',customized=0,updated_at=? WHERE id=?`)
+    const nextAttachment = current.attachment || official.attachment || null;
+    const attachmentCustomized = !messageSnapshotsEqual({ ...official, attachment: nextAttachment }, official);
+    this.db.prepare(`UPDATE automatic_messages SET title=?,topic='',response_text=?,details_text=?,source_url=?,source_title=?,verified_at=?,trigger_json=?,priority=?,active=?,archived=?,published=1,published_at=?,draft_json='',scope=?,tags_json=?,attachment_json=?,source_type='hub_package',package_key=?,package_snapshot_json=?,pending_package_json='',customized=?,updated_at=? WHERE id=?`)
       .run(official.title, official.response_text, official.details_text, official.source_url, official.source_title, official.verified_at, JSON.stringify(official.trigger), official.priority, boolToDb(official.active), boolToDb(official.archived), timestamp,
-        official.scope, JSON.stringify(official.tags), JSON.stringify(official.attachment || {}), key, JSON.stringify(officialSnapshot), timestamp, Number(current.id));
+        official.scope, JSON.stringify(official.tags), JSON.stringify(nextAttachment || {}), key, JSON.stringify(officialSnapshot), boolToDb(attachmentCustomized), timestamp, Number(current.id));
     this.invalidate('activeMessages');
     return { action: 'updated', item: this.getAutomaticMessage(current.id) };
   }
@@ -290,9 +292,11 @@ module.exports = function createMixin(deps) {
     const official = this.validateAutomaticMessage(pending);
     this.archiveAutomaticMessage(current, 'before-package-update');
     const timestamp = nowIso(); const snapshot = comparableMessageSnapshot(official);
-    this.db.prepare(`UPDATE automatic_messages SET title=?,topic='',response_text=?,details_text=?,source_url=?,source_title=?,verified_at=?,trigger_json=?,priority=?,active=?,archived=?,published=1,published_at=?,draft_json='',scope=?,tags_json=?,attachment_json=?,package_snapshot_json=?,pending_package_json='',customized=0,updated_at=? WHERE id=?`)
+    const nextAttachment = current.attachment || official.attachment || null;
+    const attachmentCustomized = !messageSnapshotsEqual({ ...official, attachment: nextAttachment }, official);
+    this.db.prepare(`UPDATE automatic_messages SET title=?,topic='',response_text=?,details_text=?,source_url=?,source_title=?,verified_at=?,trigger_json=?,priority=?,active=?,archived=?,published=1,published_at=?,draft_json='',scope=?,tags_json=?,attachment_json=?,package_snapshot_json=?,pending_package_json='',customized=?,updated_at=? WHERE id=?`)
       .run(official.title, official.response_text, official.details_text, official.source_url, official.source_title, official.verified_at, JSON.stringify(official.trigger), official.priority, boolToDb(official.active), boolToDb(official.archived), timestamp,
-        official.scope, JSON.stringify(official.tags), JSON.stringify(official.attachment || {}), JSON.stringify(snapshot), timestamp, Number(id));
+        official.scope, JSON.stringify(official.tags), JSON.stringify(nextAttachment || {}), JSON.stringify(snapshot), boolToDb(attachmentCustomized), timestamp, Number(id));
     this.invalidate('activeMessages');
     return this.getAutomaticMessage(id);
   }
@@ -344,7 +348,8 @@ module.exports = function createMixin(deps) {
     const disciplines = [...new Set((record.classes || []).map(entry => String(entry.discipline || '').trim()).filter(Boolean))];
     const schedule = (record.classes || []).map(entry => ({
       discipline: String(entry.discipline || '').trim(), semester: String(entry.semester || '').trim(),
-      day: String(entry.day || '').trim(), hours: String(entry.hours || '').trim(), description: ''
+      day: String(entry.day || '').trim(), hours: String(entry.hours || '').trim(),
+      description: String(entry.room || '').trim() ? `Sala: ${String(entry.room).trim()}` : ''
     }));
     return this.saveTeacher({
       ...(existing || {}), name: String(record.name || existing?.name || '').trim(), email,
@@ -386,7 +391,7 @@ module.exports = function createMixin(deps) {
         } else {
           const professorShape = {
             name: record.name, email: record.email || '', semesters: record.semesters || [],
-            classes: (record.classes || []).map(entry => [entry.discipline, entry.semester, entry.day, entry.hours])
+            classes: (record.classes || []).map(entry => [entry.discipline, entry.semester, entry.day, entry.hours, entry.room || ''])
           };
           const uniqueDisciplines = (record.classes || []).filter(entry => (disciplineOwners.get(normalizeText(entry.discipline))?.size || 0) === 1);
           const sentences = [...new Set([

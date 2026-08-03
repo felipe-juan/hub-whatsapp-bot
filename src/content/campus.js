@@ -3,7 +3,7 @@ const CAMPUS_CARDS = Object.freeze([
     "key": "si-support-hub-media-final-e-tabela-da-final",
     "message": {
       "title": "HUB — Média final e tabela da final",
-      "response_text": "*Média final e tabela da final*\n\n🔗 https://felipe-juan.github.io/hub-arquivos-ifba/#media-final\n\nVocê também pode calcular diretamente no WhatsApp:\n`!final MP PF`\n\nPara consultar as regras e ver um exemplo, use:\n`!final help`",
+      "response_text": "*Média final e tabela da final*\n\n🔗 https://felipe-juan.github.io/hub-arquivos-ifba/#media-final\n\nVocê também pode calcular diretamente no WhatsApp:\n• `!final 6,9` — use um valor quando ele já for a média das unidades.\n• `!final 5,0 6,0 7,0` — use vários valores para o bot calcular a média das unidades.\n\nPara consultar as regras e ver exemplos, use:\n`!final help`",
       "priority": 45,
       "active": true,
       "archived": false,

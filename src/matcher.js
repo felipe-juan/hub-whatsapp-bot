@@ -132,7 +132,7 @@ function detectAmbiguousHubMatches(detailed, threshold = 1) { return detectAmbig
 
 function isHelpCommand(message) {
   const text = normalizeText(message);
-  return ['ajuda', 'menu', 'comandos', '!ajuda', '!help', '!hub', 'hub bot', 'ajuda hub', 'menu do bot', 'o que o bot sabe responder'].includes(text);
+  return ['ajuda', 'menu', 'comandos', '!ajuda', '!help', '!hub', 'ajuda hub'].includes(text);
 }
 
 module.exports = {

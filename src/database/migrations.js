@@ -1,5 +1,45 @@
 module.exports = function createMixin(deps) {
   const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, crypto } = deps;
+
+  const professorContactValue = response => {
+    const lines = String(response || '').split('\n');
+    const legacy = lines.find(line => /^📧 \*E-mail:\*/u.test(line));
+    if (legacy) return legacy.replace(/^📧 \*E-mail:\*\s*/u, '').trim();
+    const heading = lines.findIndex(line => /^📧 \*Contato\*\s*$/u.test(line.trim()));
+    if (heading >= 0) {
+      for (let index = heading + 1; index < lines.length; index += 1) {
+        const value = lines[index].trim();
+        if (value) return value;
+      }
+    }
+    return String(response || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || '';
+  };
+  const professorContactReplaceable = response => {
+    const value = professorContactValue(response);
+    return !value
+      || /\[(?:ADICIONAR|IDENTIFICAR)[^\]]*\]/i.test(value)
+      || /^não encontrado$/i.test(value)
+      || /^nao encontrado$/i.test(value);
+  };
+  const replaceProfessorContact = (response, email) => {
+    const source = String(response || '');
+    if (!email || !professorContactReplaceable(source)) return source;
+    const lines = source.split('\n');
+    const legacy = lines.findIndex(line => /^📧 \*E-mail:\*/u.test(line));
+    if (legacy >= 0) {
+      lines[legacy] = `📧 *E-mail:* ${email}`;
+      return lines.join('\n');
+    }
+    const heading = lines.findIndex(line => /^📧 \*Contato\*\s*$/u.test(line.trim()));
+    if (heading >= 0) {
+      let target = heading + 1;
+      while (target < lines.length && !lines[target].trim()) target += 1;
+      if (target < lines.length) lines[target] = email;
+      else lines.push(email);
+      return lines.join('\n');
+    }
+    return source;
+  };
   return class {
   migrate() {
     this.db.exec(`
@@ -196,6 +236,8 @@ module.exports = function createMixin(deps) {
     this.simplifyAutomaticMessagesV0101();
     if (seedBundledContent) this.seedFunCardsV0101();
     if (seedBundledContent) this.seedFunCardsV0102();
+    if (seedBundledContent) this.seedFunCardsV0103();
+    if (seedBundledContent) this.migrateContentV0104();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -636,10 +678,12 @@ module.exports = function createMixin(deps) {
         this.stagePackageAutomaticMessage(definition.key, definition.message);
         continue;
       }
-      const updated = this.saveAutomaticMessage({ ...definition.message, attachment: existing.attachment || null }, existing.id);
-      const snapshot = comparableMessageSnapshot(updated);
-      this.db.prepare("UPDATE automatic_messages SET source_type='hub_package',package_key=?,package_snapshot_json=?,pending_package_json='',customized=0,updated_at=? WHERE id=?")
-        .run(definition.key, JSON.stringify(snapshot), nowIso(), Number(existing.id));
+      const official = this.validateAutomaticMessage(definition.message);
+      this.saveAutomaticMessage({ ...official, attachment: existing.attachment || null }, existing.id);
+      const snapshot = comparableMessageSnapshot(official);
+      const customized = Boolean(existing.attachment?.stored_name);
+      this.db.prepare("UPDATE automatic_messages SET source_type='hub_package',package_key=?,package_snapshot_json=?,pending_package_json='',customized=?,updated_at=? WHERE id=?")
+        .run(definition.key, JSON.stringify(snapshot), boolToDb(customized), nowIso(), Number(existing.id));
     }
     this.db.prepare("INSERT INTO settings(key,value) VALUES ('fun_cards_v0101_seeded','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
     this.invalidate('settings', 'activeMessages', 'conflictReport');
@@ -696,6 +740,113 @@ module.exports = function createMixin(deps) {
     this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 
+  seedFunCardsV0103() {
+    if (asBool(this.getSetting('fun_cards_v0103_attachment_restored', 'false'), false)) return;
+    const official = FUN_CARDS_V0101.find(definition => definition.key === 'hub-fun-como-passar-em-calculo');
+    if (!official) throw new Error('Card de Cálculo da v0.10.3 não encontrado.');
+    const row = this.db.prepare('SELECT id FROM automatic_messages WHERE package_key=? OR lower(title)=lower(?) ORDER BY package_key=? DESC LIMIT 1')
+      .get(official.key, official.message.title, official.key);
+    if (row) {
+      const current = this.getAutomaticMessage(row.id);
+      if (current) {
+        const officialSnapshot = comparableMessageSnapshot(this.validateAutomaticMessage(official.message));
+        let recoveredAttachment = null;
+        if (!current.attachment?.stored_name) {
+          const history = this.db.prepare("SELECT snapshot_json FROM automatic_message_history WHERE message_id=? AND action='package-update' ORDER BY id DESC LIMIT 1")
+            .get(Number(current.id));
+          const snapshot = parseJson(history?.snapshot_json || '', null);
+          if (snapshot?.attachment?.stored_name) recoveredAttachment = snapshot.attachment;
+        }
+        if (recoveredAttachment) {
+          this.archiveAutomaticMessage(current, 'v0.10.3-before-attachment-recovery');
+          this.db.prepare("UPDATE automatic_messages SET attachment_json=?,package_snapshot_json=?,pending_package_json='',customized=1,updated_at=? WHERE id=?")
+            .run(JSON.stringify(recoveredAttachment), JSON.stringify(officialSnapshot), nowIso(), Number(current.id));
+        } else if (current.attachment?.stored_name && current.package_snapshot?.attachment) {
+          this.db.prepare("UPDATE automatic_messages SET package_snapshot_json=?,customized=1,updated_at=? WHERE id=?")
+            .run(JSON.stringify(officialSnapshot), nowIso(), Number(current.id));
+        }
+      }
+    }
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('fun_cards_v0103_attachment_restored','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages');
+  }
+
+  migrateContentV0104() {
+    const finalDefinition = DEFAULT_CALCULATORS.find(item => item.key === 'final');
+    if (!asBool(this.getSetting('calculators_v0104_single_final', 'false'), false)) {
+      this.db.exec('BEGIN');
+      try {
+        this.db.prepare("DELETE FROM calculators WHERE key<>'final'").run();
+        this.db.prepare(`INSERT INTO calculators(key,label,command,description,enabled,config_json,updated_at)
+          VALUES (?,?,?,?,?,?,?)
+          ON CONFLICT(key) DO UPDATE SET label=excluded.label,command=excluded.command,description=excluded.description,enabled=excluded.enabled,config_json=excluded.config_json,updated_at=excluded.updated_at`)
+          .run(finalDefinition.key, finalDefinition.label, finalDefinition.command, finalDefinition.description, boolToDb(finalDefinition.enabled), JSON.stringify(finalDefinition.config), nowIso());
+        this.db.prepare("INSERT INTO settings(key,value) VALUES ('calculators_v0104_single_final','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+        this.db.exec('COMMIT');
+      } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+      this.invalidate('settings');
+      this.cache.calculators = null;
+    }
+
+    if (!asBool(this.getSetting('content_v0104_seeded', 'false'), false)) {
+      const keys = new Set(['si-support-hub-media-final-e-tabela-da-final', 'ifba-bsi-v098-trancamento-curso', 'hub-easter-egg-felipe-juan-v0104', 'hub-comunidade-bar-benjamin-v0104']);
+      for (const definition of INSTITUTIONAL_CARDS_V098.filter(item => keys.has(item.key))) {
+        this.stagePackageAutomaticMessage(definition.key, definition.message);
+      }
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0104_seeded','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.invalidate('settings', 'activeMessages', 'conflictReport');
+    }
+
+    if (!asBool(this.getSetting('professor_cards_v0104_rooms', 'false'), false)) {
+      const items = [...SI_PROFESSORS_2026_2, SI_PENDING_2026_2];
+      const findEmail = value => {
+        const match = String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+        return match ? match[0] : '';
+      };
+      for (const item of items) {
+        const title = item.pending ? 'Pendência — Meio Ambiente (docente substituto)' : `Professor — ${item.name}`;
+        const row = this.db.prepare('SELECT id FROM automatic_messages WHERE lower(title)=lower(?)').get(title);
+        const current = row ? this.getAutomaticMessage(row.id) : null;
+        const emailOverride = current && !item.pending ? findEmail(current.response_text) : '';
+        const input = {
+          ...(current || {}),
+          title,
+          response_text: buildSiProfessorResponse(item, emailOverride || item.email || ''),
+          attachment: current?.attachment || null,
+          active: current ? current.active : true,
+          archived: false,
+          scope: current?.scope || 'both',
+          priority: current?.priority ?? (item.pending ? 28 : 35),
+          trigger: {
+            match_mode: 'all',
+            sentences: buildSiProfessorTriggerSentences(item),
+            keywords: [], required_words: [], require_question_mark: true,
+            typo_tolerance: 1, excluded_words: Array.isArray(item.excluded) ? item.excluded : [],
+            exact_phrases: [], synonym_group_ids: [], negative_examples: [], regex_pattern: '', regex_flags: 'iu'
+          }
+        };
+        const saved = current ? this.saveAutomaticMessage(input, current.id) : this.saveAutomaticMessage(input);
+        if (current) this.db.prepare("UPDATE automatic_messages SET source_type=CASE WHEN source_type='hub_package' THEN source_type ELSE 'administrator' END,customized=1,updated_at=? WHERE id=?")
+          .run(nowIso(), Number(saved.id));
+      }
+      for (const shared of buildSharedDisciplineCards2026_2()) {
+        const row = this.db.prepare('SELECT id FROM automatic_messages WHERE lower(title)=lower(?)').get(shared.title);
+        const current = row ? this.getAutomaticMessage(row.id) : null;
+        const input = {
+          ...(current || {}), title: shared.title, response_text: shared.response_text,
+          attachment: current?.attachment || null, active: true, archived: false, scope: current?.scope || 'both',
+          priority: current?.priority ?? 38,
+          trigger: { match_mode: 'all', sentences: shared.sentences, keywords: [], required_words: [],
+            require_question_mark: true, typo_tolerance: 1, excluded_words: [], exact_phrases: [],
+            synonym_group_ids: [], negative_examples: [], regex_pattern: '', regex_flags: 'iu' }
+        };
+        current ? this.saveAutomaticMessage(input, current.id) : this.saveAutomaticMessage(input);
+      }
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('professor_cards_v0104_rooms','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.invalidate('settings', 'activeMessages', 'conflictReport');
+    }
+  }
+
   seedStructuredSectorsV098() {
     if (asBool(this.getSetting('structured_sectors_v098_seeded', 'false'), false)) return;
     const sectors = [
@@ -734,7 +885,8 @@ module.exports = function createMixin(deps) {
         const disciplines = [...new Set((item.classes || []).map(entry => String(entry?.[0] || '').trim()).filter(Boolean))];
         const schedule = (item.classes || []).map(entry => ({
           discipline: String(entry?.[0] || '').trim(), semester: String(entry?.[1] || '').trim(),
-          day: String(entry?.[2] || '').trim(), hours: String(entry?.[3] || '').trim(), description: ''
+          day: String(entry?.[2] || '').trim(), hours: String(entry?.[3] || '').trim(),
+          description: String(entry?.[4] || '').trim() ? `Sala: ${String(entry?.[4]).trim()}` : ''
         }));
         const existing = findByEmail.get(email);
         if (!existing) {
@@ -1029,22 +1181,8 @@ module.exports = function createMixin(deps) {
     const select = this.db.prepare('SELECT id,draft_json FROM automatic_messages WHERE lower(title)=lower(?)');
     const update = this.db.prepare('UPDATE automatic_messages SET response_text=?,tags_json=?,draft_json=?,updated_at=? WHERE id=?');
 
-    const emailLine = response => String(response || '').split('\n').find(line => line.startsWith('📧 *E-mail:*')) || '';
-    const currentEmail = response => emailLine(response).replace(/^📧 \*E-mail:\*\s*/, '').trim();
-    const canReplace = response => {
-      const value = currentEmail(response);
-      return !value
-        || /\[(?:ADICIONAR|IDENTIFICAR)[^\]]*\]/i.test(value)
-        || /^não encontrado$/i.test(value)
-        || /^nao encontrado$/i.test(value);
-    };
-    const replaceEmail = (response, email) => {
-      const lines = String(response || '').split('\n');
-      const index = lines.findIndex(line => line.startsWith('📧 *E-mail:*'));
-      if (index < 0 || !canReplace(response)) return String(response || '');
-      lines[index] = `📧 *E-mail:* ${email}`;
-      return lines.join('\n');
-    };
+    const currentEmail = professorContactValue;
+    const replaceEmail = replaceProfessorContact;
     const tagsFor = (tags, response, providedEmail) => {
       const set = new Set((Array.isArray(tags) ? tags : []).map(normalizeTag).filter(Boolean));
       const effective = currentEmail(response) || providedEmail || '';
@@ -1101,24 +1239,8 @@ module.exports = function createMixin(deps) {
     const title = 'Professor — Luana Lima Bittencourt Silva';
     const row = this.db.prepare('SELECT id,draft_json FROM automatic_messages WHERE lower(title)=lower(?)').get(title);
 
-    const emailLine = response => String(response || '').split('\n').find(line => line.startsWith('📧 *E-mail:*')) || '';
-    const currentEmail = response => emailLine(response).replace(/^📧 \*E-mail:\*\s*/, '').trim();
-    const canReplace = response => {
-      const value = currentEmail(response);
-      return !value
-        || /\[(?:ADICIONAR|IDENTIFICAR)[^\]]*\]/i.test(value)
-        || /^não encontrado$/i.test(value)
-        || /^nao encontrado$/i.test(value);
-    };
-    const replaceEmail = response => {
-      const source = String(response || '');
-      if (!item?.email || !canReplace(source)) return source;
-      const lines = source.split('\n');
-      const index = lines.findIndex(line => line.startsWith('📧 *E-mail:*'));
-      if (index < 0) return source;
-      lines[index] = `📧 *E-mail:* ${item.email}`;
-      return lines.join('\n');
-    };
+    const currentEmail = professorContactValue;
+    const replaceEmail = response => replaceProfessorContact(response, item?.email || '');
     const tagsFor = (tags, response) => {
       const set = new Set((Array.isArray(tags) ? tags : []).map(normalizeTag).filter(Boolean));
       if (currentEmail(response).includes('@')) {
@@ -1179,10 +1301,7 @@ module.exports = function createMixin(deps) {
     const professorItems = [...SI_PROFESSORS_2026_2, SI_PENDING_2026_2];
     const select = this.db.prepare('SELECT id,draft_json FROM automatic_messages WHERE lower(title)=lower(?)');
     const update = this.db.prepare('UPDATE automatic_messages SET response_text=?,trigger_json=?,draft_json=?,updated_at=? WHERE id=?');
-    const emailFrom = response => {
-      const line = String(response || '').split('\n').find(value => value.startsWith('📧 *E-mail:*')) || '';
-      return line.replace(/^📧 \*E-mail:\*\s*/, '').trim();
-    };
+    const emailFrom = professorContactValue;
 
     this.db.exec('BEGIN');
     try {

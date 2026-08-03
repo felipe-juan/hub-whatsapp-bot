@@ -71,6 +71,10 @@ const DEFAULT_SETTINGS = {
   structured_sectors_v098_seeded: 'false',
   fun_cards_v0101_seeded: 'false',
   fun_cards_v0102_seeded: 'false',
+  fun_cards_v0103_attachment_restored: 'false',
+  content_v0104_seeded: 'false',
+  calculators_v0104_single_final: 'false',
+  professor_cards_v0104_rooms: 'false',
   automatic_messages_v0101_simplified: 'false',
   contextual_followup_seconds: '300',
   risk_guard_enabled: 'false',
@@ -118,11 +122,14 @@ const DEFAULT_LINKS = [
 ];
 
 const DEFAULT_CALCULATORS = [
-  { key: 'average', label: 'Média parcial e nota necessária na final', command: '!media', description: 'Calcula a média aritmética das notas e a nota necessária na prova final.', enabled: true, config: { approval_average: 7, final_minimum_average: 2.5, final_target: 5 } },
-  { key: 'final', label: 'Média final', command: '!final', description: 'Calcula MF = (2 × MP + PF) ÷ 3.', enabled: true, config: { final_target: 5 } },
-  { key: 'attendance', label: 'Frequência e faltas restantes', command: '!frequencia', description: 'Calcula frequência usando total de aulas e faltas.', enabled: true, config: { minimum_percent: 75 } },
-  { key: 'hours', label: 'Progresso de horas complementares', command: '!horas', description: 'Calcula percentual concluído e horas restantes.', enabled: true, config: { default_required_hours: 200 } },
-  { key: 'weighted', label: 'Média ponderada', command: '!mediap', description: 'Calcula pares nota:peso.', enabled: true, config: {} }
+  {
+    key: 'final',
+    label: 'Média e nota necessária na final',
+    command: '!final',
+    description: 'Com uma nota, usa a média informada; com várias, calcula a média das unidades e a nota mínima da prova final.',
+    enabled: true,
+    config: { approval_average: 7, final_minimum_average: 2.5, final_target: 5 }
+  }
 ];
 
 const GROUP_FEATURES = ['help', 'messages', 'calculator'];

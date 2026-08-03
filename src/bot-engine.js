@@ -90,14 +90,10 @@ class BotEngine {
   }
 
 
-  botMentioned(message, body, settings = this.db.getSettings()) {
-    if (message?.mentionedMe) return true;
-    const text = String(body || '');
-    const aliases = [settings.bot_name, 'HUB Bot', 'hubbot', 'bot']
-      .map(value => String(value || '').trim())
-      .filter(Boolean);
-    return [...new Set(aliases.map(normalizeText).filter(Boolean))]
-      .some(alias => containsPhrase(text, alias));
+  botMentioned(message) {
+    // Ajuda por menção só deve ser ativada por uma menção real do WhatsApp.
+    // Palavras comuns como “bot” não são suficientes.
+    return Boolean(message?.mentionedMe);
   }
 
   unknownMentionEvaluation(settings) {

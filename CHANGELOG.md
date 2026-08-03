@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.10.4 — 2026-08-03
+
+- mantém somente a calculadora `!final` e remove os comandos antigos;
+- aceita uma média parcial já calculada ou várias notas de unidades e informa a nota mínima necessária na prova final;
+- aplica os limites acadêmicos do IFBA: aprovação por média a partir de 7,0, direito à final a partir de 2,5 e média final mínima 5,0;
+- atualiza 28 cards docentes e a pendência de Meio Ambiente com as salas do quadro 2026.2, versão 2, de 28/07/2026;
+- reorganiza as respostas docentes por contato, semestres e horários/salas, evitando emoji em cada linha;
+- acrescenta gatilhos de localização por `sala`, `onde`, `laboratório`, `laboratorio` e `lab`;
+- atualiza o card oficial de trancamento da graduação com limites, CORES e calendário acadêmico;
+- adiciona os cards de contato de Felipe Juan e do Bar do Benjamin;
+- remove a palavra `bot` como forma de menção em grupos, mantendo somente menções reais por `@`;
+- preserva anexos personalizados, banco, sessão e configurações durante a atualização;
+- adiciona regressões para calculadora única, novos cards, menção real e cobertura de todas as salas.
+
+## 0.10.3 — 2026-08-02
+
+- corrige a regressão que podia remover a imagem personalizada do card **Como passar em Cálculo?** ao atualizar da v0.10.1 para a v0.10.2;
+- recupera automaticamente o anexo a partir da versão `package-update` armazenada no histórico do card;
+- preserva anexos administrativos quando cards oficiais do pacote recebem novas versões;
+- normaliza snapshots antigos que haviam incorporado anexos do usuário como se fossem parte oficial do pacote;
+- mantém banco, sessão, anexos e configurações durante a atualização da Oracle, da instalação local e do GitHub;
+- adiciona testes de regressão para recuperação automática e preservação em atualizações futuras.
+
 ## 0.10.2 — 2026-08-02
 
 - reconhece perguntas completas sem `?` final quando há ao menos três termos e uma estrutura interrogativa ou de pedido clara;

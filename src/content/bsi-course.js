@@ -1614,36 +1614,37 @@ const BSI_COURSE_CARDS = Object.freeze([
   {
     "key": "ifba-bsi-v098-trancamento-curso",
     "message": {
-      "title": "Ensino superior — Trancamento do curso",
-      "response_text": "⏸️ *Trancamento do curso*\n\nO pedido deve seguir as Normas Acadêmicas do Ensino Superior e o procedimento vigente. Antes de solicitar, confirme efeitos, prazos e pendências com a CORES e a Coordenação de BSI.",
+      "title": "Graduação — Como trancar o curso",
+      "response_text": "🎓 *Como trancar o curso de graduação no IFBA*\n\nA solicitação deve ser feita à *CORES*, dentro do prazo previsto no Calendário Acadêmico do campus. Confirme com o setor o requerimento e os documentos exigidos no semestre atual.\n\n*Regras principais*\n• Não é permitido trancar no primeiro semestre letivo.\n• Trancamento total: no máximo 2 semestres, consecutivos ou alternados.\n• Trancamento parcial: no máximo 2 vezes por disciplina, permanecendo matriculado em pelo menos 3 disciplinas.\n• Também não é concedido no primeiro semestre após reintegração nem no primeiro semestre de estudante transferido.\n\n📞 *CORES — Vitória da Conquista*\nWhatsApp: (77) 99929-9331\nE-mail: coresvc@ifba.edu.br\nAtendimento presencial: segunda a sexta-feira, das 7h às 19h.\n\n📅 *Calendário Acadêmico*\nhttps://portal.ifba.edu.br/conquista/ensino/calendario-academico",
       "details_text": "",
       "source_url": "https://portal.ifba.edu.br/conquista/capas-e-paginas-menu-cursos/sistemas-de-informacao-arquivos/regulamentos/gerais/normas-academicas-ensino-superior-resolucaoo-23-2019-consepe.pdf/view",
-      "source_title": "Página oficial do IFBA",
-      "verified_at": "2026-08-01",
-      "priority": 64,
+      "source_title": "Normas Acadêmicas dos Cursos Superiores — Resolução nº 23/2019",
+      "verified_at": "2026-08-03",
+      "priority": 78,
       "active": true,
       "archived": false,
       "scope": "both",
-      "tags": [
-        "bsi",
-        "trancamento",
-        "cores"
-      ],
+      "tags": [],
       "trigger": {
         "match_mode": "all",
         "sentences": [
-          "como trancar o curso de sistemas de informação",
-          "quero trancar bsi no ifba",
-          "trancamento do curso de bsi"
+          "como trancar o curso", "como trancar a faculdade", "como trancar a graduação",
+          "como trancar sistemas de informação", "como trancar o curso de sistemas de informação",
+          "quero trancar o curso", "quero trancar a faculdade", "quero trancar bsi no ifba",
+          "posso trancar o curso", "onde peço trancamento", "onde pedir trancamento",
+          "como pedir trancamento total", "como pedir trancamento parcial",
+          "trancamento do curso", "trancamento do curso de bsi",
+          "trancamento de matrícula da graduação", "trancar uma disciplina",
+          "trancamento parcial de disciplina"
         ],
         "keywords": [],
         "required_words": [],
-        "excluded_words": [],
+        "excluded_words": ["cancelar matrícula", "cancelamento"],
         "exact_phrases": [],
         "require_question_mark": true,
         "regex_pattern": "",
         "regex_flags": "iu",
-        "typo_tolerance": 0,
+        "typo_tolerance": 1,
         "synonym_group_ids": [],
         "negative_examples": []
       }

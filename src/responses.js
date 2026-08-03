@@ -60,11 +60,15 @@ function formatUnknownMentionResponse(settings = {}) {
 
 function formatHelpResponse(settings, calculators = []) {
   const hub = settings.hub_base_url ? `\n🌐 HUB: ${settings.hub_base_url}` : '';
-  const additional = calculators.filter(item => item.enabled !== false && !['average', 'final'].includes(item.key)).map(item => `• ${item.command} — ${item.label}`).join('\n');
   return appendFooter([
     `Olá! Eu sou o *${settings.bot_name || 'HUB Bot'}*.`, '', 'Posso ajudar com:',
-    '💬 mensagens automáticas configuradas pelo administrador', '🧮 cálculos acadêmicos', '',
-    'Exemplos:', '• escreva um dos gatilhos cadastrados', '• !media 5,0 6,5', '• !final 5,75 7,0', additional, hub
+    '💬 mensagens automáticas configuradas pelo administrador',
+    '🧮 cálculo da nota necessária na prova final', '',
+    'Exemplos:',
+    '• escreva um dos gatilhos cadastrados',
+    '• !final 6,9',
+    '• !final 5,0 6,0 7,0',
+    hub
   ].filter(Boolean).join('\n'), settings.reply_footer);
 }
 

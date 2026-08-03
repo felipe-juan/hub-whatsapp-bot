@@ -129,7 +129,10 @@ function classifyProfessorLocationRequest(rawMessage, teachers = []) {
   const professorContext = hasProfessorTerm(normalized) || matches.length > 0;
 
   if (isClassroomRequest(normalized) && professorContext) {
-    if (!questionLike && !matches.length) return { matched: false, reason: 'not-exact-direct' };
+    // Quando o professor foi reconhecido, deixe o cartão individual responder:
+    // ele contém a sala correta de cada disciplina no quadro 2026.2.
+    if (matches.length) return { matched: false, reason: 'handled-by-professor-card' };
+    if (!questionLike) return { matched: false, reason: 'not-exact-direct' };
     return { matched: true, kind: 'classroom', matches };
   }
   if (hasExcludedContext(normalized)) return { matched: false, reason: 'excluded-context' };
