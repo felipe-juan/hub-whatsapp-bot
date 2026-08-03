@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Database } = require('../src/database');
+const { BotEngine } = require('../src/bot-engine');
 const { findAutomaticMessageMatchesDetailed } = require('../src/matcher');
 const { evaluateTrigger, phraseMatch } = require('../src/trigger-rules');
 
@@ -52,11 +53,13 @@ test('all reported acronym conflicts resolve to exactly one professor', () => {
       ['ctt de TCCI', 'Professor — Djan Almeida Santos'],
       ['ctt de TCCII', 'Professor — Liojes de Oliveira Carneiro']
     ]);
+    const engine = new BotEngine(db);
     for (const [message, expected] of cases) {
-      const matches = titles(db, message);
-      assert.equal(matches[0], expected, message);
-      assert.equal(matches.filter(title => title.startsWith('Professor —')).length, 1, `${message}: ${matches.join(', ')}`);
+      const result = engine.evaluate(message, { isGroup: true, ignorePermissions: true });
+      assert.equal(result.matchedItem, expected, message);
+      assert.equal(result.type, 'message', message);
     }
+    engine.close();
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -66,7 +69,7 @@ test('all reported acronym conflicts resolve to exactly one professor', () => {
 test('shared calculus discipline uses one combined card and individual names remain available', () => {
   const { db, dir } = temporaryDatabase();
   try {
-    const title = 'Disciplina compartilhada — Cálculo Diferencial Aplicado à Computação';
+    const title = 'Disciplina Compartilhada — Cálculo Diferencial Aplicado à Computação';
     assert.equal(first(db, 'qual o contato do professor de Cálculo Diferencial Aplicado à Computação?'), title);
     assert.equal(first(db, 'ctt de CDAC'), title);
     const shared = db.listAutomaticMessages().find(item => item.title === title);
@@ -85,10 +88,10 @@ test('shared calculus discipline uses one combined card and individual names rem
 test('v0.8.11 migration removes standalone calculo trigger without changing the custom response or attachment', () => {
   const { db, dbPath, dir } = temporaryDatabase();
   try {
-    const packagedJoke = db.listAutomaticMessages().find(item => item.title === 'Como passar em Cálculo?');
+    const packagedJoke = db.listAutomaticMessages().find(item => item.title === 'Como Passar em Cálculo?');
     if (packagedJoke) db.deleteAutomaticMessage(packagedJoke.id);
     const created = db.saveAutomaticMessage({
-      title: 'Como passar em Cálculo?',
+      title: 'Como Passar em Cálculo?',
       response_text: 'Resposta personalizada mantida.',
       scope: 'both', active: true,
       attachment: { stored_name: 'meme.gif', original_name: 'meme.gif', mime_type: 'image/gif' },

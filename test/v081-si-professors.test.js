@@ -16,16 +16,16 @@ test('v0.8.1 seeds the 28 SI professors and the pending Meio Ambiente card once'
   const { db, dir } = temporaryDatabase();
   try {
     const messages = db.listAutomaticMessages();
-    const professors = messages.filter(item => item.title.startsWith('Professor — ') || item.title === 'Pendência — Meio Ambiente (docente substituto)');
+    const professors = messages.filter(item => item.title.startsWith('Professor — ') || item.title === 'Pendência — Meio Ambiente (Docente Substituto)');
     assert.equal(professors.length, 29);
     assert.ok(professors.some(item => item.title === 'Professor — Alexandro dos Santos Silva'));
     assert.ok(professors.some(item => item.title === 'Professor — Viviane Maria Lélis Carvalho'));
-    assert.ok(professors.some(item => item.title === 'Pendência — Meio Ambiente (docente substituto)'));
+    assert.ok(professors.some(item => item.title === 'Pendência — Meio Ambiente (Docente Substituto)'));
     assert.equal(db.getSetting('si_professors_2026_2_seeded'), 'true');
 
     db.close();
     const reopened = new Database(path.join(dir, 'data.sqlite'), { seedBundledContent: true });
-    assert.equal(reopened.listAutomaticMessages().filter(item => item.title.startsWith('Professor — ') || item.title === 'Pendência — Meio Ambiente (docente substituto)').length, 29);
+    assert.equal(reopened.listAutomaticMessages().filter(item => item.title.startsWith('Professor — ') || item.title === 'Pendência — Meio Ambiente (Docente Substituto)').length, 29);
     reopened.close();
   } finally {
     try { db.close(); } catch {}

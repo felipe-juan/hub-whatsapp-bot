@@ -40,10 +40,10 @@ test('TCC intents are separated between teacher, procedure, schedule and prerequ
   const holder = tempDb();
   try {
     const engine = new BotEngine(holder.db);
-    assert.equal(engine.evaluate('Como iniciar o TCC I de BSI?', { isGroup: true, ignorePermissions: true }).matchedItem, 'BSI — Como iniciar o TCC I');
+    assert.equal(engine.evaluate('Como iniciar o TCC I de BSI?', { isGroup: true, ignorePermissions: true }).matchedItem, 'BSI — Como Iniciar o TCC I');
     assert.match(engine.evaluate('Quem ministra TCC I?', { isGroup: true, ignorePermissions: true }).matchedItem, /^Professor —/);
     assert.match(engine.evaluate('Qual o horário de TCC I?', { isGroup: true, ignorePermissions: true }).matchedItem, /^Professor —/);
-    assert.equal(engine.evaluate('Qual é o pré-requisito de TCC I?', { isGroup: true, ignorePermissions: true }).matchedItem, 'BSI — Pré-requisitos das disciplinas');
+    assert.equal(engine.evaluate('Qual é o pré-requisito de TCC I?', { isGroup: true, ignorePermissions: true }).matchedItem, 'BSI — Pré-requisitos das Disciplinas');
     assert.equal(engine.evaluate('Como passar do TCC I para o TCC II?', { isGroup: true, ignorePermissions: true }).matchedItem, 'BSI — Passagem do TCC I para o TCC II');
   } finally { holder.close(); }
 });

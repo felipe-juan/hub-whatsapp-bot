@@ -17,7 +17,13 @@ module.exports = function createScheduleRepositoryMixin() {
       if (Number(semester)) { where.push('semester_number=?'); params.push(Number(semester)); }
       if (dayOfWeek !== null && dayOfWeek !== undefined && Number.isInteger(Number(dayOfWeek))) { where.push('day_of_week=?'); params.push(Number(dayOfWeek)); }
       if (professor) { where.push('lower(professor_name) LIKE ?'); params.push(`%${String(professor).toLowerCase()}%`); }
-      if (discipline) { where.push('(lower(discipline_name) LIKE ? OR lower(discipline_code)=?)'); params.push(`%${String(discipline).toLowerCase()}%`, String(discipline).toLowerCase()); }
+      if (discipline) {
+        // Consultas estruturadas de disciplina são exatas. O antigo LIKE
+        // fazia siglas curtas colidirem com letras internas de outros nomes
+        // (por exemplo, RC também encontrava Comércio Eletrônico).
+        where.push('(lower(discipline_name)=lower(?) OR lower(discipline_code)=lower(?))');
+        params.push(String(discipline), String(discipline));
+      }
       if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
       sql += ' ORDER BY day_of_week,start_minutes,discipline_name COLLATE NOCASE,professor_name COLLATE NOCASE';
       return this.db.prepare(sql).all(...params).map(row => ({
@@ -29,6 +35,17 @@ module.exports = function createScheduleRepositoryMixin() {
       }));
     }
 
+
+    listProfessorDisciplineDirectory({ academicPeriod = '', activeOnly = true } = {}) {
+      let sql = `SELECT DISTINCT professor_name,professor_email,discipline_name,discipline_code
+        FROM professor_schedule_entries`;
+      const where = []; const params = [];
+      if (activeOnly) where.push('active=1');
+      if (academicPeriod) { where.push('academic_period=?'); params.push(String(academicPeriod)); }
+      if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
+      sql += ' ORDER BY discipline_name COLLATE NOCASE,professor_name COLLATE NOCASE';
+      return this.db.prepare(sql).all(...params);
+    }
 
     getProfessorScheduleEntry(id) {
       return this.listProfessorScheduleEntries({ activeOnly: false }).find(item => Number(item.id) === Number(id)) || null;

@@ -102,7 +102,7 @@ test('backup restaura origem e estado personalizado de cartões do pacote', () =
     const item = db1.stagePackageAutomaticMessage('hub-backup', message('Cartão backup', 'Oficial')).item;
     db1.saveAutomaticMessage({ ...message('Cartão backup', 'Personalizado'), trigger: item.trigger }, item.id);
     db2.importData(db1.exportData());
-    const restored = db2.listAutomaticMessages().find(value => value.title === 'Cartão backup');
+    const restored = db2.listAutomaticMessages().find(value => value.title === 'Cartão Backup');
     assert.equal(restored.source_type, 'hub_package');
     assert.equal(restored.package_key, 'hub-backup');
     assert.equal(restored.customized, true);

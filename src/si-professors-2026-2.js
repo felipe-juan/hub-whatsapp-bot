@@ -940,7 +940,7 @@ const SI_DISCIPLINE_ALIASES_2026_2 = Object.freeze({
 // enquanto perguntas pelo nome continuam abrindo o cartão individual.
 const SI_SHARED_DISCIPLINES_2026_2 = Object.freeze({
   'Cálculo Diferencial Aplicado à Computação': Object.freeze({
-    title: 'Disciplina compartilhada — Cálculo Diferencial Aplicado à Computação',
+    title: 'Disciplina Compartilhada — Cálculo Diferencial Aplicado à Computação',
     professorNames: Object.freeze([
       'Paulo Espinheira Menezes de Melo',
       'Thiago Leonardo Bastos da Silva'
@@ -1089,10 +1089,10 @@ function buildSharedDisciplineCards2026_2() {
   });
 }
 function buildSiProfessorTriggerSentences(item) {
-  return unique([
-    ...buildSiProfessorNameTriggerSentences(item),
-    ...buildSiProfessorDisciplineTriggerSentences(item)
-  ]);
+  // Disciplinas são reconhecidas pelo diretório estruturado, por sigla e nome
+  // completo. Os cards docentes guardam somente os identificadores do docente,
+  // reduzindo milhares de sentenças duplicadas no Aho-Corasick.
+  return buildSiProfessorNameTriggerSentences(item);
 }
 
 function buildSiProfessorResponse(item, emailOverride = '') {

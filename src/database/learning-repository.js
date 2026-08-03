@@ -63,5 +63,34 @@ module.exports = function createLearningRepositoryMixin() {
       if (!result.changes) throw new Error('Sugestão pendente não encontrada.');
       return this.getUnrecognizedSuggestion(id);
     }
+    listRegressionCases({ activeOnly = false } = {}) {
+      let sql = 'SELECT * FROM regression_cases';
+      if (activeOnly) sql += ' WHERE active=1';
+      sql += ' ORDER BY expectation DESC,id ASC';
+      return this.db.prepare(sql).all().map(row => ({ ...row, id: Number(row.id), active: Boolean(row.active) }));
+    }
+
+    saveRegressionCase(input = {}, id = null) {
+      const phrase = String(input.phrase || '').trim().slice(0, 500);
+      if (!phrase) throw new Error('Informe a frase do teste.');
+      const expectation = ['respond','ignore'].includes(String(input.expectation)) ? String(input.expectation) : 'respond';
+      const expectedTitle = String(input.expected_title || '').trim().slice(0, 240);
+      const active = input.active === undefined ? true : Boolean(input.active);
+      const timestamp = nowIso(); const normalized = normalizeText(phrase);
+      if (id) {
+        const result = this.db.prepare('UPDATE regression_cases SET phrase=?,normalized_phrase=?,expectation=?,expected_title=?,active=?,updated_at=? WHERE id=?')
+          .run(phrase, normalized, expectation, expectedTitle, active ? 1 : 0, timestamp, Number(id));
+        if (!result.changes) throw new Error('Caso de regressão não encontrado.');
+      } else {
+        id = this.db.prepare('INSERT INTO regression_cases(phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?)')
+          .run(phrase, normalized, expectation, expectedTitle, active ? 1 : 0, timestamp, timestamp).lastInsertRowid;
+      }
+      return this.db.prepare('SELECT * FROM regression_cases WHERE id=?').get(Number(id));
+    }
+
+    deleteRegressionCase(id) {
+      return { deleted: Number(this.db.prepare('DELETE FROM regression_cases WHERE id=?').run(Number(id)).changes || 0) };
+    }
+
   };
 };

@@ -15,7 +15,7 @@ function temporaryDatabase() {
 }
 
 function scheduleCard(db) {
-  return db.listAutomaticMessages().find(item => item.title === 'HUB — Quadro de horários 2026.2');
+  return db.listAutomaticMessages().find(item => item.title === 'HUB — Quadro de Horários 2026.2');
 }
 
 test('v0.8.12 seeds the schedule board card with the supplied SharePoint link', () => {
@@ -60,11 +60,11 @@ test('schedule board triggers are specific and do not react to generic professor
 test('schedule board card is seeded once and creates no trigger conflict', () => {
   const { db, dbPath, dir } = temporaryDatabase();
   try {
-    assert.equal(db.listAutomaticMessages().filter(item => item.title === 'HUB — Quadro de horários 2026.2').length, 1);
+    assert.equal(db.listAutomaticMessages().filter(item => item.title === 'HUB — Quadro de Horários 2026.2').length, 1);
     assert.equal(db.getConflictReport().count, 0);
     db.close();
     const reopened = new Database(dbPath, { seedBundledContent: true });
-    assert.equal(reopened.listAutomaticMessages().filter(item => item.title === 'HUB — Quadro de horários 2026.2').length, 1);
+    assert.equal(reopened.listAutomaticMessages().filter(item => item.title === 'HUB — Quadro de Horários 2026.2').length, 1);
     assert.equal(reopened.getConflictReport().count, 0);
     reopened.close();
   } finally {

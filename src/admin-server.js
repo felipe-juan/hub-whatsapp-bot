@@ -10,6 +10,7 @@ const { systemHealth } = require('./system-health');
 const { importTeachersCsv, importLinksCsv, importAutomaticMessagesCsv } = require('./csv-import');
 const { parseProfessorScheduleFile } = require('./professor-schedule-import');
 const { parseAcademicCalendarCsv } = require('./academic-calendar-import');
+const { normalizeText } = require('./text');
 
 const MAX_STREAM_BUFFER_BYTES = 512 * 1024;
 function safeStreamWrite(res, payload) {
@@ -185,7 +186,7 @@ class AdminServer {
     const analytics = this.cachedStatusPart('analytics30', 60_000, () => this.db.getUsageStats(30));
     const databaseHealth = this.cachedStatusPart('database-health', 60_000, () => this.db.healthCheck());
     return {
-      version: this.updates?.status?.().currentVersion || '0.13.2', whatsapp: this.whatsapp.getStatus(),
+      version: this.updates?.status?.().currentVersion || '0.14.1', whatsapp: this.whatsapp.getStatus(),
       stats,
       analytics,
       health: {
@@ -585,6 +586,25 @@ Allan de Sousa Soares,allansoares@ifba.edu.br,Matemática Discreta I,1º semestr
     if (approveLearning && req.method === 'POST') return json(res, 200, await this.mutateDatabase('approveUnrecognizedSuggestion', [approveLearning[1]], { reason: 'learning-suggestion-approved', reloadRules: true }));
     const rejectLearning = route.match(/^\/api\/learning-suggestions\/(\d+)\/reject$/);
     if (rejectLearning && req.method === 'POST') return json(res, 200, await this.mutateDatabase('rejectUnrecognizedSuggestion', [rejectLearning[1]], { reason: 'learning-suggestion-rejected', reloadRules: false }));
+
+    if (route === '/api/regression-cases' && req.method === 'GET') return json(res, 200, this.db.listRegressionCases({ activeOnly: url.searchParams.get('active') === '1' }));
+    if (route === '/api/regression-cases' && req.method === 'POST') return json(res, 201, await this.mutateDatabase('saveRegressionCase', [await readBody(req)], { reason: 'regression-case-created', reloadRules: false }));
+    const regressionCase = route.match(/^\/api\/regression-cases\/(\d+)$/);
+    if (regressionCase && req.method === 'PUT') return json(res, 200, await this.mutateDatabase('saveRegressionCase', [await readBody(req), regressionCase[1]], { reason: 'regression-case-updated', reloadRules: false }));
+    if (regressionCase && req.method === 'DELETE') return json(res, 200, await this.mutateDatabase('deleteRegressionCase', [regressionCase[1]], { reason: 'regression-case-deleted', reloadRules: false }));
+    if (route === '/api/regression-cases/run' && req.method === 'POST') {
+      const cases = this.db.listRegressionCases({ activeOnly: true });
+      const results = cases.map(item => {
+        const evaluation = this.engine.simulate(item.phrase, { isGroup: false, includeDrafts: false });
+        const responded = Boolean(evaluation?.matched && evaluation.type !== 'disambiguation');
+        const titleOk = !item.expected_title || normalizeText(evaluation?.matchedItem || '').includes(normalizeText(item.expected_title));
+        const passed = item.expectation === 'ignore' ? !responded : responded && titleOk;
+        return { id: item.id, phrase: item.phrase, expectation: item.expectation, expected_title: item.expected_title, passed,
+          actual: responded ? (evaluation.matchedItem || evaluation.type || 'resposta') : (evaluation.blockedBy || 'ignorada') };
+      });
+      return json(res, 200, { total: results.length, passed: results.filter(item => item.passed).length,
+        failed: results.filter(item => !item.passed).length, ok: results.every(item => item.passed), results });
+    }
 
     if (route === '/api/logs' && req.method === 'GET') return json(res, 200, this.db.listLogs(url.searchParams.get('limit') || 200));
     if (route === '/api/logs' && req.method === 'DELETE') { await this.mutateDatabase('clearLogs', [], { reason: 'logs-cleared', reloadRules: false }); return json(res, 200, { ok: true }); }

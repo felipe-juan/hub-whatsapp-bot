@@ -32,7 +32,7 @@ test('official trancamento and community cards answer their direct triggers', ()
   try {
     const engine = new BotEngine(holder.db);
     const trancamento = engine.evaluate('como trancar o curso', { isGroup: true, ignorePermissions: true });
-    assert.equal(trancamento.matchedItem, 'Graduação — Como trancar o curso');
+    assert.equal(trancamento.matchedItem, 'Graduação — Como Trancar o Curso');
     assert.match(trancamento.text, /no máximo 2 semestres/i);
     assert.match(trancamento.text, /pelo menos 3 disciplinas/i);
     assert.match(trancamento.text, /99929-9331/);
@@ -44,7 +44,7 @@ test('official trancamento and community cards answer their direct triggers', ()
     assert.match(felipe.text, /linkedin\.com\/in\/felipe-juan/);
 
     const bar = engine.evaluate('bar perto do ifba', { isGroup: true, ignorePermissions: true });
-    assert.equal(bar.matchedItem, 'Bar perto do IFBA — Bar do Benjamin');
+    assert.equal(bar.matchedItem, 'Bar Perto do IFBA — Bar do Benjamin');
     assert.match(bar.text, /R\. H, 2297–2407/);
     assert.match(bar.text, /rua à esquerda do IFBA/i);
     engine.close();
@@ -62,7 +62,7 @@ test('all schedule records contain a classroom and every professor card displays
   try {
     const messages = new Map(holder.db.listAutomaticMessages().map(item => [item.title, item]));
     for (const { item, entry } of records) {
-      const title = item.pending ? 'Pendência — Meio Ambiente (docente substituto)' : `Professor — ${item.name}`;
+      const title = item.pending ? 'Pendência — Meio Ambiente (Docente Substituto)' : `Professor — ${item.name}`;
       const card = messages.get(title);
       assert.ok(card, title);
       assert.match(card.response_text, new RegExp(`Sala: \\*${String(entry[4]).replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\*`), `${title}: ${entry[0]}`);

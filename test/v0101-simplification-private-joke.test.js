@@ -25,14 +25,14 @@ function message(body, replies, isGroup = false) {
 test('card Como passar em Cálculo is seeded with specific triggers', () => {
   const ctx = setup();
   try {
-    const card = ctx.db.listAutomaticMessages().find(item => item.title === 'Como passar em Cálculo?');
+    const card = ctx.db.listAutomaticMessages().find(item => item.title === 'Como Passar em Cálculo?');
     assert.ok(card);
     const matched = ctx.engine.evaluate('como eu faço para passar em cálculo', { isGroup: false });
     assert.equal(matched.matched, true);
-    assert.equal(matched.matchedItem, 'Como passar em Cálculo?');
+    assert.equal(matched.matchedItem, 'Como Passar em Cálculo?');
     assert.match(matched.text, /Depende da sua religião/);
     const unrelated = ctx.engine.evaluate('como passar do tcc i para o tcc ii?', { isGroup: false });
-    assert.notEqual(unrelated.matchedItem, 'Como passar em Cálculo?');
+    assert.notEqual(unrelated.matchedItem, 'Como Passar em Cálculo?');
   } finally { close(ctx); }
 });
 

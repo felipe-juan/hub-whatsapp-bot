@@ -17,7 +17,7 @@ function cleanup(db, dir) { try { db?.close(); } catch {} fs.rmSync(dir, { recur
 
 function baseMessage(overrides = {}) {
   return {
-    title: 'Calendário do curso',
+    title: 'Calendário do Curso',
     scope: 'both',
     response_text: '📅 Resposta administrada',
     trigger: { match_mode: 'all', keywords: ['calendário', '?'] },
@@ -134,7 +134,7 @@ test('diagnóstico registra uma decisão final por mensagem e explica todas as r
   const events = diagnostics.list();
   assert.equal(events.length, 1, 'não deve criar um evento provisório e outro final para a mesma mensagem');
   assert.equal(events[0].outcome, 'responded');
-  assert.equal(events[0].matchedItem, 'Calendário do curso');
+  assert.equal(events[0].matchedItem, 'Calendário do Curso');
   assert.ok(events[0].details.length >= 2);
   assert.ok(events[0].details.some(detail => detail.blockedReasons.some(reason => /somente privado/.test(reason))));
   cleanup(db, dir);

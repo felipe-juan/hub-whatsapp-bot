@@ -69,7 +69,7 @@ test('resposta inválida ao pedido não cai no fallback e explica formatos aceit
     await engine.handle(second.message);
     assert.equal(second.replies.length,1);
     assert.match(second.replies[0],/Não consegui identificar o semestre/u);
-    assert.match(second.replies[0],/5 semestre/u);
+    assert.match(second.replies[0],/`3`, `5` ou `8`/u);
     engine.close();
   } finally { h.close(); }
 });

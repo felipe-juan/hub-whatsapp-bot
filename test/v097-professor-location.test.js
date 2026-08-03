@@ -94,7 +94,7 @@ test('generic professor request asks for a name and exclusions protect other car
     assert.equal(coordination.matchedItem, 'CSI — location');
     const laboratory = engine.evaluate('qual é a sala do laboratório de redes de BSI?', { isGroup: false, ignorePermissions: true });
     assert.equal(laboratory.matched, true);
-    assert.equal(laboratory.matchedItem, 'BSI — Laboratórios de redes');
+    assert.equal(laboratory.matchedItem, 'BSI — Laboratórios de Redes');
   } finally { closeAll(engine, db, dir); }
 });
 

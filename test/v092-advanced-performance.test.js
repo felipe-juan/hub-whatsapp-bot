@@ -114,6 +114,7 @@ test('Admin Center usa o escritor dedicado e assets modulares da versão atual',
   const root = path.join(__dirname, '..');
   const server = fs.readFileSync(path.join(root, 'src', 'admin-server.js'), 'utf8');
   const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+  const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim().replace(/\./g, '\\.');
   assert.match(server, /mutateDatabase\(/); assert.match(server, /writeQueue\.callDatabase/);
-  assert.match(server, /database\.optimize/); assert.match(html, /app\.js\?v=0\.13\.2/); assert.match(html, /app\.css\?v=0\.13\.2/); assert.match(html, /js\/cards\.js\?v=0\.13\.2/);
+  assert.match(server, /database\.optimize/); assert.match(html, new RegExp(`app\\.js\\?v=${version}`)); assert.match(html, new RegExp(`app\\.css\\?v=${version}`)); assert.match(html, new RegExp(`js\/cards\\.js\\?v=${version}`));
 });

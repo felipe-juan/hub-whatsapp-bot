@@ -13,6 +13,12 @@ const {
 
 const SEMESTER_SCHEDULE_CARD_TITLE = 'BSI — Aulas por semestre e dia';
 const DEFAULT_TIME_ZONE = 'America/Bahia';
+const DATE_FORMATTERS = new Map();
+function dateFormatter(timeZone = DEFAULT_TIME_ZONE) {
+  const key = String(timeZone || DEFAULT_TIME_ZONE);
+  if (!DATE_FORMATTERS.has(key)) DATE_FORMATTERS.set(key, new Intl.DateTimeFormat('en-CA', { timeZone: key, year: 'numeric', month: '2-digit', day: '2-digit' }));
+  return DATE_FORMATTERS.get(key);
+}
 const DAY_NAMES = Object.freeze([
   'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira',
   'quinta-feira', 'sexta-feira', 'sábado'
@@ -32,6 +38,19 @@ const DAY_ALIASES = Object.freeze([
   ['sábado', 'sabado']
 ]);
 
+const DAY_ALIAS_PATTERNS = Object.freeze(DAY_ALIASES.map(aliases => Object.freeze(
+  aliases.map(alias => new RegExp(`(?:^|\\s)${escapeRegExp(normalizeText(alias))}(?:$|\\s)`, 'u'))
+)));
+const SCHEDULE_SUBJECT_PATTERN = '(?:aula|aulas|horario|horarios|grade|disciplina|disciplinas|materia|materias|cadeira|cadeiras|componente|componentes)';
+const SCHEDULE_DATE_PATTERN = '(?:hoje|amanha|depois de amanha|ontem|domingo|segunda(?:-feira| feira)?|terca(?:-feira| feira)?|quarta(?:-feira| feira)?|quinta(?:-feira| feira)?|sexta(?:-feira| feira)?|sabado)';
+const SCHEDULE_INTENT_PATTERNS = Object.freeze([
+  new RegExp(`\\bsera que\\b.*\\b${SCHEDULE_SUBJECT_PATTERN}\\b`, 'u'),
+  new RegExp(`\\b(?:qual|quais)(?:\\s+e)?(?:\\s+(?:o|a|os|as))?\\s+${SCHEDULE_SUBJECT_PATTERN}\\b`, 'u'),
+  /\b(?:o que|que) (?:tem|tera|vai ter)\b/u,
+  new RegExp(`\\b(?:me diga|me fala|informe|quero saber|queria saber|gostaria de saber)\\b.*\\b${SCHEDULE_SUBJECT_PATTERN}\\b`, 'u'),
+  new RegExp(`(?:^|\\s)${SCHEDULE_SUBJECT_PATTERN}\\s+(?:de|do|da|para|na|no)?\\s*${SCHEDULE_DATE_PATTERN}(?:$|\\s)`, 'u'),
+  new RegExp(`(?:^|\\s)${SCHEDULE_DATE_PATTERN}\\s+(?:tem|tera|vai ter)?\\s*${SCHEDULE_SUBJECT_PATTERN}(?:$|\\s)`, 'u')
+]);
 const SEMESTER_WORDS = Object.freeze({
   1: ['1', '1o', '1a', 'primeiro', 'primeira'],
   2: ['2', '2o', '2a', 'segundo', 'segunda'],
@@ -42,6 +61,14 @@ const SEMESTER_WORDS = Object.freeze({
   7: ['7', '7o', '7a', 'setimo', 'setima'],
   8: ['8', '8o', '8a', 'oitavo', 'oitava']
 });
+const SEMESTER_PATTERNS = Object.freeze(Object.entries(SEMESTER_WORDS).flatMap(([number, aliases]) => aliases.flatMap(alias => {
+  const token = escapeRegExp(alias);
+  const noun = '(?:semestre|sem|periodo)';
+  return [
+    { number: Number(number), pattern: new RegExp(`(?:^|\\s)${token}(?:\\s+)${noun}(?:$|\\s)`, 'u') },
+    { number: Number(number), pattern: new RegExp(`(?:^|\\s)${noun}(?:\\s+)${token}(?:$|\\s)`, 'u') }
+  ];
+})));
 
 function semesterNumberForAlias(value) {
   const normalized = normalizeText(value);
@@ -54,9 +81,7 @@ function semesterNumberForAlias(value) {
 function zonedCalendarDate(value = Date.now(), timeZone = DEFAULT_TIME_ZONE) {
   const date = value instanceof Date ? value : new Date(Number(value));
   const safeDate = Number.isFinite(date.getTime()) ? date : new Date();
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone, year: 'numeric', month: '2-digit', day: '2-digit'
-  }).formatToParts(safeDate);
+  const parts = dateFormatter(timeZone).formatToParts(safeDate);
   const byType = Object.fromEntries(parts.map(part => [part.type, part.value]));
   return new Date(Date.UTC(Number(byType.year), Number(byType.month) - 1, Number(byType.day), 12));
 }
@@ -84,23 +109,34 @@ function parseSemester(text) {
   const normalized = normalizeText(source);
   if (!normalized) return 0;
   const padded = ` ${normalized} `;
-  const noun = '(?:semestre|sem|periodo)';
-  for (const [number, aliases] of Object.entries(SEMESTER_WORDS)) {
-    for (const alias of aliases) {
-      const token = escapeRegExp(alias);
-      const before = new RegExp(`(?:^|\\s)${token}(?:\\s+)${noun}(?:$|\\s)`, 'u');
-      const after = new RegExp(`(?:^|\\s)${noun}(?:\\s+)${token}(?:$|\\s)`, 'u');
-      if (before.test(padded) || after.test(padded)) return Number(number);
-    }
-  }
+  for (const entry of SEMESTER_PATTERNS) if (entry.pattern.test(padded)) return entry.number;
 
   const contextual = normalized.match(/\b(?:para|pro|pra|do|da|turma)\s+(?:o|a)?\s*(1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])\b/u)?.[1] || '';
   return contextual ? semesterNumberForAlias(contextual) : 0;
 }
 
+function isScheduleStatusConfirmation(text) {
+  const normalized = normalizeText(text);
+  if (!normalized) return false;
+  const target = parseTargetDate(text);
+  if (!target.matched) return false;
+
+  const mentionsClass = /\b(?:aula|aulas)\b/u.test(normalized);
+  const saysNormal = /\b(?:normal|normais|normalmente)\b/u.test(normalized);
+  if (!mentionsClass || !saysNormal) return false;
+
+  // Perguntas abertas sobre qual aula, matéria, disciplina, horário ou sala
+  // continuam sendo consultas válidas. A exceção é para confirmações do tipo
+  // “vai ter aula hoje normal?”, cuja resposta depende de informação em tempo
+  // real que o bot não possui.
+  const asksScheduleDetails = /\b(?:qual|quais|o que|que aula|que aulas|que materia|que materias|que disciplina|que disciplinas|que horario|que horarios|qual horario|quais horarios|onde|em qual sala|quem)\b/u.test(normalized);
+  return !asksScheduleDetails;
+}
+
 function hasScheduleIntent(text) {
   const normalized = normalizeText(text);
   if (!normalized) return false;
+  if (isScheduleStatusConfirmation(text)) return false;
 
   if (/\b(?:aula|aulas) normal(?:mente)?\b/u.test(normalized)
     || /\b(?:nao|nunca) (?:vai ter|tera|tem|teremos) aula\b/u.test(normalized)
@@ -108,16 +144,7 @@ function hasScheduleIntent(text) {
     || /\ba semana toda\b/u.test(normalized)
     || /\b(?:a aula|as aulas|a materia|a disciplina)\b.*\b(?:foi|foram|estava|estavam|acabou|acabaram|comecou|comecaram)\b/u.test(normalized)) return false;
 
-  const subject = '(?:aula|aulas|horario|horarios|grade|disciplina|disciplinas|materia|materias|cadeira|cadeiras|componente|componentes)';
-  if (new RegExp(`\\bsera que\\b.*\\b${subject}\\b`, 'u').test(normalized)) return true;
-  const date = '(?:hoje|amanha|depois de amanha|ontem|domingo|segunda(?:-feira| feira)?|terca(?:-feira| feira)?|quarta(?:-feira| feira)?|quinta(?:-feira| feira)?|sexta(?:-feira| feira)?|sabado)';
-
-  if (new RegExp(`\\b(?:qual|quais)(?:\\s+e)?(?:\\s+(?:o|a|os|as))?\\s+${subject}\\b`, 'u').test(normalized)) return true;
-  if (/\b(?:o que|que) (?:tem|tera|vai ter)\b/u.test(normalized)) return true;
-  if (new RegExp(`\\b(?:me diga|me fala|informe|quero saber|queria saber|gostaria de saber)\\b.*\\b${subject}\\b`, 'u').test(normalized)) return true;
-  if (new RegExp(`(?:^|\\s)${subject}\\s+(?:de|do|da|para|na|no)?\\s*${date}(?:$|\\s)`, 'u').test(normalized)) return true;
-  if (new RegExp(`(?:^|\\s)${date}\\s+(?:tem|tera|vai ter)?\\s*${subject}(?:$|\\s)`, 'u').test(normalized)) return true;
-  return false;
+  return SCHEDULE_INTENT_PATTERNS.some(pattern => pattern.test(normalized));
 }
 
 function parseTargetDate(text, now = Date.now(), timeZone = DEFAULT_TIME_ZONE) {
@@ -322,7 +349,7 @@ function formatSemesterSchedulePrompt(dayIndex, date = null) {
   return [
     `Qual semestre você quer consultar para ${DAY_DISPLAY_NAMES[dayIndex]}${datePart}?`,
     '',
-    'Exemplo: responda `3º semestre`, `3 semestre` ou `terceiro semestre`.'
+    'Exemplo: responda apenas com um número, como `3`, `5` ou `8`.'
   ].join('\n');
 }
 
@@ -367,6 +394,7 @@ module.exports = {
   parseSemester,
   parseTargetDate,
   hasScheduleIntent,
+  isScheduleStatusConfirmation,
   classesForSemesterAndDay,
   semesterScheduleTitle,
   formatSemesterScheduleResponse,

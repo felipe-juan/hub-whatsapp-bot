@@ -27,7 +27,7 @@ test('structured coordination understands coordenador and coordenadora without m
   try {
     for (const body of ['qual o contato do coordenador de bsi?', 'email da coordenadora de sistemas de informação', 'ctt do coordenador do curso de bsi']) {
       const result = engine.evaluate(body, { isGroup: false, ignorePermissions: true });
-      assert.equal(result.matched, true, body); assert.equal(result.matchedItem, 'BSI — Contato da coordenação'); assert.match(result.text, /csi\.vdc@ifba\.edu\.br/u);
+      assert.equal(result.matched, true, body); assert.equal(result.matchedItem, 'BSI — Contato da Coordenação'); assert.match(result.text, /csi\.vdc@ifba\.edu\.br/u);
     }
     assert.equal(engine.evaluate('o coordenador participou da reunião', { isGroup: false, ignorePermissions: true }).matched, false);
   } finally { engine.close(); db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
@@ -41,10 +41,10 @@ test('bundled support triggers avoid isolated generic words and reject unrelated
         assert.ok(tokenize(sentence).length >= 2, `${item.title} contains broad single trigger: ${sentence}`);
       }
     }
-    const media = card(db, 'HUB — Média final e tabela da final');
-    const fluxograma = card(db, 'HUB — Fluxograma e matriz de Sistemas de Informação');
+    const media = card(db, 'HUB — Média Final e Tabela da Final');
+    const fluxograma = card(db, 'HUB — Fluxograma e Matriz de Sistemas de Informação');
     const protocolo = card(db, 'Serviço — Protocolo');
-    const calendario = card(db, 'HUB — Calendário acadêmico');
+    const calendario = card(db, 'HUB — Calendário Acadêmico');
 
     assert.equal(evaluateTrigger('tabela', media).matched, false);
     assert.equal(evaluateTrigger('a tabela está na planilha', media).matched, false);
@@ -69,8 +69,8 @@ test('bundled support triggers avoid isolated generic words and reject unrelated
 test('common discipline abbreviations and acronyms identify the correct professor', () => {
   const { db, dir } = temporaryDatabase();
   try {
-    const messages = db.listAutomaticMessages();
-    const first = text => findAutomaticMessageMatchesDetailed(text, messages, [], 5, { isGroup: true })[0]?.item?.title;
+    const engine = new BotEngine(db);
+    const first = text => engine.evaluate(text, { isGroup: true, ignorePermissions: true }).matchedItem || undefined;
 
     assert.equal(first('quem ensina MDI?'), 'Professor — Allan de Sousa Soares');
     assert.equal(first('qual o contato de MDII?'), 'Professor — Allan de Sousa Soares');
@@ -82,7 +82,8 @@ test('common discipline abbreviations and acronyms identify the correct professo
     assert.equal(first('professor de BDII'), 'Professor — Pablo Freire Matos');
     assert.equal(first('horário de OAC'), 'Professor — Leonardo Barreto Campos');
     assert.equal(first('quem ensina TCC1?'), 'Professor — Djan Almeida Santos');
-    assert.equal(first('quem ensina SI?'), undefined, 'SI must not be used as an unsafe alias for Segurança da Informação');
+    assert.equal(first('quem ensina SI?'), 'Professor — Stênio Longo Araújo');
+    engine.close();
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -99,7 +100,7 @@ test('discipline alias catalogue includes the requested MDI and ADM forms', () =
 test('v0.8.6 migration removes old broad support triggers and adds abbreviations while preserving responses', () => {
   const { db, dbPath, dir } = temporaryDatabase();
   try {
-    const media = card(db, 'HUB — Média final e tabela da final');
+    const media = card(db, 'HUB — Média Final e Tabela da Final');
     const allan = card(db, 'Professor — Allan de Sousa Soares');
     const customResponse = `${media.response_text}\n\nTexto personalizado preservado.`;
     const broad = { ...media.trigger, sentences: ['tabela', 'nota final'] };
@@ -107,17 +108,20 @@ test('v0.8.6 migration removes old broad support triggers and adds abbreviations
       .run(customResponse, JSON.stringify(broad), media.id);
     db.db.prepare('UPDATE automatic_messages SET trigger_json=? WHERE id=?')
       .run(JSON.stringify({ ...allan.trigger, sentences: ['matemática discreta i'] }), allan.id);
-    db.db.prepare("UPDATE settings SET value='false' WHERE key='si_triggers_v086_migrated'").run();
+    db.db.prepare("UPDATE settings SET value='false' WHERE key IN ('si_triggers_v086_migrated','content_v0140_precision_performance')").run();
     db.close();
 
     const reopened = new Database(dbPath, { seedBundledContent: true });
-    const migratedMedia = card(reopened, 'HUB — Média final e tabela da final');
+    const migratedMedia = card(reopened, 'HUB — Média Final e Tabela da Final');
     const migratedAllan = card(reopened, 'Professor — Allan de Sousa Soares');
     assert.match(migratedMedia.response_text, /Texto personalizado preservado/);
     assert.equal(evaluateTrigger('tabela', migratedMedia).matched, false);
     assert.equal(evaluateTrigger('qual a tabela da final?', migratedMedia).matched, true);
-    assert.equal(evaluateTrigger('quem ensina MDI?', migratedAllan).matched, true);
-    assert.ok(reopened.listAutomaticMessageHistory(migratedMedia.id).some(entry => entry.action === 'v0.8.6-gatilhos-especificos'));
+    assert.equal(migratedAllan.trigger.sentences.some(sentence => /matemática discreta/i.test(sentence)), false);
+    const engine = new BotEngine(reopened);
+    assert.equal(engine.evaluate('quem ensina MDI?', { isGroup: true, ignorePermissions: true }).matchedItem, 'Professor — Allan de Sousa Soares');
+    engine.close();
+    assert.ok(reopened.listAutomaticMessageHistory(migratedMedia.id).some(entry => entry.action === 'v0.14.0-gatilhos-estruturados'));
     assert.ok(reopened.listAutomaticMessageHistory(migratedAllan.id).some(entry => entry.action === 'v0.8.6-siglas-e-abreviacoes'));
     assert.equal(reopened.getSetting('si_triggers_v086_migrated'), 'true');
     reopened.close();

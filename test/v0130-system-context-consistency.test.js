@@ -23,7 +23,7 @@ test('contexto curto sem reply funciona no privado e continua exigindo reply em 
     const engine=new BotEngine(h.db);
     const privateMessage={from:'user@s.whatsapp.net',author:'user@s.whatsapp.net',quotedFromMe:false,timestampMs:Date.UTC(2026,7,3,15)};
     const key=engine.conversationKey(privateMessage);
-    engine.conversationContexts.set(key,{kind:'semester_schedule',title:'BSI — Aulas por semestre e dia',targetDate:'2026-08-03',dayIndex:1,semester:3,expiresAt:Date.now()+60000});
+    engine.conversationContexts.set(key,{kind:'semester_schedule',title:'BSI — Aulas por Semestre e Dia',targetDate:'2026-08-03',dayIndex:1,semester:3,expiresAt:Date.now()+60000});
     const privateResult=engine.contextualFollowUpEvaluation(privateMessage,'e sexta?',h.db.getSettings());
     assert.equal(privateResult?.matched,true);
     assert.equal(privateResult.contextSubject.semester,3);
@@ -44,7 +44,7 @@ test('gatilhos curtos de contato da coordenação retornam o card completo do CS
     for (const phrase of ['contato coordenador','contato coordenação','qual é o contato do coordenador']) {
       const result=engine.evaluate(phrase,{isGroup:false,ignorePermissions:true});
       assert.equal(result?.matched,true,phrase);
-      assert.equal(result.matchedItem,'BSI — Contato da coordenação');
+      assert.equal(result.matchedItem,'BSI — Contato da Coordenação');
       assert.match(result.text,/csi\.vdc@ifba\.edu\.br/u);
     }
     engine.close();

@@ -102,7 +102,7 @@ test('end-to-end examples choose expected cards', () => {
   const engine = new BotEngine(holder.db);
   try {
     const cases = [
-      ['calendário acadêmico', true, 'HUB — Calendário acadêmico'],
+      ['calendário acadêmico', true, 'HUB — Calendário Acadêmico'],
       ['alguma coisa calendário acadêmico', false, ''],
       ['alguma coisa calendário acadêmico?', false, ''],
       ['contato caens', true, 'CAENS — contact'],

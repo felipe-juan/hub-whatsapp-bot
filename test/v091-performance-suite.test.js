@@ -125,7 +125,8 @@ test('métricas calculam p50, p95 e p99 com memória limitada', () => {
 
 test('painel usa paginação, janela virtual, assets versionados e lotes SSE', () => {
   const root = path.join(__dirname, '..'); const app = readAdminJs(root); const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+  const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim().replace(/\./g, '\\.');
   assert.match(app, /paginated:'1'/); assert.match(app, /virtualSlice\(/); assert.match(app, /virtual-spacer/); assert.match(app, /realtime-batch/); assert.match(app, /p95/);
-  assert.match(html, /app\.js\?v=0\.13\.2/); assert.match(html, /app\.css\?v=0\.13\.2/);
+  assert.match(html, new RegExp(`app\\.js\\?v=${version}`)); assert.match(html, new RegExp(`app\\.css\\?v=${version}`));
   assert.ok(fs.existsSync(path.join(root, 'public', 'app.0.9.9.js'))); assert.ok(fs.existsSync(path.join(root, 'public', 'app.0.9.9.css')));
 });

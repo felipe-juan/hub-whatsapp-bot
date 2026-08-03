@@ -34,6 +34,8 @@ const { menuCandidates, formatMenu } = require('./help-menu');
 const { progressiveMenuFor } = require('./progressive-menus');
 const { semanticQuestionAssessment, implicitQuestionStructure } = require('./semantic-question');
 const { classifyBotReaction } = require('./reactions');
+const { prepareMessage, isProfessorAttendanceConfirmation } = require('./message-analysis');
+const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
 const {
   SEMESTER_SCHEDULE_CARD_TITLE,
   classifySemesterScheduleRequest,
@@ -43,7 +45,8 @@ const {
   parseSemester,
   parseTargetDate,
   formatSemesterScheduleDetail,
-  scheduleDetailIntent
+  scheduleDetailIntent,
+  isScheduleStatusConfirmation
 } = require('./semester-schedule');
 
 function asBool(value, fallback = false) {
@@ -79,12 +82,14 @@ class BotEngine {
     });
     this.metrics.lastRuleReloadAt = this.ruleStore.snapshot.createdAt;
     this.groupTouchIntervalMs = Math.max(30000, Number(options.groupTouchIntervalSeconds || 600) * 1000);
+    this.contextCleanupTimer = setInterval(() => this.cleanupExpiredContexts(), 60_000);
+    this.contextCleanupTimer.unref?.();
   }
 
   setServices(services = {}) { this.services = { ...this.services, ...services }; }
   getMetrics() { return { ...this.metrics, pendingDisambiguations: this.pendingChoices.size, conversationContexts: this.conversationContexts.size, replyContexts: this.replyContexts.size, outboundGuard: this.outboundGuard.stats(), rules: this.ruleStore.stats(), performance: this.performance.snapshot() }; }
   reloadRules(reason = 'manual') { return this.ruleStore.scheduleReload(reason); }
-  close() { this.ruleStore.close(); }
+  close() { clearInterval(this.contextCleanupTimer); this.contextCleanupTimer = null; this.ruleStore.close(); }
 
   touchGroup(groupId, name) {
     const now = Date.now(); const lastTouch = this.groupTouches.get(groupId) || 0;
@@ -137,11 +142,12 @@ class BotEngine {
   unrecognizedSuggestion(body, evaluation = {}) {
     const normalized = normalizeText(body);
     if (!normalized || normalized.length < 3 || normalized.startsWith('!')) return null;
-    const teachers = this.db.listTeachers({ activeOnly: true });
+    const snapshot = evaluation.context?.snapshot || null;
+    const teachers = snapshot?.teachers || this.db.listTeachers({ activeOnly: true, cloneResult: false });
     const professorMatches = findProfessorDirectoryMatches(normalized, teachers);
     if (professorMatches.length === 1) {
       const teacher = professorMatches[0].teacher;
-      const card = this.db.listAutomaticMessages({ activeOnly: true })
+      const card = (snapshot?.messages || this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false }))
         .find(item => normalizeText(item.title) === normalizeText(`Professor — ${teacher.name}`));
       if (card) return { suggested_message_id: Number(card.id), suggested_title: card.title, confidence: professorMatches[0].fuzzy ? 0.84 : 0.94,
         reasons: ['nome de professor reconhecido; intenção ainda não cadastrada'] };
@@ -171,6 +177,39 @@ class BotEngine {
     }
   }
 
+  cleanupExpiredContexts(now = Date.now()) {
+    for (const [key, context] of this.conversationContexts) if (Number(context.expiresAt || 0) <= now) this.conversationContexts.delete(key);
+    for (const [key, context] of this.replyContexts) if (Number(context.expiresAt || 0) <= now) this.replyContexts.delete(key);
+    for (const [key, pending] of this.pendingChoices) if (Number(pending.expiresAt || 0) <= now) this.pendingChoices.delete(key);
+  }
+
+  buildMessageSnapshot(prepared, context = {}, settings = null) {
+    const resolvedSettings = settings || this.db.getSettings();
+    const academicPeriod = String(resolvedSettings.current_academic_period || '2026.2');
+    const messages = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) }).messages;
+    const teachers = this.db.listTeachers({ activeOnly: true, cloneResult: false });
+    const sectors = this.db.listSectors({ activeOnly: true, cloneResult: false });
+    const calculators = this.db.listCalculators({ enabledOnly: true, cloneResult: false });
+    // Catálogo compacto: uma linha por disciplina/professor, sem carregar o
+    // quadro semanal inteiro apenas para reconhecer siglas e nomes novos.
+    const disciplineDirectory = this.db.listProfessorDisciplineDirectory?.({ academicPeriod, activeOnly: true }) || [];
+    const base = { settings: resolvedSettings, academicPeriod, messages, teachers, sectors, calculators, disciplineDirectory };
+    return this.scopeMessageSnapshot(base, prepared);
+  }
+
+  scopeMessageSnapshot(base, prepared) {
+    let scheduleEntries = [];
+    let calendarEvents = [];
+    if (prepared?.targetDate?.matched && prepared?.semester) {
+      scheduleEntries = this.db.listProfessorScheduleEntries?.({
+        academicPeriod: base.academicPeriod, semester: prepared.semester,
+        dayOfWeek: prepared.targetDate.dayIndex, activeOnly: true
+      }) || [];
+      calendarEvents = this.db.academicCalendarEventsForDate?.(prepared.targetDate.iso, { course: 'bsi', semester: prepared.semester }) || [];
+    }
+    return Object.freeze({ ...base, scheduleEntries, calendarEvents });
+  }
+
   activeContent({ includeDrafts = false } = {}) {
     let messages = this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false });
     if (includeDrafts) {
@@ -183,10 +222,10 @@ class BotEngine {
   }
 
   professorLocationEvaluation(text, context, settings) {
-    const { messages } = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) });
-    const enabled = messages.some(item => normalizeText(item.title) === normalizeText(LOCATION_CARD_TITLE));
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context, settings);
+    const enabled = snapshot.messages.some(item => normalizeText(item.title) === normalizeText(LOCATION_CARD_TITLE));
     if (!enabled) return null;
-    const teachers = this.db.listTeachers({ activeOnly: true });
+    const teachers = snapshot.teachers;
     const classified = classifyProfessorLocationRequest(text, teachers);
     if (!classified.matched) return null;
     const base = {
@@ -230,36 +269,38 @@ class BotEngine {
     };
   }
 
-  professorAttendanceConfirmation(text) {
-    const normalized = normalizeText(text);
+  professorAttendanceConfirmation(text, context = {}) {
+    const prepared = context.prepared;
+    if (prepared?.intent === 'professor-attendance-confirmation') return true;
+    const normalized = prepared?.normalized || normalizeText(text);
     if (!normalized) return false;
+    const teachers = context.snapshot?.teachers || this.db.listTeachers({ activeOnly: true });
+    const exactTeacherMatches = (prepared?.professorMatches || findProfessorDirectoryMatches(normalized, teachers)).filter(match => !match.fuzzy);
+    return isProfessorAttendanceConfirmation({ normalized, professorMatches: exactTeacherMatches });
+  }
 
-    const target = parseTargetDate(text, Date.now());
-    if (!target.matched) return false;
-
-    const teachers = this.db.listTeachers({ activeOnly: true });
-    const exactTeacherMatches = findProfessorDirectoryMatches(normalized, teachers)
-      .filter(match => !match.fuzzy);
-    if (!exactTeacherMatches.length) return false;
-
-    // Perguntas abertas sobre o quadro continuam respondíveis. O bloqueio é
-    // restrito a confirmações factuais do tipo “vai ter mesmo?”, que dependem
-    // de presença, cancelamento ou decisão de última hora do docente.
-    const asksWhichInformation = /\b(?:qual|quais|onde|quando|que horas|qual horario|quais horarios|quais dias|que materia|qual materia|quais materias|que disciplina|qual disciplina|quais disciplinas|em qual sala)\b/u.test(normalized);
-    if (asksWhichInformation) return false;
-
-    const confirmationPatterns = [
-      /\b(?:tem|tera|vai ter|havera|vai haver)\s+aula\s+(?:de|do|da|com)\b/u,
-      /\b(?:vai|ira)\s+(?:dar|ministrar|lecionar)\s+aula\b/u,
-      /\b(?:da|dara|ministra|ministrara|leciona|lecionara)\s+aula\b/u,
-      /\baula\s+(?:de|do|da|com)\b[\s\S]{0,100}\b(?:acontece|acontecera|vai acontecer|esta confirmada|foi confirmada|vai rolar|rola)\b/u,
-      /\b(?:vem|vira|vai vir|aparece|vai aparecer|comparece|vai comparecer)\b[\s\S]{0,100}\b(?:hoje|amanha|depois de amanha|domingo|segunda|terca|quarta|quinta|sexta|sabado)\b/u
-    ];
-    return confirmationPatterns.some(pattern => pattern.test(normalized));
+  scheduleStatusConfirmationIgnoredEvaluation(text, context = {}) {
+    if (!isScheduleStatusConfirmation(text)) return null;
+    return {
+      matched: false,
+      type: 'none',
+      text: '',
+      signature: '',
+      matchedItem: '',
+      redactLog: false,
+      reasons: ['confirmação sobre funcionamento normal das aulas não pode ser verificada pelo bot'],
+      candidates: [],
+      conflict: false,
+      blockedBy: 'schedule-status-unverifiable',
+      topic: 'Horários de BSI',
+      context: { ...context },
+      analysis: [],
+      suppressPrivateFallback: true
+    };
   }
 
   professorAttendanceIgnoredEvaluation(text, context = {}) {
-    if (!this.professorAttendanceConfirmation(text)) return null;
+    if (!this.professorAttendanceConfirmation(text, context)) return null;
     return {
       matched: false,
       type: 'none',
@@ -278,94 +319,106 @@ class BotEngine {
     };
   }
 
-  professorCardIntent(text) {
+  professorCardIntent(text, prepared = null) {
     const normalized = normalizeText(text);
     if (!normalized) return false;
-    const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas)\b/u.test(normalized);
+    const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas|professor|professora|docente|onde|quando|ministra|ministro|leciona|ensina|da)\b/u.test(normalized);
     if (!topic) return false;
+    if (prepared?.disciplineMatches?.length && hasDisciplineInformationIntent(text)) return true;
+    // 'Onde fica/encontro o professor' busca o local de atendimento. Já
+    // 'qual/em qual sala' e referências explícitas à aula/turma buscam o
+    // card docente, que contém as salas das disciplinas.
+    const asksOfficeLocation = prepared?.professorMatches?.length
+      && /(?:^|\b)(?:onde\s+(?:fica|encontro|acho)|gabinete|local\s+de\s+atendimento|falar\s+com)\b/u.test(normalized)
+      && !/\b(?:qual|em\s+qual)\s+sala\b|\bsala\s+(?:da|de)\s+(?:aula|turma)\b/u.test(normalized);
+    if (asksOfficeLocation) return false;
     if (/\?\s*$/.test(String(text || '')) || implicitQuestionStructure(text)) return true;
-    if (/^(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|sala|laboratorio|lab|qual\s+(?:e\s+)?(?:a\s+)?sala|em\s+qual\s+sala)\b/u.test(normalized)) return true;
+    if (/^(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|sala|laboratorio|lab|onde|quando|qual\s+(?:e\s+)?(?:a\s+)?sala|em\s+qual\s+sala)\b/u.test(normalized)) return true;
     return /\b(?:da|dar|dá|ministra|ensina|leciona) aula\b[\s\S]{0,80}\b(?:quais|qual|quando|onde|dias|materias|disciplinas|sala)\b/u.test(String(text || '').toLowerCase());
   }
 
   professorCardEvaluation(text, context = {}) {
-    if (!this.professorCardIntent(text)) return null;
-    const teachers = this.db.listTeachers({ activeOnly: true });
-    const matches = findProfessorDirectoryMatches(normalizeText(text), teachers);
-    if (matches.length !== 1) return null;
-    const teacher = matches[0].teacher;
-    const title = `Professor — ${teacher.name}`;
-    const { messages } = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) });
-    const card = messages.find(item => normalizeText(item.title) === normalizeText(title));
-    if (!card || !card.response_text) return null;
-    const scope = card.scope || 'both';
-    if (context.isGroup && scope === 'private') return null;
-    if (!context.isGroup && scope === 'group') return null;
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context);
+    const prepared = context.prepared || prepareMessage(text, { now: context.now || Date.now(), teachers: snapshot.teachers, isGroup: context.isGroup });
+    if (!this.professorCardIntent(text, prepared)) return null;
+    let teacherMatches = [...(prepared.professorMatches || [])];
+    const disciplineMatches = prepared.disciplineMatches?.length ? prepared.disciplineMatches : findDisciplineMatches(text, snapshot.disciplineDirectory);
+    const sharedCards = [];
+    if (disciplineMatches.length) {
+      const names = new Set();
+      for (const discipline of disciplineMatches) {
+        const shared = snapshot.messages.find(item => normalizeText(item.title) === normalizeText(`Disciplina Compartilhada — ${discipline.name}`));
+        if (shared?.response_text) {
+          sharedCards.push(shared);
+          continue;
+        }
+        const entries = this.db.listProfessorScheduleEntries?.({ academicPeriod: snapshot.academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name }) || [];
+        for (const entry of entries) names.add(normalizeText(entry.professor_name));
+        for (const name of discipline.professorNames || []) names.add(normalizeText(name));
+      }
+      for (const teacher of snapshot.teachers) if (names.has(normalizeText(teacher.name))) teacherMatches.push({ teacher, fuzzy: false, score: 100 });
+    }
+    const teachers = [...new Map(teacherMatches.map(match => [Number(match.teacher?.id || 0) || normalizeText(match.teacher?.name), match.teacher])).values()].filter(Boolean);
+    if (!teachers.length && !sharedCards.length) return null;
+    const professorCards = teachers.map(teacher => snapshot.messages.find(item => normalizeText(item.title) === normalizeText(`Professor — ${teacher.name}`)));
+    const cards = [...new Map([...sharedCards, ...professorCards]
+      .filter(card => card?.response_text)
+      .filter(card => !(context.isGroup && (card.scope || 'both') === 'private') && !(!context.isGroup && (card.scope || 'both') === 'group'))
+      .map(card => [Number(card.id) || normalizeText(card.title), card])).values()];
+    if (!cards.length) return null;
+    const responseItems = cards.map(card => ({
+      text: card.response_text, attachment: card.attachment || null,
+      source_url: card.source_url || '', source_title: card.source_title || '', verified_at: card.verified_at || '',
+      matchedItem: card.title, topic: card.topic || card.title
+    }));
+    const first = cards[0];
     return {
-      matched: true, type: 'message', text: card.response_text,
-      signature: `message:${card.id}`, matchedItem: card.title, topic: card.topic || card.title,
-      attachment: card.attachment || null, details_text: card.details_text || '', source_url: card.source_url || '',
-      source_title: card.source_title || '', verified_at: card.verified_at || '', conflict: false, redactLog: false,
-      reasons: ['nome do professor reconhecido com tolerância contextual de digitação'], candidates: [{ kind: 'message', id: card.id, title: card.title }],
-      analysis: [], context: { ...context },
-      contextSubject: { kind: 'message', id: Number(card.id || 0), title: card.title, topic: card.topic || card.title,
-        details_text: card.details_text || '', source_url: card.source_url || '', source_title: card.source_title || '', verified_at: card.verified_at || '' }
+      matched: true, type: cards.length > 1 ? 'multi_message' : 'message', text: first.response_text,
+      responseItems: cards.length > 1 ? responseItems : null,
+      privateDelivery: Boolean(context.isGroup && cards.length > 1),
+      signature: cards.map(card => `message:${card.id}`).join('|'), matchedItem: cards.map(card => card.title).join(', '),
+      topic: cards.length > 1 ? 'Professores e Disciplinas' : (first.topic || first.title),
+      attachment: cards.length === 1 ? first.attachment || null : null,
+      details_text: first.details_text || '', source_url: first.source_url || '', source_title: first.source_title || '', verified_at: first.verified_at || '',
+      conflict: false, redactLog: false,
+      reasons: [disciplineMatches.length ? 'disciplina reconhecida por sigla ou nome completo' : 'nome do professor reconhecido'],
+      candidates: cards.map(card => ({ kind: 'message', id: card.id, title: card.title })), analysis: [], context: { ...context },
+      contextSubject: { kind: 'message', id: Number(first.id || 0), title: first.title, topic: first.topic || first.title,
+        details_text: first.details_text || '', source_url: first.source_url || '', source_title: first.source_title || '', verified_at: first.verified_at || '' }
     };
   }
 
-  semesterScheduleEnabled({ includeDrafts = false } = {}) {
-    return this.activeContent({ includeDrafts }).messages
-      .some(item => normalizeText(item.title) === normalizeText(SEMESTER_SCHEDULE_CARD_TITLE));
+  semesterScheduleEnabled({ includeDrafts = false, messages = null } = {}) {
+    const source = messages || this.activeContent({ includeDrafts }).messages;
+    return source.some(item => normalizeText(item.title) === normalizeText(SEMESTER_SCHEDULE_CARD_TITLE));
   }
 
   semesterScheduleEvaluation(text, context = {}) {
-    if (!this.semesterScheduleEnabled({ includeDrafts: Boolean(context.includeDrafts) })) return null;
-    const settings = this.db.getSettings();
-    const academicPeriod = String(settings.current_academic_period || '2026.2');
-    const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, activeOnly: true }) || [];
-    const calendarEvents = this.db.listAcademicCalendarEvents?.({ activeOnly: true, course: 'bsi' }) || [];
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context);
+    if (!this.semesterScheduleEnabled({ includeDrafts: Boolean(context.includeDrafts), messages: snapshot.messages })) return null;
+    const prepared = context.prepared || prepareMessage(text, { now: context.now || Date.now(), teachers: snapshot.teachers, isGroup: context.isGroup });
+    if (['schedule-status-confirmation','schedule-narrative','professor-attendance-confirmation'].includes(prepared.intent)) return null;
     const request = classifySemesterScheduleRequest(text, {
-      now: context.now || Date.now(), scheduleEntries, calendarEvents, academicPeriod
+      now: context.now || Date.now(), scheduleEntries: snapshot.scheduleEntries, calendarEvents: snapshot.calendarEvents, academicPeriod: snapshot.academicPeriod
     });
     if (!request) return null;
-    const base = {
-      matched: true, candidates: [], conflict: false, redactLog: false,
-      topic: 'Horários de BSI', analysis: [], reasons: ['consulta de aulas por semestre e dia'],
-      context: { ...context }, attachment: null
+    const base = { matched: true, candidates: [], conflict: false, redactLog: false, topic: 'Horários de BSI', analysis: [], reasons: ['consulta de aulas por semestre e dia'], context: { ...context }, attachment: null };
+    if (request.kind === 'ask-semester') return {
+      ...base, type: 'semester_schedule_prompt', text: formatSemesterSchedulePrompt(request.dayIndex, request.date),
+      signature: `semester-schedule-prompt:${request.iso}`, matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
+      contextSubject: { kind: 'semester_schedule_prompt', title: SEMESTER_SCHEDULE_CARD_TITLE, targetDate: request.iso, dayIndex: request.dayIndex }
     };
-    if (request.kind === 'ask-semester') {
-      return {
-        ...base,
-        type: 'semester_schedule_prompt',
-        text: formatSemesterSchedulePrompt(request.dayIndex, request.date),
-        signature: `semester-schedule-prompt:${request.iso}`,
-        matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
-        contextSubject: {
-          kind: 'semester_schedule_prompt',
-          title: SEMESTER_SCHEDULE_CARD_TITLE,
-          targetDate: request.iso,
-          dayIndex: request.dayIndex
-        }
-      };
-    }
     return {
-      ...base,
-      type: 'semester_schedule',
-      text: request.text,
+      ...base, type: 'semester_schedule', text: request.text,
       signature: `semester-schedule:${request.iso}:${request.semester}`,
       matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${request.semester}º semestre`,
-      contextSubject: {
-        kind: 'semester_schedule',
-        title: SEMESTER_SCHEDULE_CARD_TITLE,
-        targetDate: request.iso,
-        dayIndex: request.dayIndex,
-        semester: request.semester
-      }
+      contextSubject: { kind: 'semester_schedule', title: SEMESTER_SCHEDULE_CARD_TITLE, targetDate: request.iso, dayIndex: request.dayIndex, semester: request.semester }
     };
   }
 
   sectorEvaluation(text, context, settings) {
-    const sectors = this.db.listSectors({ activeOnly: true });
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context, settings);
+    const sectors = snapshot.sectors;
     const classified = classifySectorRequest(text, sectors);
     if (!classified.matched || !classified.sector) return null;
     const sector = classified.sector; const intent = classified.intent || 'contact';
@@ -375,8 +428,8 @@ class BotEngine {
     if (normalizeText(sector.acronym || '') === 'csi' && ['contact', 'email', 'phone', 'whatsapp'].includes(intent)) {
       const normalizedRequest = normalizeText(text);
       const asksCoordinationContact = /\b(?:coordenacao|coordenador(?:a)?|csi)\b/u.test(normalizedRequest);
-      const coordinationCard = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) }).messages
-        .find(item => normalizeText(item.title) === normalizeText('BSI — Contato da coordenação'));
+      const coordinationCard = snapshot.messages
+        .find(item => normalizeText(item.title) === normalizeText('BSI — Contato da Coordenação'));
       if (asksCoordinationContact && coordinationCard) {
         return {
           matched: true, type: 'message', text: coordinationCard.response_text,
@@ -411,7 +464,8 @@ class BotEngine {
   guidedFlowEvaluation(text, context, settings) {
     const flow = classifyGuidedFlow(text);
     if (!flow) return null;
-    const messages = this.db.listAutomaticMessages({ activeOnly: true });
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context, settings);
+    const messages = snapshot.messages;
     const byTitle = new Map(messages.map(item => [normalizeText(item.title), item]));
     const candidates = flow.options.map(([label, title]) => {
       const item = byTitle.get(normalizeText(title));
@@ -431,7 +485,8 @@ class BotEngine {
   }
 
   menuEvaluation(menuKey, context, settings) {
-    const messages = this.db.listAutomaticMessages({ activeOnly: true });
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context, settings);
+    const messages = snapshot.messages;
     const candidates = menuCandidates(menuKey, messages);
     if (!candidates.length) return null;
     const timeout = Math.max(30, Math.min(600, Number(settings.disambiguation_timeout_seconds || 120)));
@@ -446,7 +501,7 @@ class BotEngine {
   progressiveMenuEvaluation(evaluation, item, settings) {
     const menuKey = progressiveMenuFor(item?.title || evaluation?.matchedItem || '');
     if (!menuKey) return evaluation;
-    const candidates = menuCandidates(menuKey, this.db.listAutomaticMessages({ activeOnly: true }));
+    const candidates = menuCandidates(menuKey, evaluation?.context?.snapshot?.messages || this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false }));
     if (!candidates.length) return evaluation;
     const timeout = Math.max(30, Math.min(600, Number(settings.disambiguation_timeout_seconds || 120)));
     const menuText = formatMenu(menuKey, candidates, timeout);
@@ -464,25 +519,40 @@ ${menuText}`.trim(), pendingCandidates: candidates };
 
   evaluate(body, context = {}) {
     const text = String(body || '').trim();
-    const settings = this.db.getSettings();
+    const settings = context.snapshot?.settings || context.settings || this.db.getSettings();
+    const baseSnapshot = context.snapshot || this.buildMessageSnapshot(null, context, settings);
+    const prepared = context.prepared || prepareMessage(text, {
+      now: context.now || Date.now(), teachers: baseSnapshot.teachers,
+      scheduleEntries: baseSnapshot.disciplineDirectory,
+      isGroup: Boolean(context.isGroup), hasReply: Boolean(context.hasReply),
+      mentionedMe: Boolean(context.mentionedMe)
+    });
+    const snapshot = context.snapshot || this.scopeMessageSnapshot(baseSnapshot, prepared);
+    context = { ...context, settings, prepared, snapshot };
     const result = {
       matched: false, type: 'none', text: '', signature: '', matchedItem: '', redactLog: false,
       reasons: [], candidates: [], conflict: false, blockedBy: '', topic: '', context: { ...context }, analysis: []
     };
     if (!text) return result;
 
-    const attendanceConfirmation = this.professorAttendanceIgnoredEvaluation(text, context);
-    if (attendanceConfirmation) return attendanceConfirmation;
+    if (prepared.intent === 'professor-attendance-confirmation') {
+      const ignored = this.professorAttendanceIgnoredEvaluation(text, context);
+      if (ignored) return ignored;
+    }
+    if (prepared.intent === 'schedule-status-confirmation' || prepared.intent === 'schedule-narrative') {
+      const ignored = this.scheduleStatusConfirmationIgnoredEvaluation(text, context);
+      if (ignored) return ignored;
+    }
 
     if (isHelpCommand(text)) {
       if (!this.featureAllowed(context, 'help', settings)) return { ...result, blockedBy: 'group-help-disabled', reasons: ['ajuda desativada neste grupo'] };
       return this.menuEvaluation('root', context, settings)
-        || { ...result, matched: true, type: 'help', text: formatHelpResponse(settings, this.db.listCalculators()), signature: 'help', matchedItem: 'Ajuda', topic: 'Ajuda', reasons: ['comando de ajuda reconhecido'] };
+        || { ...result, matched: true, type: 'help', text: formatHelpResponse(settings, snapshot.calculators), signature: 'help', matchedItem: 'Ajuda', topic: 'Ajuda', reasons: ['comando de ajuda reconhecido'] };
     }
 
-    const calculators = this.db.listCalculators({ enabledOnly: true });
+    const calculators = snapshot.calculators;
     const explicitCalculatorCommand = Boolean(commandFor(text, calculators));
-    const numericCalculatorRequest = looksLikeCalculator(text, calculators) && /\d/.test(String(text || ''));
+    const numericCalculatorRequest = looksLikeCalculator(text, calculators) && /\d/.test(text);
     if (asBool(settings.calculator_enabled, true) && (explicitCalculatorCommand || numericCalculatorRequest)) {
       if (!this.featureAllowed(context, 'calculator', settings)) return { ...result, blockedBy: 'group-calculator-disabled', reasons: ['calculadoras desativadas neste grupo'] };
       const calculation = handleCalculator(text, calculators);
@@ -505,22 +575,21 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const guidedFlow = this.guidedFlowEvaluation(text, context, settings);
     if (guidedFlow) return { ...result, ...guidedFlow };
 
-    const professorLocation = this.professorLocationEvaluation(text, context, settings);
-    if (professorLocation) return { ...result, ...professorLocation };
-
+    // Consultas por sala/dia/horário de professor ou disciplina devem abrir
+    // primeiro o card docente. A orientação genérica de localização só entra
+    // quando não existe professor/disciplina identificável.
     const professorCard = this.professorCardEvaluation(text, context);
     if (professorCard) return { ...result, ...professorCard };
+
+    const professorLocation = this.professorLocationEvaluation(text, context, settings);
+    if (professorLocation) return { ...result, ...professorLocation };
 
     let analysis;
     const finishTriggerEvaluation = this.performance.timer('trigger_evaluation_ms');
     if (context.includeDrafts) {
-      const { messages } = this.activeContent({ includeDrafts: true });
       const synonymGroups = this.db.listSynonymGroups({ activeOnly: true });
-      analysis = evaluateAutomaticMessagesDetailed(text, messages, synonymGroups, { isGroup: Boolean(context.isGroup) });
+      analysis = evaluateAutomaticMessagesDetailed(text, snapshot.messages, synonymGroups, { isGroup: Boolean(context.isGroup) });
     } else {
-      // O snapshot foi totalmente compilado antes de se tornar visível. A
-      // mensagem atual usa uma única referência imutável, mesmo que o
-      // administrador salve outra regra durante esta avaliação.
       analysis = this.ruleStore.evaluate(text, { isGroup: Boolean(context.isGroup), ambiguityThreshold: Math.max(0, Number(settings.disambiguation_threshold || 1)) });
     }
     finishTriggerEvaluation();
@@ -607,9 +676,8 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     return String(result?.key?.id || result?.id || '').trim();
   }
   cleanConversationContexts() {
-    const now = Date.now();
-    for (const [key, context] of this.conversationContexts) if (Number(context.expiresAt || 0) <= now) this.conversationContexts.delete(key);
-    for (const [key, context] of this.replyContexts) if (Number(context.expiresAt || 0) <= now) this.replyContexts.delete(key);
+    // A expiração completa é feita pelo temporizador periódico. No caminho
+    // quente de cada mensagem, limitamos apenas o tamanho dos mapas.
     if (this.conversationContexts.size > 1500) {
       const ordered = [...this.conversationContexts.entries()].sort((a, b) => Number(a[1].expiresAt || 0) - Number(b[1].expiresAt || 0));
       for (const [key] of ordered.slice(0, this.conversationContexts.size - 1500)) this.conversationContexts.delete(key);
@@ -653,6 +721,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       }
     }
     if (!stored) return null;
+    if (Number(stored.expiresAt || 0) <= Date.now()) { this.forgetConversationContext(message, stored); return null; }
     const raw = String(body || '').trim();
     const normalized = normalizeText(raw.replace(/[?]+\s*$/, '')).replace(/^(?:e|mas|entao|então)\s+/, '').trim();
     const hasQuestion = /\?\s*$/.test(raw);
@@ -670,7 +739,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
           text: [
             'Não consegui identificar o semestre.',
             '',
-            'Responda, por exemplo: `5º semestre`, `5 semestre`, `quinto semestre` ou apenas `5`.'
+            'Responda apenas com um número entre 1 e 8, como `3`, `5` ou `8`.'
           ].join('\n'),
           signature: `semester-schedule-prompt-invalid:${stored.targetDate || 'context'}`,
           matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
@@ -683,8 +752,8 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       const dayIndex = Number(stored.dayIndex);
       if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return null;
       const academicPeriod = String(settings.current_academic_period || '2026.2');
-      const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, activeOnly: true }) || [];
-      const calendarEvents = this.db.listAcademicCalendarEvents?.({ activeOnly: true, course: 'bsi' }) || [];
+      const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, semester, dayOfWeek: dayIndex, activeOnly: true }) || [];
+      const calendarEvents = stored.targetDate ? (this.db.academicCalendarEventsForDate?.(stored.targetDate, { course: 'bsi', semester }) || []) : [];
       const targetDate = stored.targetDate ? new Date(`${stored.targetDate}T12:00:00Z`) : null;
       const target = { dayIndex, iso: stored.targetDate || '', date: targetDate };
       this.forgetConversationContext(message, stored);
@@ -717,8 +786,8 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         : { dayIndex: Number(stored.dayIndex), iso: stored.targetDate || '', date: storedDate };
       if (!Number.isInteger(target.dayIndex) || target.dayIndex < 0 || target.dayIndex > 6) return null;
       const academicPeriod = String(settings.current_academic_period || '2026.2');
-      const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, activeOnly: true }) || [];
-      const calendarEvents = this.db.listAcademicCalendarEvents?.({ activeOnly: true, course: 'bsi' }) || [];
+      const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, semester, dayOfWeek: target.dayIndex, activeOnly: true }) || [];
+      const calendarEvents = target.iso ? (this.db.academicCalendarEventsForDate?.(target.iso, { course: 'bsi', semester }) || []) : [];
       const text = detail
         ? formatSemesterScheduleDetail(semester, target, detail, { scheduleEntries, calendarEvents, academicPeriod })
         : formatSemesterScheduleResponse(semester, target, { scheduleEntries, calendarEvents, academicPeriod });
@@ -734,9 +803,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     }
     if (stored.kind === 'sector') {
       if (/^(?:e\s+)?(?:o\s+)?horario(?:\s+de\s+atendimento)?$/u.test(normalized) || /^(?:qual|quais)\s+(?:e|é|sao|são)?\s*o?\s*horario$/u.test(normalized)) {
-        const sector = this.db.listSectors({ activeOnly: true }).find(item => Number(item.id) === Number(stored.id));
+        const sector = this.db.listSectors({ activeOnly: true, cloneResult: false }).find(item => Number(item.id) === Number(stored.id));
         if (!sector) return null;
-        const schedule = this.db.listAutomaticMessages({ activeOnly: true }).find(item => normalizeText(item.title) === normalizeText('HUB — Quadro de horários 2026.2'));
+        const schedule = this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false }).find(item => normalizeText(item.title) === normalizeText('HUB — Quadro de horários 2026.2'));
         const candidates = [
           { kind: 'static', label: `Horário de atendimento da ${sector.acronym || sector.name}`, item: { id: `sector-hours:${sector.id}`, title: `Horário de atendimento — ${sector.acronym || sector.name}`, topic: 'Setores do IFBA', response_text: `🏢 *Horário de atendimento — ${sector.acronym || sector.name}*\n\nNão há um horário de atendimento confirmado no cadastro. Confirme diretamente pelo canal oficial do setor.${sector.email ? `\n\n📧 ${sector.email}` : ''}` }, score: 100, reasons: ['horário de atendimento do setor'] },
           ...(schedule ? [{ kind: 'message', label: 'Horário de uma disciplina ou turma de BSI', item: { ...schedule, topic: schedule.topic || schedule.title }, score: 100, reasons: ['horário acadêmico'] }] : [])
@@ -745,7 +814,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       }
       const intent = classifySectorFollowUp(raw);
       if (!intent) return null;
-      const sector = this.db.listSectors({ activeOnly: true }).find(item => Number(item.id) === Number(stored.id));
+      const sector = this.db.listSectors({ activeOnly: true, cloneResult: false }).find(item => Number(item.id) === Number(stored.id));
       if (!sector) return null;
       return {
         matched: true, type: 'sector', text: formatSectorResponse(sector, intent), signature: `sector:${sector.id}:${intent}`,
@@ -779,8 +848,8 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     return null;
   }
   cleanPendingChoices() {
-    const now = Date.now();
-    for (const [key, pending] of this.pendingChoices) if (pending.expiresAt <= now) this.pendingChoices.delete(key);
+    // Expirações são removidas pelo temporizador periódico. Aqui só limitamos
+    // o mapa para manter o custo por mensagem constante.
     if (this.pendingChoices.size > 500) {
       const ordered = [...this.pendingChoices.entries()].sort((a, b) => Number(a[1].expiresAt || 0) - Number(b[1].expiresAt || 0));
       for (const [key] of ordered.slice(0, this.pendingChoices.size - 500)) this.pendingChoices.delete(key);
@@ -789,6 +858,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   pendingEvaluation(message, body, settings) {
     this.cleanPendingChoices();
     const key = this.conversationKey(message); const pending = this.pendingChoices.get(key);
+    if (pending && Number(pending.expiresAt || 0) <= Date.now()) { this.pendingChoices.delete(key); return null; }
     if (!pending || !/^[1-9]$/.test(String(body).trim())) return null;
     const index = Number(String(body).trim()) - 1; const selected = pending.candidates[index];
     if (!selected) return null;
@@ -834,16 +904,28 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   }
   renderEvaluation(evaluation, message, chat) {
     if (!evaluation?.matched || evaluation.type === 'disambiguation') return evaluation;
-    let text = renderTemplate(evaluation.text, {
-      isGroup: Boolean(chat?.isGroup), groupName: chat?.name || '', senderName: message?.senderName || ''
-    });
-    const source = {
+    const renderOne = item => {
+      let text = renderTemplate(item.text, {
+        isGroup: Boolean(chat?.isGroup), groupName: chat?.name || '', senderName: message?.senderName || ''
+      });
+      const source = {
+        source_url: item.source_url || '', source_title: item.source_title || '', verified_at: item.verified_at || ''
+      };
+      if (!item.sourceAlreadyShown && evaluation.type !== 'message_source') text = appendSourceMetadata(text, source);
+      return { ...item, text };
+    };
+    if (Array.isArray(evaluation.responseItems) && evaluation.responseItems.length) {
+      const responseItems = evaluation.responseItems.map(renderOne);
+      return { ...evaluation, responseItems, text: responseItems[0]?.text || evaluation.text };
+    }
+    const item = renderOne({
+      text: evaluation.text,
       source_url: evaluation.source_url || evaluation.contextSubject?.source_url || '',
       source_title: evaluation.source_title || evaluation.contextSubject?.source_title || '',
-      verified_at: evaluation.verified_at || evaluation.contextSubject?.verified_at || ''
-    };
-    if (!evaluation.sourceAlreadyShown && evaluation.type !== 'message_source') text = appendSourceMetadata(text, source);
-    return { ...evaluation, text };
+      verified_at: evaluation.verified_at || evaluation.contextSubject?.verified_at || '',
+      sourceAlreadyShown: evaluation.sourceAlreadyShown
+    });
+    return { ...evaluation, text: item.text };
   }
 
   async setSettingsPersisted(values) {
@@ -908,7 +990,8 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   }
 
   async reply(message, evaluation, chat, originalBody) {
-    const settings = this.db.getSettings(); const seconds = Number(settings.cooldown_seconds || 20);
+    const settings = evaluation.context?.snapshot?.settings || this.db.getSettings();
+    const seconds = Number(settings.cooldown_seconds || 20);
     const cooldownKey = this.conversationKey(message);
     if (evaluation.type !== 'private_unknown' && seconds > 0 && this.cooldown.isActive(cooldownKey, evaluation.type, evaluation.signature, seconds)) {
       evaluation.replyBlockedReason = 'antirrepetição';
@@ -917,37 +1000,46 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const sender = message.author || message.from;
     const guard = this.outboundGuard.check(sender, settings);
     if (!guard.allowed) {
-      this.outboundGuard.reject();
-      this.metrics.rateLimitedReplies += 1;
-      evaluation.replyBlockedReason = guard.reason;
-      return false;
+      this.outboundGuard.reject(); this.metrics.rateLimitedReplies += 1;
+      evaluation.replyBlockedReason = guard.reason; return false;
     }
     this.outboundGuard.record(sender);
-    const attachmentPath = evaluation.attachment ? await this.services.attachments?.resolve?.(evaluation.attachment) : null;
-    evaluation.attachmentMissing = Boolean(evaluation.attachment && !attachmentPath);
-    const response = { text: evaluation.text, attachment: evaluation.attachment || null, attachmentPath };
     const quote = asBool(settings.quote_replies, true);
-    let sendResult;
+    const items = Array.isArray(evaluation.responseItems) && evaluation.responseItems.length
+      ? evaluation.responseItems
+      : [{ text: evaluation.text, attachment: evaluation.attachment || null }];
+    const sentResults = [];
     const finishSend = this.performance.timer('reply_send_ms');
-    if (message.sendResponse) sendResult = await message.sendResponse(response, quote);
-    else if (quote || !chat?.sendMessage) sendResult = await message.reply(evaluation.text);
-    else sendResult = await chat.sendMessage(evaluation.text);
+    for (const item of items) {
+      const attachmentPath = item.attachment ? await this.services.attachments?.resolve?.(item.attachment) : null;
+      if (item.attachment && !attachmentPath) evaluation.attachmentMissing = true;
+      const response = { text: item.text, attachment: item.attachment || null, attachmentPath };
+      let sendResult;
+      if (evaluation.privateDelivery && chat?.isGroup && typeof message.sendPrivateResponse === 'function') {
+        sendResult = await message.sendPrivateResponse(response);
+      } else if (message.sendResponse) sendResult = await message.sendResponse(response, quote);
+      else if (quote || !chat?.sendMessage) sendResult = await message.reply(item.text);
+      else sendResult = await chat.sendMessage(item.text);
+      sentResults.push(sendResult);
+      if (sendResult?.attachmentError) evaluation.attachmentSendError = String(sendResult.attachmentError);
+    }
     finishSend();
-    if (sendResult?.attachmentError) evaluation.attachmentSendError = String(sendResult.attachmentError);
     if (evaluation.type !== 'private_unknown' && seconds > 0) this.cooldown.touch(cooldownKey, evaluation.type, evaluation.signature, seconds);
-    this.metrics.lastReplyAt = new Date().toISOString(); this.metrics.totalReplies += 1; this.metrics.lastMatchType = evaluation.type; this.metrics.lastMatchedItem = evaluation.matchedItem;
+    this.metrics.lastReplyAt = new Date().toISOString();
+    this.metrics.totalReplies += items.length;
+    this.metrics.lastMatchType = evaluation.type; this.metrics.lastMatchedItem = evaluation.matchedItem;
 
     if (evaluation.type !== 'disambiguation') {
       if (this.services.writeQueue?.recordUsage) this.services.writeQueue.recordUsage(evaluation.topic || evaluation.matchedItem || 'Outros', evaluation.type);
-      else this.db.recordUsage(evaluation.topic || evaluation.matchedItem || 'Outros', evaluation.type);
+      else this.db.recordUsage(evaluation.topic || evaluation.matchedItem || 'Outros', evaluation.type, asBool(settings.usage_statistics_enabled, true));
     }
-    this.rememberConversationContext(message, evaluation, settings, sendResult);
+    this.rememberConversationContext(message, evaluation, settings, sentResults[0]);
 
     if (asBool(settings.log_matched_messages, true)) {
       const logEntry = {
         chatId: chat.id?._serialized || message.from, chatName: chat.name || (chat.isGroup ? 'Grupo' : 'Conversa privada'),
         message: evaluation.redactLog ? '[conteúdo não armazenado]' : truncate(originalBody, 220), matchType: evaluation.type,
-        matchedItem: truncate(evaluation.matchedItem, 160), reply: evaluation.redactLog ? '[resposta não armazenada]' : truncate(evaluation.text, 260)
+        matchedItem: truncate(evaluation.matchedItem, 160), reply: evaluation.redactLog ? '[resposta não armazenada]' : truncate(items.map(item => item.text).join(' | '), 260)
       };
       if (this.services.writeQueue?.addLog) this.services.writeQueue.addLog(logEntry);
       else this.db.addLog(logEntry);
@@ -970,7 +1062,6 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       this.diagnostic({ type: 'admin', outcome: 'responded', matchedItem: 'Comando administrativo', summary: 'Comando administrativo autorizado e executado.', ...diagnosticBase }, settings);
       return;
     }
-    settings = this.db.getSettings();
     const cycleReason = this.cycleBlockReason(message, body, settings);
     if (cycleReason) {
       this.diagnostic({ type: 'ignored', outcome: 'ignored', summary: `Proteção contra ciclo: ${cycleReason}.`, ...diagnosticBase }, settings);
@@ -982,6 +1073,20 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     }
     if (await this.handleContextualReaction(message, body, chat, settings)) return;
 
+    const baseContext = {
+      isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now(),
+      hasReply: Boolean(message.quotedFromMe), mentionedMe: Boolean(message.mentionedMe)
+    };
+    const baseSnapshot = this.buildMessageSnapshot(null, baseContext, settings);
+    const prepared = prepareMessage(body, {
+      now: baseContext.now, teachers: baseSnapshot.teachers,
+      scheduleEntries: baseSnapshot.disciplineDirectory,
+      isGroup: baseContext.isGroup, hasReply: baseContext.hasReply,
+      mentionedMe: baseContext.mentionedMe
+    });
+    const snapshot = this.scopeMessageSnapshot(baseSnapshot, prepared);
+    const evaluationContext = { ...baseContext, prepared, snapshot, settings };
+
     const pending = this.pendingEvaluation(message, body, settings);
     const chosen = pending ? this.renderEvaluation(pending, message, chat) : null;
     if (chosen) {
@@ -991,12 +1096,14 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       return;
     }
 
-    const ignoredAttendanceConfirmation = this.professorAttendanceIgnoredEvaluation(body, {
-      isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now()
-    });
+    const ignoredAttendanceConfirmation = prepared.intent === 'professor-attendance-confirmation'
+      ? this.professorAttendanceIgnoredEvaluation(body, evaluationContext) : null;
+    const ignoredScheduleStatusConfirmation = ['schedule-status-confirmation', 'schedule-narrative'].includes(prepared.intent)
+      ? this.scheduleStatusConfirmationIgnoredEvaluation(body, evaluationContext) : null;
     let evaluation = ignoredAttendanceConfirmation
+      || ignoredScheduleStatusConfirmation
       || this.contextualFollowUpEvaluation(message, body, settings)
-      || this.evaluate(body, { isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now() });
+      || this.evaluate(body, evaluationContext);
     if (!evaluation.matched) this.recordUnrecognizedSuggestion(body, evaluation, chat);
     if (!evaluation.matched && !this.isAdminCommand(body) && this.botMentioned(message, body, settings) && this.featureAllowed({ isGroup: Boolean(chat.isGroup), groupId }, 'help', settings)) {
       evaluation = this.unknownMentionEvaluation(settings);

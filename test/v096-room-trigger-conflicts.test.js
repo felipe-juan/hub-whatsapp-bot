@@ -24,15 +24,21 @@ function hasUnsafe(trigger) {
 }
 
 test('legacy room seed no longer contains generic room-only phrases', () => {
-  const definition = SI_SUPPORT_MESSAGES_V083.find(item => item.title === 'Onde está o professor — salas do IFBA');
-  assert.ok(definition);
-  assert.equal(hasUnsafe({ sentences: definition.sentences }), false);
+  const { db, dir } = temporaryDatabase();
+  try {
+    const definition = db.listAutomaticMessages().find(item => item.title === 'Onde Está o Professor — Salas do IFBA');
+    assert.ok(definition);
+    assert.equal(hasUnsafe(definition.trigger), false);
+  } finally {
+    db.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('v0.9.6 removes unsafe room triggers from customized live and draft content', () => {
   const { db, dbPath, dir } = temporaryDatabase();
   try {
-    const original = db.listAutomaticMessages().find(item => item.title === 'Onde está o professor — salas do IFBA');
+    const original = db.listAutomaticMessages().find(item => item.title === 'Onde Está o Professor — Salas do IFBA');
     assert.ok(original);
     const customResponse = `${original.response_text}\n\nObservação personalizada.`;
     const published = db.saveAutomaticMessage({
@@ -80,8 +86,8 @@ test('room questions resolve to the specific BSI card and generic room text reso
       ['qual é a sala?', false, ''],
       ['em qual sala?', false, ''],
       ['qual é a sala da coordenação de bsi?', true, 'CSI — location'],
-      ['qual é a sala do laboratório de redes de sistemas de informação?', true, 'BSI — Laboratórios de redes'],
-      ['qual é a sala do miniauditório de sistemas de informação?', true, 'BSI — Miniauditório e salas dos professores'],
+      ['qual é a sala do laboratório de redes de sistemas de informação?', true, 'BSI — Laboratórios de Redes'],
+      ['qual é a sala do miniauditório de sistemas de informação?', true, 'BSI — Miniauditório e Salas dos Professores'],
       ['em qual sala está o professor Allan?', true, 'Professor — Allan de Sousa Soares']
     ];
     for (const [body, matched, title] of cases) {

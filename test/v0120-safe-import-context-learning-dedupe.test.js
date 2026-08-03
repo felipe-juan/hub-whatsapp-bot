@@ -57,7 +57,7 @@ test('continua consulta de aulas por reply reutilizando data e semestre', () => 
     const engine = new BotEngine(h.db);
     const message = { from: 'chat@s.whatsapp.net', author: 'user@s.whatsapp.net', quotedFromMe: true, timestampMs: Date.UTC(2026, 7, 3, 15) };
     engine.conversationContexts.set(engine.conversationKey(message), {
-      kind: 'semester_schedule', title: 'BSI — Aulas por semestre e dia', targetDate: '2026-08-03', dayIndex: 1, semester: 3, expiresAt: Date.now() + 60000
+      kind: 'semester_schedule', title: 'BSI — Aulas por Semestre e Dia', targetDate: '2026-08-03', dayIndex: 1, semester: 3, expiresAt: Date.now() + 60000
     });
     const friday = engine.contextualFollowUpEvaluation(message, 'e na sexta?', h.db.getSettings());
     assert.equal(friday.matched, true);

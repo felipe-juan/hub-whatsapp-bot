@@ -39,7 +39,7 @@ function fakeMessage(body, { from = '120363000000000000@g.us', timestampMs = Dat
 test('card de contato da Coordenação de BSI reúne os dados oficiais do HUB', () => {
   const holder = temporaryDatabase();
   try {
-    const card = holder.db.listAutomaticMessages().find(item => item.title === 'BSI — Contato da coordenação');
+    const card = holder.db.listAutomaticMessages().find(item => item.title === 'BSI — Contato da Coordenação');
     assert.ok(card);
     assert.match(card.response_text, /Pablo Freire Matos/u);
     assert.match(card.response_text, /csi\.vdc@ifba\.edu\.br/u);
@@ -55,7 +55,7 @@ test('perguntas de contato usam o card completo da Coordenação de BSI', async 
     const engine = new BotEngine(holder.db);
     const result = await engine.simulate('qual o contato da coordenação de bsi', { isGroup: true });
     assert.equal(result.type, 'message');
-    assert.equal(result.matchedItem, 'BSI — Contato da coordenação');
+    assert.equal(result.matchedItem, 'BSI — Contato da Coordenação');
     assert.match(result.text, /Pablo Freire Matos/u);
     engine.close();
   } finally { holder.close(); }
@@ -95,7 +95,7 @@ test('consultas de matéria aceitam variações de semestre e próxima ocorrênc
 
 test('pergunta de semestre ausente informa o dia e exemplos de resposta', async () => {
   assert.match(formatSemesterSchedulePrompt(2), /Terça-Feira/u);
-  assert.match(formatSemesterSchedulePrompt(2), /`3º semestre`, `3 semestre` ou `terceiro semestre`/u);
+  assert.match(formatSemesterSchedulePrompt(2), /`3`, `5` ou `8`/u);
 
   const holder = temporaryDatabase();
   try {

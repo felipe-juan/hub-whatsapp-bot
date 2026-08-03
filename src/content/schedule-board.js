@@ -37,7 +37,7 @@ const SCHEDULE_BOARD_V0812 = Object.freeze({
 const SEMESTER_DAY_SCHEDULE_CARD_V0106 = Object.freeze({
   key: 'hub-bsi-aulas-semestre-dia-v0106',
   message: {
-    title: 'BSI — Aulas por semestre e dia',
+    title: 'BSI — Aulas por Semestre e Dia',
     response_text: [
       '*Aulas de BSI por semestre e dia*', '',
       'Informe um dia e o semestre para consultar disciplina, sala e professor.', '',

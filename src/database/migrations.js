@@ -4,7 +4,7 @@ const { ACADEMIC_CALENDAR_EVENTS_2026 } = require('../content/academic-calendar-
 const { SI_SCHEDULE_SOURCE_2026_2 } = require('../si-professors-2026-2');
 
 module.exports = function createMixin(deps) {
-  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, crypto } = deps;
+  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto } = deps;
 
   const professorContactValue = response => {
     const lines = String(response || '').split('\n');
@@ -131,6 +131,13 @@ module.exports = function createMixin(deps) {
         last_seen_at TEXT NOT NULL, reviewed_at TEXT NOT NULL DEFAULT '',
         FOREIGN KEY(suggested_message_id) REFERENCES automatic_messages(id) ON DELETE SET NULL
       );
+      CREATE TABLE IF NOT EXISTS regression_cases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, phrase TEXT NOT NULL, normalized_phrase TEXT NOT NULL,
+        expectation TEXT NOT NULL DEFAULT 'respond', expected_title TEXT NOT NULL DEFAULT '',
+        active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        UNIQUE(normalized_phrase, expectation, expected_title)
+      );
+      CREATE INDEX IF NOT EXISTS idx_regression_cases_active ON regression_cases(active,expectation,id);
       CREATE TABLE IF NOT EXISTS admin_auth (
         id INTEGER PRIMARY KEY CHECK(id=1), salt TEXT NOT NULL, password_hash TEXT NOT NULL, updated_at TEXT NOT NULL
       );
@@ -299,6 +306,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0109();
     if (seedBundledContent) this.migrateContentV0110();
     if (seedBundledContent) this.migrateContentV0130();
+    if (seedBundledContent) this.migrateContentV0140();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -1328,6 +1336,88 @@ module.exports = function createMixin(deps) {
     }
     this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0130_management_and_triggers','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
     this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
+  migrateContentV0140() {
+    if (asBool(this.getSetting('content_v0140_precision_performance', 'false'), false)) return;
+    const timestamp = nowIso();
+    const rows = this.db.prepare('SELECT id,title,draft_json,package_snapshot_json,pending_package_json,trigger_json,response_text FROM automatic_messages').all();
+    const patchObjectTitle = value => {
+      if (!value) return value || '';
+      const object = parseJson(value, null);
+      if (!object || typeof object !== 'object') return value;
+      if (object.title) object.title = toPortugueseTitleCase(object.title);
+      return JSON.stringify(object);
+    };
+    const update = this.db.prepare('UPDATE automatic_messages SET title=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?');
+    const updateTriggerResponse = this.db.prepare('UPDATE automatic_messages SET trigger_json=?,response_text=?,updated_at=? WHERE id=?');
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const row of rows) {
+        update.run(toPortugueseTitleCase(row.title), patchObjectTitle(row.draft_json), patchObjectTitle(row.package_snapshot_json), patchObjectTitle(row.pending_package_json), timestamp, Number(row.id));
+      }
+      this.db.prepare("UPDATE calculators SET label='Calculadora de Prova Final',description='Com uma nota, usa a média informada; com várias, calcula a média das unidades e a nota mínima da prova final.',updated_at=? WHERE key='final'").run(timestamp);
+
+      // Repara gatilhos genéricos herdados da antiga tabela da final sem
+      // apagar frases específicas adicionadas pelo administrador. A fonte
+      // canônica passa a ser o cartão atual do pacote.
+      const mediaDefinition = (CAMPUS_CARDS || []).find(item => item.key === 'si-support-hub-media-final-e-tabela-da-final')?.message;
+      const mediaRow = this.db.prepare("SELECT id,trigger_json FROM automatic_messages WHERE lower(title)=lower('HUB — Média Final e Tabela da Final') ORDER BY id LIMIT 1").get();
+      if (mediaDefinition && mediaRow) {
+        const currentMedia = this.getAutomaticMessage(mediaRow.id);
+        const currentTrigger = normalizeTriggerRules(parseJson(mediaRow.trigger_json || '{}', {}));
+        const canonicalTrigger = normalizeTriggerRules(mediaDefinition.trigger || {});
+        const unsafe = new Set(['tabela', 'nota final'].map(normalizeText));
+        const customSafe = (currentTrigger.sentences || []).filter(sentence => !unsafe.has(normalizeText(sentence)));
+        const repaired = normalizeTriggerRules({
+          ...currentTrigger,
+          ...canonicalTrigger,
+          sentences: [...new Set([...(canonicalTrigger.sentences || []), ...customSafe])]
+        });
+        if (JSON.stringify(repaired) !== JSON.stringify(currentTrigger)) {
+          if (currentMedia) this.archiveAutomaticMessage(currentMedia, 'v0.14.0-gatilhos-estruturados');
+          this.db.prepare('UPDATE automatic_messages SET trigger_json=?,updated_at=? WHERE id=?').run(JSON.stringify(repaired), timestamp, Number(mediaRow.id));
+        }
+      }
+
+      const juan = this.db.prepare("SELECT id,trigger_json,response_text FROM automatic_messages WHERE lower(title)=lower('Contato — Felipe Juan') ORDER BY id LIMIT 1").get();
+      if (juan) {
+        const trigger = normalizeTriggerRules(parseJson(juan.trigger_json || '{}', {}));
+        trigger.sentences = [...new Set(['felipe', ...(trigger.sentences || [])])];
+        trigger.exact_phrases = [...new Set(['juan','felipe', ...(trigger.exact_phrases || [])])];
+        let response = String(juan.response_text || '')
+          .replace('*Projeto para o curso*', '*Projeto para o Curso*')
+          .replace('*Para conhecer meus hobbies*', '*Para Conhecer Meus Hobbies*');
+        if (!response.includes('felipe-juan.github.io/hub-arquivos-ifba')) {
+          response = response.replace(/\n\n🎮 \*Para conhecer meus hobbies\*/u, '\n\n🌐 *Projeto para o Curso*\nhttps://felipe-juan.github.io/hub-arquivos-ifba/\n\n🎮 *Para Conhecer Meus Hobbies*');
+        }
+        updateTriggerResponse.run(JSON.stringify(trigger), response, timestamp, Number(juan.id));
+      }
+
+      for (const professor of SI_PROFESSORS_2026_2) {
+        const row = this.db.prepare('SELECT id,trigger_json FROM automatic_messages WHERE lower(title)=lower(?) ORDER BY id LIMIT 1').get(`Professor — ${professor.name}`);
+        if (!row) continue;
+        const trigger = normalizeTriggerRules(parseJson(row.trigger_json || '{}', {}));
+        const generatedDiscipline = new Set((professor.classes || []).flatMap(entry => buildDisciplineTriggerSentences(entry[0])).map(normalizeText));
+        trigger.sentences = (trigger.sentences || []).filter(sentence => !generatedDiscipline.has(normalizeText(sentence)));
+        trigger.sentences = [...new Set([...buildSiProfessorNameTriggerSentences(professor), ...trigger.sentences])];
+        this.db.prepare('UPDATE automatic_messages SET trigger_json=?,updated_at=? WHERE id=?').run(JSON.stringify(trigger), timestamp, Number(row.id));
+      }
+
+      const seedRegression = this.db.prepare(`INSERT OR IGNORE INTO regression_cases(phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`);
+      const cases = [
+        ['quais aulas tem hoje no terceiro semestre','respond','BSI — Aulas por Semestre e Dia'],
+        ['qual sala de Pablo','respond','Professor — Pablo Freire Matos'],
+        ['vai ter aula hoje normal','ignore',''],
+        ['hoje tem aula de Pablo?','ignore',''],
+        ['a aula de hoje foi boa','ignore',''],
+        ['hoje não teremos aula','ignore','']
+      ];
+      for (const [phrase, expectation, expectedTitle] of cases) seedRegression.run(phrase, normalizeText(phrase), expectation, expectedTitle, timestamp, timestamp);
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0140_precision_performance','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.db.exec('COMMIT');
+    } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+    this.invalidate('settings', 'activeMessages', 'messageSummaries', 'conflictReport', 'calculators');
   }
 
   seedStructuredSectorsV098() {

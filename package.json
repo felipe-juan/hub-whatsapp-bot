@@ -1,6 +1,6 @@
 {
   "name": "hub-whatsapp-bot",
-  "version": "0.13.2",
+  "version": "0.14.1",
   "private": true,
   "description": "Bot comunitário autohospedado do HUB Arquivos IFBA, com painel local de administração.",
   "main": "src/index.js",
@@ -16,7 +16,8 @@
     "uninstall:fedora": "bash uninstall-fedora-gnome.sh",
     "desktop:check": "python3 -m py_compile desktop/hub-bot-indicator.py && rm -rf desktop/__pycache__ && bash -n install-fedora-gnome.sh && bash -n uninstall-fedora-gnome.sh",
     "resources": "bash scripts/resource-usage.sh",
-    "setup:fedora": "bash INSTALL.sh"
+    "setup:fedora": "bash INSTALL.sh",
+    "test:regression": "node scripts/run-regression-cases.js"
   },
   "dependencies": {
     "dotenv": "17.4.2",

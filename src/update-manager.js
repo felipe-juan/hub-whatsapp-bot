@@ -321,6 +321,7 @@ tar --exclude='./data' --exclude='./node_modules' --exclude='./.env' --exclude='
 install_dependencies
 timeout 3m npm run syntax
 timeout 8m npm test
+timeout 3m node scripts/run-regression-cases.js
 write_status restarting "Atualização instalada; reiniciando o bot."
 service_ctl start
 SERVICE_STOPPED=0

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Database } = require('../src/database');
+const { BotEngine } = require('../src/bot-engine');
 const { evaluateTrigger } = require('../src/trigger-rules');
 const { SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, SI_DISCIPLINE_ALIASES_2026_2 } = require('../src/si-professors-2026-2');
 const { normalizeText } = require('../src/text');
@@ -20,7 +21,7 @@ test('every bundled professor sentence identifies the professor by name or by on
   try {
     const items = [...SI_PROFESSORS_2026_2, SI_PENDING_2026_2];
     for (const professor of items) {
-      const title = professor.pending ? 'Pendência — Meio Ambiente (docente substituto)' : `Professor — ${professor.name}`;
+      const title = professor.pending ? 'Pendência — Meio Ambiente (Docente Substituto)' : `Professor — ${professor.name}`;
       const card = db.listAutomaticMessages().find(item => item.title === title);
       assert.ok(card, `missing card ${title}`);
       const aliases = (SI_PROFESSOR_TRIGGER_ALIASES_2026_2[professor.name] || [professor.identifier]).map(normalizeText);
@@ -90,7 +91,10 @@ test('v0.8.2 migrates old generic professor triggers without changing the respon
     assert.equal(migrated.response_text, originalResponse);
     assert.deepEqual(migrated.trigger.required_words, []);
     assert.ok(migrated.trigger.sentences.some(sentence => normalizeText(sentence).includes('allan')));
-    assert.ok(migrated.trigger.sentences.some(sentence => normalizeText(sentence).includes('matematica discreta ii')));
+    assert.equal(migrated.trigger.sentences.some(sentence => normalizeText(sentence).includes('matematica discreta ii')), false);
+    const engine = new BotEngine(reopened);
+    assert.equal(engine.evaluate('email do professor de MDII', { isGroup: true, ignorePermissions: true }).matchedItem, 'Professor — Allan de Sousa Soares');
+    engine.close();
     assert.equal(reopened.getSetting('si_professors_2026_2_triggers_v082_migrated'), 'true');
     reopened.close();
   } finally {

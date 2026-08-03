@@ -64,7 +64,7 @@ test('PAAE edital request is routed to the edital card, not sector location', ()
   try {
     const result = engine.simulate('Onde encontro os editais do PAAE?', { isGroup: false, ignorePermissions: true });
     assert.equal(result.type, 'message');
-    assert.equal(result.matchedItem, 'PAAE — Editais atuais');
+    assert.equal(result.matchedItem, 'PAAE — Editais Atuais');
     assert.match(result.text, /Editais do PAAE/);
     assert.doesNotMatch(result.text, /Não há localização confirmada/);
   } finally { closeAll(engine, db, dir); }

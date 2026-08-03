@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.14.1 — 2026-08-03
+
+- impede que confirmações sem data, como `Crescéncio vai dar aula né?`, `Crescêncio vai dar aula?` e `vai ter aula com Crescêncio?`, ativem o card docente;
+- amplia a classificação de presença docente para perguntas de confirmação sem `hoje`, `amanhã` ou dia da semana;
+- mantém funcionando consultas objetivas como `quais dias Crescêncio dá aula?`, `qual sala de Crescêncio?` e `Crescêncio dá aula de qual matéria?`;
+- suprime também o fallback privado nessas confirmações, deixando a mensagem sem resposta;
+- adiciona regressões automatizadas para a frase relatada e variantes equivalentes.
+
+## 0.14.0 — 2026-08-03
+
+- simplifica a pergunta de semestre para exemplos numéricos (`3`, `5` e `8`), preservando todas as formas antigas de resposta;
+- adiciona `felipe` aos gatilhos do card de Felipe Juan e inclui o endereço público do HUB Arquivos IFBA;
+- padroniza todos os títulos em capitalização portuguesa e renomeia a calculadora para **Calculadora de Prova Final**;
+- reconhece consultas docentes por sigla ou nome completo da disciplina, incluindo sala, dia, horário/horários e múltiplas disciplinas;
+- envia múltiplos resultados no privado e, quando a consulta parte de um grupo, entrega os cards no privado do participante;
+- prepara e normaliza cada mensagem uma única vez, centralizando tokens, data, semestre, intenção, docentes, disciplinas, reply e menção;
+- reutiliza um snapshot único dos dados do banco durante o processamento;
+- consulta o quadro somente pelo dia e semestre necessários e usa um catálogo compacto para reconhecer disciplinas novas;
+- centraliza a classificação de consulta, narrativa, aula normal e presença docente;
+- adiciona casos permanentes de regressão no painel e os executa antes de atualizações;
+- reduz os gatilhos gerados dos cards docentes, diminuindo o índice Aho-Corasick de aproximadamente 10,6 mil para 5,7 mil padrões;
+- pré-compila expressões estáticas e mantém a limpeza de contextos em tarefa periódica;
+- corrige colisão de siglas curtas na consulta SQL, em que `RC` também podia localizar `Comércio Eletrônico`;
+- preserva o card combinado de disciplinas compartilhadas e reconhece disciplinas novas importadas sem regenerar milhares de frases.
+
+## 0.13.3 — 2026-08-03
+
+- impede que confirmações como `vai ter aula hoje normal`, `hoje vai ter aula normal?` e variantes abram a pergunta de semestre;
+- diferencia confirmação sobre o funcionamento real das aulas de perguntas abertas sobre horário, matéria, sala ou professor;
+- no privado, suprime também a ajuda automática para esse caso específico;
+- preserva um pedido de semestre pendente quando a pessoa envia uma confirmação sobre aula normal no meio do fluxo;
+- adiciona testes de regressão para diferentes posições de `hoje`, `amanhã`, dia da semana, singular e plural de `normal`;
+- conclui nova revisão de precisão e desempenho, com 324 testes automatizados e medições do caminho de reconhecimento;
+- remove versões fixas dos testes de cache do painel, evitando falhas artificiais a cada novo release.
+
 ## 0.13.2 — 2026-08-03
 
 - garante que a resposta ao pedido de semestre seja processada antes de qualquer outro gatilho ou fallback;

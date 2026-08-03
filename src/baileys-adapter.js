@@ -206,6 +206,19 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     }
   };
 
+  const sendPrivateResponse = async ({ text = '', attachment = null, attachmentPath = null } = {}) => {
+    const privateJid = participant || remoteJid;
+    if (!privateJid || privateJid.endsWith('@g.us')) throw new Error('Não foi possível identificar o contato privado da pessoa.');
+    const caption = String(text || '');
+    if (!attachment || !attachmentPath) return dispatch(privateJid, { text: caption }, undefined, { priority: 110, kind: 'private-text', attachment: false });
+    const mime = String(attachment.mime_type || 'application/octet-stream');
+    const fileName = String(attachment.file_name || 'arquivo');
+    let content;
+    if ((attachment.kind === 'image' || mime.startsWith('image/')) && mime !== 'image/gif') content = { image: { url: attachmentPath }, mimetype: mime, ...(caption ? { caption } : {}) };
+    else content = { document: { url: attachmentPath }, mimetype: mime, fileName, ...(caption ? { caption } : {}) };
+    return dispatch(privateJid, content, undefined, { priority: 110, kind: 'private-response', attachment: true });
+  };
+
   return {
     fromMe: Boolean(raw?.key?.fromMe),
     messageId: sourceMessageId,
@@ -225,6 +238,7 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     async react(emoji) { return react(emoji); },
     async reply(text) { return send(text, true); },
     async sendResponse(payload, quoted = true) { return sendResponse(payload, quoted); },
+    async sendPrivateResponse(payload) { return sendPrivateResponse(payload); },
     async getChat() {
       let metadata = metadataCache.get(remoteJid);
       if (isGroup && !metadata) {

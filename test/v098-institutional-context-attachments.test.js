@@ -134,15 +134,17 @@ test('media failure preserves text as an explicit fallback', async () => {
 
 test('admin asset exposes sector editor and separated source fields', () => {
   const app = readAdminJs(path.join(__dirname, '..'));
-  const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const root = path.join(__dirname, '..');
+  const index = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+  const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim().replace(/\./g, '\\.');
   assert.match(app, /Cadastro de setores/);
   assert.doesNotMatch(app, /Mais detalhes — opcional/);
   assert.doesNotMatch(app, /Etiquetas com #/);
   assert.match(app, /editableTitle/);
   assert.match(app, /source_url/);
   assert.match(app, /verified_at/);
-  assert.match(index, /app\.js\?v=0\.13\.2/);
-  assert.match(index, /js\/sectors\.js\?v=0\.13\.2/);
+  assert.match(index, new RegExp(`app\\.js\\?v=${version}`));
+  assert.match(index, new RegExp(`js\/sectors\\.js\\?v=${version}`));
 });
 
 test('institutional migration does not falsely verify administrator cards', () => {

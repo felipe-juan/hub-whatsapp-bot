@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Database } = require('../src/database');
+const { BotEngine } = require('../src/bot-engine');
 const { evaluateTrigger } = require('../src/trigger-rules');
 const { findAutomaticMessageMatchesDetailed } = require('../src/matcher');
 const { readAdminJs } = require('./helpers/admin-assets');
@@ -43,7 +44,7 @@ test('professor replies are readable, grouped by topic and include every classro
 test('canonical support cards stay concise and structured sectors expose useful locators', () => {
   const { db, dir } = temporaryDatabase();
   try {
-    const titles = ['Serviço — Protocolo', 'Onde está o professor — salas do IFBA', 'HUB — Fluxograma e matriz de Sistemas de Informação', 'HUB — Média final e tabela da final', 'HUB — Calendário acadêmico'];
+    const titles = ['Serviço — Protocolo', 'Onde Está o Professor — Salas do IFBA', 'HUB — Fluxograma e Matriz de Sistemas de Informação', 'HUB — Média Final e Tabela da Final', 'HUB — Calendário Acadêmico'];
     for (const title of titles) {
       const item = card(db, title); assert.ok(item, `missing ${title}`);
       assert.doesNotMatch(item.response_text, /♿|🎓|🧑‍🎓|📝|🏫|🧭|📊/u);
@@ -51,19 +52,18 @@ test('canonical support cards stay concise and structured sectors expose useful 
     const capne = db.listSectors().find(item => item.acronym === 'CAPNE');
     assert.ok(capne); assert.match(capne.email, /capne\.vdc@ifba\.edu\.br/);
     assert.match(card(db, 'Serviço — Protocolo').response_text, /🔗/);
-    assert.match(card(db, 'HUB — Calendário acadêmico').response_text, /📅/);
+    assert.match(card(db, 'HUB — Calendário Acadêmico').response_text, /📅/);
   } finally { db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('discipline questions find the professor even when the name is unknown', () => {
   const { db, dir } = temporaryDatabase();
   try {
-    const bruno = card(db, 'Professor — Bruno Silvério Costa');
-    const allan = card(db, 'Professor — Allan de Sousa Soares');
-    const camilo = card(db, 'Professor — Camilo Alves Carvalho');
-    assert.equal(evaluateTrigger('qual o contato do professor de Inteligência Artificial?', bruno).matched, true);
-    assert.equal(evaluateTrigger('email do professor de Matemática Discreta II', allan).matched, true);
-    assert.equal(evaluateTrigger('que dia tem Sistemas Operacionais?', camilo).matched, true);
+    const engine = new BotEngine(db);
+    assert.equal(engine.evaluate('qual o contato do professor de Inteligência Artificial?', { isGroup: true, ignorePermissions: true }).matchedItem, 'Professor — Bruno Silvério Costa');
+    assert.equal(engine.evaluate('email do professor de Matemática Discreta II', { isGroup: true, ignorePermissions: true }).matchedItem, 'Professor — Allan de Sousa Soares');
+    assert.equal(engine.evaluate('que dia tem Sistemas Operacionais?', { isGroup: true, ignorePermissions: true }).matchedItem, 'Professor — Camilo Alves Carvalho');
+    engine.close();
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -73,19 +73,14 @@ test('discipline questions find the professor even when the name is unknown', ()
 test('the most specific discipline wins and shared disciplines use one combined card', () => {
   const { db, dir } = temporaryDatabase();
   try {
-    const messages = db.listAutomaticMessages();
-    const web = findAutomaticMessageMatchesDetailed(
-      'qual o contato do professor de Programação Web II?', messages, [], 5, { isGroup: true }
-    );
-    assert.equal(web[0].item.title, 'Professor — Alexandro dos Santos Silva');
-    assert.ok(web[0].score > (web.find(item => item.item.title === 'Professor — Andrique Figueirêdo Amorim')?.score || 0));
+    const engine = new BotEngine(db);
+    const web = engine.evaluate('qual o contato do professor de Programação Web II?', { isGroup: true, ignorePermissions: true });
+    assert.equal(web.matchedItem, 'Professor — Alexandro dos Santos Silva');
 
-    const calculo = findAutomaticMessageMatchesDetailed(
-      'qual o contato do professor de Cálculo Diferencial Aplicado à Computação?', messages, [], 5, { isGroup: true }
-    );
-    assert.equal(calculo[0].item.title, 'Disciplina compartilhada — Cálculo Diferencial Aplicado à Computação');
-    assert.equal(calculo.some(item => item.item.title.includes('Paulo Espinheira')), false);
-    assert.equal(calculo.some(item => item.item.title.includes('Thiago Leonardo')), false);
+    const calculo = engine.evaluate('qual o contato do professor de Cálculo Diferencial Aplicado à Computação?', { isGroup: true, ignorePermissions: true });
+    assert.equal(calculo.matchedItem, 'Disciplina Compartilhada — Cálculo Diferencial Aplicado à Computação');
+    assert.equal(calculo.type, 'message');
+    engine.close();
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -95,7 +90,7 @@ test('the most specific discipline wins and shared disciplines use one combined 
 test('final grade card mentions the WhatsApp calculator and help command', () => {
   const { db, dir } = temporaryDatabase();
   try {
-    const media = card(db, 'HUB — Média final e tabela da final');
+    const media = card(db, 'HUB — Média Final e Tabela da Final');
     assert.match(media.response_text, /!final 6,9/);
     assert.match(media.response_text, /!final 5,0 6,0 7,0/);
     assert.match(media.response_text, /!final help/);

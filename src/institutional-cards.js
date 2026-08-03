@@ -10,6 +10,7 @@ const { SCHEDULE_BOARD_V0812, SEMESTER_DAY_SCHEDULE_CARD_V0106 } = require('./co
 const { ACADEMIC_LIFE_CARDS } = require('./content/academic-life');
 const { COMMUNITY_CARDS } = require('./content/community');
 const { formatDisciplineNamesInText } = require('./si-professors-2026-2');
+const { toPortugueseTitleCase } = require('./title-case');
 
 const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...CAMPUS_CARDS,
@@ -25,6 +26,7 @@ const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...definition,
   message: {
     ...definition.message,
+    title: toPortugueseTitleCase(definition.message?.title || ''),
     response_text: formatDisciplineNamesInText(definition.message?.response_text || ''),
     details_text: formatDisciplineNamesInText(definition.message?.details_text || '')
   }

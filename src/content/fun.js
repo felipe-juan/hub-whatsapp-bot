@@ -2,7 +2,7 @@ const FUN_CARDS_V0101 = Object.freeze([
   {
     key: 'hub-fun-como-passar-em-calculo',
     message: {
-      title: 'Como passar em Cálculo?',
+      title: 'Como Passar em Cálculo?',
       response_text: 'Depende da sua religião:\n- Se católico, apele para todos os santos;\n- Se evangélico, faça jejum e campanha de oração;\n- Se for umbanda/candomblé, faça despacho pras entidades e pros orixás;\n- Se for ateu, apenas lamento.',
       priority: 70,
       active: true,

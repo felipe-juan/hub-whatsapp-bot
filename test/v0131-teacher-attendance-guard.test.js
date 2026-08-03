@@ -46,7 +46,11 @@ test('confirmações sobre presença do professor ou realização real da aula s
       'vai ter aula com Alexandro amanhã?',
       'Pablo dá aula sexta?',
       'a aula de Amanda hoje está confirmada?',
-      'Amanda vem hoje?'
+      'Amanda vem hoje?',
+      'Crescéncio vai dar aula né?',
+      'Crescêncio vai dar aula?',
+      'vai ter aula com Crescêncio?',
+      'o professor Crescêncio vai ministrar aula?'
     ];
     for (const value of variants) {
       const result = engine.simulate(value, { isGroup: true });
@@ -70,6 +74,14 @@ test('consultas objetivas ao quadro continuam funcionando', () => {
     assert.equal(room.type, 'message');
     assert.equal(room.matchedItem, 'Professor — Pablo Freire Matos');
 
+    const crescentDays = engine.simulate('quais dias Crescêncio dá aula?', { isGroup: true });
+    assert.equal(crescentDays.type, 'message');
+    assert.equal(crescentDays.matchedItem, 'Professor — Crescêncio Rodrigues Lima Neto');
+
+    const crescentSubject = engine.simulate('Crescêncio dá aula de qual matéria?', { isGroup: true });
+    assert.equal(crescentSubject.type, 'message');
+    assert.equal(crescentSubject.matchedItem, 'Professor — Crescêncio Rodrigues Lima Neto');
+
     const semester = engine.simulate('quais aulas hoje no 3º semestre?', { isGroup: true });
     assert.equal(semester.type, 'semester_schedule');
     engine.close();
@@ -80,7 +92,7 @@ test('no privado, confirmação não recebe nem o fallback de ajuda', async () =
   const holder = temporaryDatabase();
   try {
     const engine = new BotEngine(holder.db);
-    const request = fakePrivateMessage('hoje tem aula de Pablo?');
+    const request = fakePrivateMessage('Crescéncio vai dar aula né?');
     await engine.handle(request.message);
     assert.deepEqual(request.replies, []);
     engine.close();

@@ -6,11 +6,12 @@ module.exports = function createMixin(deps) {
     this.db.exec('BEGIN');
     try {
       const payload = {
-        format: 'hub-whatsapp-bot-backup', version: 12, exported_at: nowIso(), settings: this.getSettings(),
+        format: 'hub-whatsapp-bot-backup', version: 13, exported_at: nowIso(), settings: this.getSettings(),
         teachers: this.listTeachers(), sectors: this.listSectors(),
         professor_schedule_entries: this.listProfessorScheduleEntries({ activeOnly: false }),
         academic_calendar_events: this.listAcademicCalendarEvents({ activeOnly: false }),
         unrecognized_suggestions: this.listUnrecognizedSuggestions({ state: 'all', limit: 1000 }),
+        regression_cases: this.listRegressionCases(),
         automatic_messages: this.listAutomaticMessages(),
         automatic_message_history: this.db.prepare('SELECT id,message_id,action,snapshot_json,created_at FROM automatic_message_history ORDER BY message_id,id').all()
           .map(row => ({ id: row.id, message_id: row.message_id, action: row.action, snapshot: parseJson(row.snapshot_json, {}), created_at: row.created_at })),
@@ -80,6 +81,11 @@ module.exports = function createMixin(deps) {
           const mappedId = item.suggested_message_id ? (importedMessageIds.get(Number(item.suggested_message_id)) || null) : null;
           suggestionStmt.run(String(item.normalized_message || normalizeText(item.message_excerpt || '')).slice(0,300),String(item.message_excerpt || '').slice(0,300),String(item.chat_type || 'private'),String(item.chat_name || '').slice(0,160),mappedId,String(item.suggested_title || '').slice(0,180),Number(item.confidence || 0),JSON.stringify(item.reasons || parseJson(item.reasons_json || '[]', [])),['pending','approved','rejected'].includes(item.state)?item.state:'pending',Math.max(1,Number(item.occurrences || 1)),String(item.created_at || nowIso()),String(item.last_seen_at || item.created_at || nowIso()),String(item.reviewed_at || ''));
         }
+      }
+      if (Array.isArray(payload.regression_cases)) {
+        this.db.prepare('DELETE FROM regression_cases').run();
+        const regressionStmt = this.db.prepare('INSERT INTO regression_cases(phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
+        for (const item of payload.regression_cases) regressionStmt.run(String(item.phrase || '').slice(0,500),normalizeText(item.phrase || ''),['respond','ignore'].includes(item.expectation)?item.expectation:'respond',String(item.expected_title || '').slice(0,240),boolToDb(item.active !== false),String(item.created_at || nowIso()),String(item.updated_at || item.created_at || nowIso()));
       }
       if (Array.isArray(payload.automatic_message_history)) {
         this.db.prepare('DELETE FROM automatic_message_history').run();

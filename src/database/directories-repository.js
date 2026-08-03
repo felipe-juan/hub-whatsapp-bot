@@ -1,8 +1,8 @@
 module.exports = function createMixin(deps) {
   const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, crypto } = deps;
   return class {
-  listTeachers({ activeOnly = false, search = '' } = {}) {
-    if (activeOnly && !search && this.cache.activeTeachers) return clone(this.cache.activeTeachers);
+  listTeachers({ activeOnly = false, search = '', cloneResult = true } = {}) {
+    if (activeOnly && !search && this.cache.activeTeachers) return cloneResult ? clone(this.cache.activeTeachers) : this.cache.activeTeachers;
     let sql = 'SELECT * FROM teachers'; const where = []; const params = [];
     if (activeOnly) where.push('active=1');
     if (search) { where.push('(name LIKE ? OR email LIKE ? OR aliases_json LIKE ?)'); const term = `%${search}%`; params.push(term, term, term); }
@@ -10,7 +10,7 @@ module.exports = function createMixin(deps) {
     sql += ' ORDER BY active DESC,name COLLATE NOCASE';
     const items = this.db.prepare(sql).all(...params).map(row => this.mapTeacher(row));
     if (activeOnly && !search) this.cache.activeTeachers = items;
-    return clone(items);
+    return cloneResult ? clone(items) : items;
   }
   mapTeacher(row) {
     if (!row) return null;
@@ -85,8 +85,8 @@ module.exports = function createMixin(deps) {
   upsertTeacherByEmail(input) { const email = String(input.email || '').trim().toLowerCase(); const found = email ? this.db.prepare('SELECT id FROM teachers WHERE lower(email)=?').get(email) : null; return { item: this.saveTeacher(input, found?.id || null), created: !found }; }
   deleteTeacher(id, options = {}) { const before=this.mapTeacher(this.db.prepare('SELECT * FROM teachers WHERE id=?').get(Number(id))); const deleted = Boolean(this.db.prepare('DELETE FROM teachers WHERE id=?').run(Number(id)).changes); if (deleted) { this.invalidate('activeTeachers'); if(!options.skipHistory&&typeof this.recordChangeHistory==='function')this.recordChangeHistory({entity_type:'teacher',entity_id:String(id),entity_label:before?.name||'Professor',action:'deleted',source:'painel',before,after:null}); } return deleted; }
 
-  listSectors({ activeOnly = false, search = '' } = {}) {
-    if (activeOnly && !search && this.cache.activeSectors) return clone(this.cache.activeSectors);
+  listSectors({ activeOnly = false, search = '', cloneResult = true } = {}) {
+    if (activeOnly && !search && this.cache.activeSectors) return cloneResult ? clone(this.cache.activeSectors) : this.cache.activeSectors;
     let sql = 'SELECT * FROM sectors'; const where = []; const params = [];
     if (activeOnly) where.push('active=1');
     if (search) {
@@ -97,7 +97,7 @@ module.exports = function createMixin(deps) {
     sql += ' ORDER BY active DESC,acronym COLLATE NOCASE,name COLLATE NOCASE';
     const items = this.db.prepare(sql).all(...params).map(row => this.mapSector(row));
     if (activeOnly && !search) this.cache.activeSectors = items;
-    return clone(items);
+    return cloneResult ? clone(items) : items;
   }
   mapSector(row) {
     if (!row) return null;

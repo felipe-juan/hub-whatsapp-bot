@@ -73,10 +73,10 @@ test('structured sectors and retained HUB cards answer natural requests', () => 
       ['qual o contato do CAPNE?', 'CAPNE — contact'],
       ['whatsapp da CORES', 'CORES — whatsapp'],
       ['como falar com a CAENS?', 'CAENS — contact'],
-      ['qual o e-mail da coordenação de bsi?', 'BSI — Contato da coordenação'],
-      ['onde encontro a matriz curricular atual de bsi', 'HUB — Fluxograma e matriz de Sistemas de Informação'],
-      ['qual a tabela da final?', 'HUB — Média final e tabela da final'],
-      ['calendário acadêmico', 'HUB — Calendário acadêmico']
+      ['qual o e-mail da coordenação de bsi?', 'BSI — Contato da Coordenação'],
+      ['onde encontro a matriz curricular atual de bsi', 'HUB — Fluxograma e Matriz de Sistemas de Informação'],
+      ['qual a tabela da final?', 'HUB — Média Final e Tabela da Final'],
+      ['calendário acadêmico', 'HUB — Calendário Acadêmico']
     ];
     for (const [body, title] of cases) {
       const result = engine.evaluate(body, { isGroup: false, ignorePermissions: true });

@@ -1,34 +1,25 @@
-HUB WhatsApp Bot v0.13.2 — Fedora GNOME
+HUB WhatsApp Bot v0.14.1 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.13.2
+ATUALIZAÇÃO v0.14.1
 
 NOVIDADES PRINCIPAIS
-- Resposta de semestre priorizada como próxima etapa do diálogo, com ou sem reply.
-- Aceita 5 semestre, 5º semestre, quinto semestre ou apenas 5.
-- Replies recuperam o contexto pelo ID exato da mensagem enviada pelo bot.
-- Identificadores PN/LID do mesmo participante são tratados como aliases do mesmo usuário.
-- Respostas inválidas recebem exemplos claros, sem cair no fallback genérico.
-- Contexto de aulas sem reply no privado e com reply obrigatório em grupos.
-- Área Sistema e manutenção com saúde da Oracle, logs e teste de envio.
-- Atualização pelo painel com backup, testes e rollback.
-- Backup externo criptografado com retenção configurável.
-- Editor estruturado de horários e histórico com reversão.
-- Relatório automático de inconsistências e fila persistente de saída.
-
-NA ORACLE — UMA VEZ APÓS ATUALIZAR
-sudo bash scripts/install-oracle-management.sh
-
-Isso habilita no painel: reinício do serviço, download de logs e atualização segura com rollback.
-Para backup externo, defina HUB_BACKUP_PASSPHRASE no .env da VM antes de ativar o recurso.
-
-- O quadro docente é armazenado em campos estruturados, incluindo sigla, semestre, dia, início, fim e sala.
-- A consulta de aulas mostra dia, data e semestre no título.
-- O painel inclui “Calendário e exceções” para feriados, recessos, suspensões, reposições, sábados letivos e mudanças de sala.
-- Exceções alteram a resposta de uma data sem sobrescrever o quadro semanal.
-- Nomes docentes aceitam erro moderado; siglas aceitam um erro curto; palavras genéricas não usam aproximação excessiva.
-- Transposição de letras adjacentes é reconhecida, como Amanda/Amnada e CORES/COERS.
-- O backup JSON preserva o quadro estruturado e as exceções acadêmicas cadastradas.
+- “Crescéncio vai dar aula né?” e confirmações semelhantes não acionam mais o card docente, mesmo sem data.
+- Perguntas objetivas sobre dias, horários, salas, matérias e semestres continuam funcionando.
+- A pergunta de semestre mostra apenas exemplos numéricos: 3, 5 ou 8.
+- O card de Felipe Juan aceita “felipe” e inclui o projeto HUB Arquivos IFBA.
+- A calculadora passa a se chamar “Calculadora de Prova Final”.
+- Todos os títulos dos cards seguem capitalização portuguesa.
+- Consultas por disciplina aceitam sigla, nome completo, “horário” e “horários”.
+- “Sala e dia de aula de <disciplina>” abre o card docente correspondente.
+- Consultas privadas podem pedir várias disciplinas ou professores de uma vez.
+- Em grupos, respostas múltiplas são entregues no privado do participante.
+- A mensagem é preparada uma única vez e reutiliza um snapshot único do banco.
+- O quadro é consultado somente para o dia e semestre solicitados.
+- Um catálogo compacto reconhece disciplinas novas importadas.
+- A intenção é classificada antes dos gatilhos, reduzindo falsos positivos.
+- O painel permite salvar e executar frases permanentes de regressão.
+- O índice de frases foi reduzido aproximadamente pela metade.
 
 INSTALAÇÃO
 1. Extraia o ZIP.

@@ -14,7 +14,7 @@ function temporaryDatabase() {
   return { dir, dbPath, db };
 }
 function close(holder) { try { holder.db?.close(); } catch {} fs.rmSync(holder.dir, { recursive: true, force: true }); }
-function cardOf(db) { return db.listAutomaticMessages().find(item => item.title === 'Como passar em Cálculo?'); }
+function cardOf(db) { return db.listAutomaticMessages().find(item => item.title === 'Como Passar em Cálculo?'); }
 
 test('v0.10.3 restores an attachment removed by the v0.10.2 package update', () => {
   const holder = temporaryDatabase();

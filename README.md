@@ -1,4 +1,4 @@
-# HUB WhatsApp Bot v0.13.2
+# HUB WhatsApp Bot v0.14.1
 
 Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB Arquivos IFBA. Cada automação reúne **gatilhos editáveis** e a **resposta completa** que será enviada.
 
@@ -9,6 +9,37 @@ Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB A
 
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA. Respostas simultâneas são organizadas por conversa, mas nenhuma integração não oficial garante que a conta nunca será restringida.
+
+
+## Proteção contra confirmação docente sem data — v0.14.1
+
+- perguntas de confirmação como `Crescéncio vai dar aula né?`, `Crescêncio vai dar aula?` e `vai ter aula com Crescêncio?` não ativam mais o card docente;
+- esse padrão é tratado como pergunta sobre presença ou realização efetiva da aula, informação que o bot não consegue confirmar;
+- a proteção funciona mesmo quando a frase não contém `hoje`, `amanhã` ou um dia da semana;
+- consultas objetivas continuam funcionando, como `quais dias Crescêncio dá aula?`, `qual sala de Crescêncio?` e `Crescêncio dá aula de qual matéria?`.
+
+
+## Precisão, disciplinas e desempenho — v0.14.0
+
+- a escolha de semestre mostra apenas exemplos numéricos (`3`, `5` ou `8`), embora continue aceitando ordinais e formas por extenso;
+- o card de Felipe Juan aceita também `felipe` e inclui o projeto `felipe-juan.github.io/hub-arquivos-ifba/`;
+- todos os títulos dos cards seguem capitalização portuguesa; a calculadora passa a se chamar **Calculadora de Prova Final**;
+- consultas por disciplina aceitam sigla ou nome completo, incluindo `sala e dia de aula de LPII`, `horários de Linguagem de Programação II` e múltiplas disciplinas;
+- no privado, consultas múltiplas enviam um card por professor/disciplina; em grupos, os vários resultados são enviados no privado do participante;
+- cada mensagem é normalizada e classificada uma única vez, usando um snapshot único de configurações, cards, docentes, setores e catálogo de disciplinas;
+- o quadro semanal é consultado somente pelo dia e semestre necessários, enquanto um catálogo compacto reconhece disciplinas novas importadas;
+- a classificação central diferencia consulta ao quadro, narrativa, confirmação de aula normal e confirmação de presença docente;
+- o painel possui casos permanentes de regressão, executados também antes de uma atualização;
+- os gatilhos docentes deixaram de duplicar milhares de frases de disciplinas: o índice caiu de cerca de 10,6 mil para 5,7 mil padrões.
+
+
+## Confirmações sobre aula normal — v0.13.3
+
+- mensagens como `vai ter aula hoje normal`, `hoje vai ter aula normal?` e `as aulas de sexta serão normais?` não abrem mais a escolha de semestre;
+- esse tipo de pergunta é tratado como confirmação sobre o funcionamento real das aulas, informação que o bot não consegue verificar;
+- no privado, a exceção também suprime o fallback genérico, deixando a mensagem sem resposta;
+- se havia um pedido de semestre pendente, a confirmação não consome o contexto: a pessoa ainda pode informar o semestre na mensagem seguinte;
+- perguntas abertas e objetivas, como `qual é o horário normal das aulas de hoje no 3º semestre?`, continuam funcionando.
 
 
 ## Continuação garantida do semestre — v0.13.2

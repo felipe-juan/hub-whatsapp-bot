@@ -64,18 +64,18 @@ test('Como passar em Cálculo works with or without final question mark', () => 
       'por favor como eu consigo passar em cálculo'
     ]) {
       const result = engine.evaluate(text, { isGroup: false, ignorePermissions: true });
-      assert.equal(result.matchedItem, 'Como passar em Cálculo?', text);
+      assert.equal(result.matchedItem, 'Como Passar em Cálculo?', text);
       assert.match(result.text, /Depende da sua religião/, text);
     }
-    assert.notEqual(engine.evaluate('como passar do tcc i para o tcc ii', { isGroup: false, ignorePermissions: true }).matchedItem, 'Como passar em Cálculo?');
-    assert.notEqual(engine.evaluate('ontem comentaram sobre como passar em cálculo', { isGroup: false, ignorePermissions: true }).matchedItem, 'Como passar em Cálculo?');
+    assert.notEqual(engine.evaluate('como passar do tcc i para o tcc ii', { isGroup: false, ignorePermissions: true }).matchedItem, 'Como Passar em Cálculo?');
+    assert.notEqual(engine.evaluate('ontem comentaram sobre como passar em cálculo', { isGroup: false, ignorePermissions: true }).matchedItem, 'Como Passar em Cálculo?');
   } finally { engine.close(); close(holder); }
 });
 
 test('v0.10.2 migration fixes an existing v0.10.1 joke trigger without replacing its response or attachment', () => {
   const holder = temporaryDatabase();
   try {
-    const card = holder.db.listAutomaticMessages().find(item => item.title === 'Como passar em Cálculo?');
+    const card = holder.db.listAutomaticMessages().find(item => item.title === 'Como Passar em Cálculo?');
     assert.ok(card);
     const oldTrigger = {
       ...card.trigger,

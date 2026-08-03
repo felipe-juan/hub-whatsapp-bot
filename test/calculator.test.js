@@ -67,7 +67,7 @@ test('mais de um valor é primeiro convertido em média das unidades', () => {
 test('!final help mostra apenas a ajuda da prova final', () => {
   const result = handleCalculator('!final help');
   assert.equal(result.type, 'calculator-final-help');
-  assert.match(result.text, /Calculadora da prova final/);
+  assert.match(result.text, /Calculadora de Prova Final/);
   assert.doesNotMatch(result.text, /média final|MF =/i);
   assert.doesNotMatch(result.text, /Calculadoras disponíveis/);
 });

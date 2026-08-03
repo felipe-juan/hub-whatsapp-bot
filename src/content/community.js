@@ -8,7 +8,9 @@ const COMMUNITY_CARDS = Object.freeze([
       response_text: injectFelipeJuanPhone([
         '👤 *Felipe Juan*', '',
         'Diretor-geral do Diretório Acadêmico de Sistemas de Informação — *DASI*.', '',
-        '🎮 *Para conhecer meus hobbies*',
+        '🌐 *Projeto para o Curso*',
+        'https://felipe-juan.github.io/hub-arquivos-ifba/', '',
+        '🎮 *Para Conhecer Meus Hobbies*',
         'https://linktr.ee/felipojuano', '',
         '💼 *Profissionalmente*',
         'https://www.linkedin.com/in/felipe-juan/'
@@ -20,7 +22,7 @@ const COMMUNITY_CARDS = Object.freeze([
       trigger: {
         match_mode: 'all',
         sentences: [
-          'juan', 'felipe juan', 'felipo juano',
+          'juan', 'felipe', 'felipe juan', 'felipo juano',
           'contato juan', 'contato do juan', 'qual contato do juan', 'qual o contato do juan',
           'contato felipe juan', 'contato do felipe juan', 'qual contato do felipe juan',
           'quem é juan', 'quem e juan', 'quem é felipe juan', 'quem e felipe juan',
@@ -32,7 +34,7 @@ const COMMUNITY_CARDS = Object.freeze([
           'quem criou o bot', 'quem é o criador do bot', 'quem e o criador do bot',
           'quem criou o escravo do juan', 'criador do escravo do juan'
         ],
-        keywords: [], required_words: [], excluded_words: [], exact_phrases: ['juan'],
+        keywords: [], required_words: [], excluded_words: [], exact_phrases: ['juan', 'felipe'],
         require_question_mark: true, typo_tolerance: 1, synonym_group_ids: [],
         negative_examples: [], regex_pattern: '', regex_flags: 'iu'
       }

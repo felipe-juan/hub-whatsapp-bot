@@ -3,10 +3,10 @@
 const { buildProfessorScheduleImportPlan, buildEffectiveProfessorScheduleRecords } = require('../schedule-import-plan');
 
 module.exports = function createMixin(deps) {
-  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, crypto } = deps;
+  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, toPortugueseTitleCase, crypto } = deps;
   return class {
   validateAutomaticMessage(input) {
-    const title = String(input.title || '').trim();
+    const title = toPortugueseTitleCase(String(input.title || '').trim());
     const responseText = String(input.response_text || input.answer || '').trim();
     if (!title) throw new Error('O nome interno da mensagem é obrigatório.');
     if (!responseText) throw new Error('Escreva a resposta completa que o bot deve enviar.');
@@ -416,11 +416,7 @@ module.exports = function createMixin(deps) {
             name: record.name, email: record.email || '', semesters: record.semesters || [],
             classes: (record.classes || []).map(entry => [entry.discipline, entry.semester, entry.day, entry.hours, entry.room || ''])
           };
-          const uniqueDisciplines = (record.classes || []).filter(entry => (disciplineOwners.get(normalizeText(entry.discipline))?.size || 0) === 1);
-          const sentences = [...new Set([
-            ...buildSiProfessorNameTriggerSentences(professorShape),
-            ...uniqueDisciplines.flatMap(entry => buildDisciplineTriggerSentences(entry.discipline))
-          ])];
+          const sentences = [...new Set(buildSiProfessorNameTriggerSentences(professorShape))];
           const created = this.saveAutomaticMessage({
             title: `Professor — ${record.name}`, response_text: response, priority: 35, active: true, archived: false, scope: 'both',
             trigger: { match_mode: 'all', sentences, keywords: [], required_words: [], require_question_mark: false,

@@ -5,7 +5,7 @@ const FALLBACK_CALCULATORS = Object.freeze([
     key: 'final',
     enabled: true,
     command: '!final',
-    label: 'Calculadora da prova final',
+    label: 'Calculadora de Prova Final',
     config: { approval_average: 7, final_minimum_average: 2.5, final_target: 5 }
   }
 ]);
@@ -103,7 +103,7 @@ function finalHelpText(definition = {}) {
   const target = Number(config.final_target ?? 5);
   const command = aliases(definition)[0] || '!final';
   return [
-    '🧮 *Calculadora da prova final*',
+    '🧮 *Calculadora de Prova Final*',
     '',
     '*Como usar*',
     `• \`${command} 6,9\` — considera 6,9 como a média de todas as unidades.`,
@@ -138,7 +138,7 @@ function finalRangeEmoji(mp) {
 }
 
 function formatRequiredFinalResult(result, singleValue = false) {
-  const lines = ['🧮 *Calculadora da prova final*', ''];
+  const lines = ['🧮 *Calculadora de Prova Final*', ''];
   const rangeEmoji = finalRangeEmoji(result.mp);
   if (singleValue) {
     lines.push(`${rangeEmoji} Média das unidades informada: *${formatGrade(result.mp)}*`);
@@ -165,13 +165,13 @@ function helpText(calculators) {
 function handleCalculator(text, calculators) {
   const selected = commandFor(text, calculators);
   if (!selected) return null;
-  if (isCommandHelpRequest(text, selected)) return { type: 'calculator-final-help', topic: selected.label || 'Calculadora da prova final', text: finalHelpText(selected) };
+  if (isCommandHelpRequest(text, selected)) return { type: 'calculator-final-help', topic: selected.label || 'Calculadora de Prova Final', text: finalHelpText(selected) };
   const grades = extractGrades(text);
-  if (!grades.length) return { type: 'calculator-final-help', topic: selected.label || 'Calculadora da prova final', text: finalHelpText(selected) };
+  if (!grades.length) return { type: 'calculator-final-help', topic: selected.label || 'Calculadora de Prova Final', text: finalHelpText(selected) };
   const result = calculateAverage(grades, selected.config || {});
   return {
     type: 'calculator-final',
-    topic: selected.label || 'Calculadora da prova final',
+    topic: selected.label || 'Calculadora de Prova Final',
     text: formatRequiredFinalResult(result, grades.length === 1)
   };
 }
