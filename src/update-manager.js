@@ -37,6 +37,7 @@ class UpdateManager {
     this.statusPath = path.join(dataDir, 'update-status.json');
     fs.mkdirSync(dataDir, { recursive: true });
     this.currentVersion = this.readCurrentVersion();
+    this.controlHelper = '/usr/local/sbin/hub-whatsapp-bot-control';
   }
   readCurrentVersion() { try { return fs.readFileSync(path.join(this.rootDir, 'VERSION'), 'utf8').trim(); } catch { return '0.0.0'; } }
   writeStatus(patch) {
@@ -51,6 +52,75 @@ class UpdateManager {
     try { return { currentVersion: this.readCurrentVersion(), ...JSON.parse(fs.readFileSync(this.statusPath, 'utf8')) }; }
     catch { return { currentVersion: this.readCurrentVersion(), state: 'idle', message: 'Nenhuma atualização iniciada pelo painel.', updatedAt: '' }; }
   }
+  privilegedHelperAvailable() {
+    try {
+      return fs.existsSync(this.controlHelper) && this.commandRunner('sudo', ['-n', this.controlHelper, 'status'], { encoding: 'utf8' }).trim().length > 0;
+    } catch { return false; }
+  }
+  launchApplyScript(scriptPath) {
+    if (fs.existsSync(this.controlHelper)) {
+      try {
+        const output = this.commandRunner('sudo', ['-n', this.controlHelper, 'apply', scriptPath], { encoding: 'utf8' });
+        return String(output || '').trim().split(/\s+/).at(-1) || 'hub-whatsapp-bot-update';
+      } catch (error) {
+        if (process.platform === 'linux' && process.env.HUB_ALLOW_USER_SYSTEMD_FALLBACK !== '1') {
+          throw new Error(`Integração do serviço Oracle indisponível: ${String(error?.message || error).split('\n')[0]}. Execute sudo bash scripts/install-oracle-management.sh.`);
+        }
+      }
+    }
+    const unit = `hub-whatsapp-bot-update-${Date.now()}`;
+    this.commandRunner('systemd-run', ['--user', `--unit=${unit}`, '--collect', '/bin/bash', scriptPath], { encoding: 'utf8' });
+    return unit;
+  }
+  async fetchBuffer(url, { maxBytes = 100 * 1024 * 1024, redirects = 5 } = {}) {
+    let current = String(url);
+    for (let attempt = 0; attempt <= redirects; attempt += 1) {
+      const response = await fetch(current, { redirect: 'manual', headers: { 'User-Agent': 'HUB-WhatsApp-Bot-Updater/1.0', Accept: 'application/octet-stream,application/zip,text/plain,*/*' } });
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        const location = response.headers.get('location');
+        if (!location) throw new Error('Redirecionamento sem destino ao consultar a atualização.');
+        current = new URL(location, current).toString();
+        continue;
+      }
+      if (!response.ok) throw new Error(`Servidor de atualização respondeu HTTP ${response.status}.`);
+      const length = Number(response.headers.get('content-length') || 0);
+      if (length > maxBytes) throw new Error('O arquivo remoto excede o limite de tamanho.');
+      const reader = response.body?.getReader();
+      if (!reader) return Buffer.from(await response.arrayBuffer());
+      const chunks = []; let total = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) throw new Error('O arquivo remoto excede o limite de tamanho.');
+        chunks.push(Buffer.from(value));
+      }
+      return Buffer.concat(chunks);
+    }
+    throw new Error('Redirecionamentos demais ao consultar a atualização.');
+  }
+  remoteUrls(repository, branch = 'main') {
+    const repo = String(repository || '').trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/^\/+|\/+$/g, '');
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) throw new Error('Repositório GitHub inválido.');
+    const safeBranch = encodeURIComponent(String(branch || 'main').trim());
+    return { repo, version: `https://raw.githubusercontent.com/${repo}/${safeBranch}/VERSION`, archive: `https://github.com/${repo}/archive/refs/heads/${safeBranch}.zip` };
+  }
+  async checkRemote(repository, branch = 'main') {
+    const urls = this.remoteUrls(repository, branch);
+    const remoteVersion = (await this.fetchBuffer(urls.version, { maxBytes: 4096 })).toString('utf8').trim();
+    parseVersion(remoteVersion);
+    const currentVersion = this.readCurrentVersion();
+    return { repository: urls.repo, branch, currentVersion, remoteVersion, available: compareVersions(remoteVersion, currentVersion) > 0 };
+  }
+  async downloadRemoteAndApply(repository, branch = 'main') {
+    const remote = await this.checkRemote(repository, branch);
+    if (!remote.available) throw new Error(`Nenhuma versão mais nova disponível. Instalada: ${remote.currentVersion}; remota: ${remote.remoteVersion}.`);
+    const urls = this.remoteUrls(repository, branch);
+    this.writeStatus({ state: 'downloading', message: `Baixando a versão ${remote.remoteVersion} do GitHub.`, targetVersion: remote.remoteVersion });
+    const buffer = await this.fetchBuffer(urls.archive);
+    return this.stageAndApply(buffer, `${urls.repo.replace('/', '-')}-${branch}.zip`);
+  }
+
   packageRoot(extractDir) {
     const candidates = [extractDir, ...fs.readdirSync(extractDir, { withFileTypes: true }).filter(item => item.isDirectory()).map(item => path.join(extractDir, item.name))];
     return candidates.find(candidate => fs.existsSync(path.join(candidate, 'UPDATE_MANIFEST.json')) && fs.existsSync(path.join(candidate, 'package.json')) && fs.existsSync(path.join(candidate, 'VERSION')));
@@ -150,6 +220,15 @@ BACKUP_READY=0
 SERVICE_STOPPED=0
 DEPENDENCIES_BACKUP_READY=0
 DEPENDENCIES_REPLACED=0
+CONTROL=/usr/local/sbin/hub-whatsapp-bot-control
+service_ctl() {
+  local action="$1"
+  if [[ -x "$CONTROL" ]] && sudo -n "$CONTROL" "$action" >/dev/null 2>&1; then return 0; fi
+  systemctl --user "$action" "$SERVICE"
+}
+service_is_active() {
+  if [[ -x "$CONTROL" ]]; then sudo -n "$CONTROL" status >/dev/null 2>&1; else systemctl --user is-active --quiet "$SERVICE"; fi
+}
 write_status() {
   local state="$1" message="$2"
   node - "$STATUS" "$state" "$message" "$TARGET" <<'NODE'
@@ -204,7 +283,7 @@ rollback() {
   rm -f "$BACKUP_TMP"
   if [[ "$BACKUP_READY" == "1" ]] && [[ -s "$BACKUP" ]] && tar -tzf "$BACKUP" >/dev/null 2>&1; then
     write_status rolling-back "Falha durante a atualização; restaurando a versão anterior."
-    systemctl --user stop "$SERVICE" >/dev/null 2>&1
+    service_ctl stop >/dev/null 2>&1
     clean_code
     if tar -C "$ROOT" -xzf "$BACKUP"; then
       if [[ "$DEPENDENCIES_BACKUP_READY" == "1" ]] && [[ -d "$OLD_NODE_MODULES" ]]; then
@@ -213,13 +292,13 @@ rollback() {
       elif [[ "$DEPENDENCIES_REPLACED" == "1" ]]; then
         install_dependencies >/dev/null 2>&1
       fi
-      systemctl --user start "$SERVICE" >/dev/null 2>&1
+      service_ctl start >/dev/null 2>&1
       write_status failed "A atualização falhou e a versão anterior foi restaurada. Consulte os registros da unidade de atualização."
     else
       write_status failed "A atualização falhou e o backup anterior não pôde ser restaurado automaticamente."
     fi
   else
-    if [[ "$SERVICE_STOPPED" == "1" ]]; then systemctl --user start "$SERVICE" >/dev/null 2>&1; fi
+    if [[ "$SERVICE_STOPPED" == "1" ]]; then service_ctl start >/dev/null 2>&1; fi
     write_status failed "A atualização foi interrompida antes da criação de um backup válido; a instalação existente não foi apagada."
   fi
   rm -rf "$WORKSPACE"
@@ -228,7 +307,7 @@ rollback() {
 trap rollback ERR
 sleep 2
 write_status applying "Parando o bot e preparando um backup verificável."
-systemctl --user stop "$SERVICE"
+service_ctl stop
 SERVICE_STOPPED=1
 rm -f "$BACKUP_TMP"
 tar --exclude='./data' --exclude='./node_modules' --exclude='./.env' -C "$ROOT" -czf "$BACKUP_TMP" .
@@ -243,11 +322,16 @@ install_dependencies
 timeout 3m npm run syntax
 timeout 8m npm test
 write_status restarting "Atualização instalada; reiniciando o bot."
-systemctl --user start "$SERVICE"
+service_ctl start
 SERVICE_STOPPED=0
 sleep 2
-systemctl --user is-active --quiet "$SERVICE"
-write_status completed "Atualização concluída com sucesso."
+service_is_active
+for attempt in $(seq 1 45); do
+  if curl -fsS --max-time 2 http://127.0.0.1:3210/api/health >/dev/null 2>&1 || curl -fsS --max-time 2 http://127.0.0.1:3210/ >/dev/null 2>&1; then break; fi
+  [[ "$attempt" == "45" ]] && { write_status failed "O serviço reiniciou, mas o painel não respondeu ao teste de saúde."; false; }
+  sleep 2
+done
+write_status completed "Atualização concluída com sucesso e painel verificado."
 rm -rf "$OLD_NODE_MODULES"
 rm -rf "$WORKSPACE"
 find ${shellQuote(this.dataDir)} -maxdepth 1 -name 'code-before-*.tar.gz' -printf '%T@ %p\n' | sort -nr | tail -n +3 | cut -d' ' -f2- | xargs -r rm -f
@@ -272,8 +356,7 @@ find ${shellQuote(this.dataDir)} -maxdepth 1 -name 'code-before-*.tar.gz' -print
       const targetVersion = this.validateManifest(packageRoot, manifest);
       const scriptPath = this.createApplyScript(packageRoot, targetVersion, workspace);
       this.writeStatus({ state: 'staged', message: `Versão ${targetVersion} validada. A instalação será iniciada.`, targetVersion, fileName });
-      const unit = `hub-whatsapp-bot-update-${Date.now()}`;
-      this.commandRunner('systemd-run', ['--user', `--unit=${unit}`, '--collect', '/bin/bash', scriptPath], { encoding: 'utf8' });
+      const unit = this.launchApplyScript(scriptPath);
       return { accepted: true, targetVersion, unit, message: 'Atualização aceita. O painel ficará indisponível por alguns instantes.' };
     } catch (error) {
       this.writeStatus({ state: 'failed', message: error.message, fileName });

@@ -100,12 +100,12 @@ test('pergunta de semestre ausente informa o dia e exemplos de resposta', async 
   const holder = temporaryDatabase();
   try {
     const engine = new BotEngine(holder.db);
-    const first = fakeMessage('qual matéria tem amanhã?');
+    const first = fakeMessage('qual matéria tem amanhã?', { from: '5577999999999@s.whatsapp.net' });
     await engine.handle(first.message);
     assert.match(first.replies[0], /Terça-Feira/u);
     assert.match(first.replies[0], /Exemplo:/u);
 
-    const second = fakeMessage('3');
+    const second = fakeMessage('3', { from: '5577999999999@s.whatsapp.net' });
     await engine.handle(second.message);
     assert.ok(second.replies[0].startsWith('*Aulas de Terça-Feira, 04/08/2026 — 3º Semestre*'));
     engine.close();

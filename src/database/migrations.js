@@ -118,6 +118,19 @@ module.exports = function createMixin(deps) {
         progress INTEGER NOT NULL DEFAULT 0, result_json TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL, finished_at TEXT NOT NULL DEFAULT ''
       );
+      CREATE TABLE IF NOT EXISTS processed_incoming_messages (
+        remote_jid TEXT NOT NULL, message_id TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'processing',
+        claimed_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_error TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY(remote_jid,message_id)
+      );
+      CREATE TABLE IF NOT EXISTS unrecognized_suggestions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, normalized_message TEXT NOT NULL, message_excerpt TEXT NOT NULL,
+        chat_type TEXT NOT NULL DEFAULT 'private', chat_name TEXT NOT NULL DEFAULT '', suggested_message_id INTEGER,
+        suggested_title TEXT NOT NULL DEFAULT '', confidence REAL NOT NULL DEFAULT 0, reasons_json TEXT NOT NULL DEFAULT '[]',
+        state TEXT NOT NULL DEFAULT 'pending', occurrences INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL, reviewed_at TEXT NOT NULL DEFAULT '',
+        FOREIGN KEY(suggested_message_id) REFERENCES automatic_messages(id) ON DELETE SET NULL
+      );
       CREATE TABLE IF NOT EXISTS admin_auth (
         id INTEGER PRIMARY KEY CHECK(id=1), salt TEXT NOT NULL, password_hash TEXT NOT NULL, updated_at TEXT NOT NULL
       );
@@ -129,11 +142,18 @@ module.exports = function createMixin(deps) {
         source_date TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
         FOREIGN KEY(teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
       );
+      CREATE TABLE IF NOT EXISTS change_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL DEFAULT '',
+        entity_label TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT 'updated', source TEXT NOT NULL DEFAULT 'painel',
+        before_json TEXT NOT NULL DEFAULT 'null', after_json TEXT NOT NULL DEFAULT 'null', created_at TEXT NOT NULL,
+        reverted_at TEXT NOT NULL DEFAULT ''
+      );
       CREATE TABLE IF NOT EXISTS academic_calendar_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT, package_key TEXT NOT NULL DEFAULT '', event_type TEXT NOT NULL,
         start_date TEXT NOT NULL, end_date TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', course TEXT NOT NULL DEFAULT 'todos',
         semester_numbers_json TEXT NOT NULL DEFAULT '[]', discipline_code TEXT NOT NULL DEFAULT '', professor_name TEXT NOT NULL DEFAULT '',
         old_room TEXT NOT NULL DEFAULT '', new_room TEXT NOT NULL DEFAULT '', replacement_day_of_week INTEGER, start_minutes INTEGER, end_minutes INTEGER,
+        recurrence_type TEXT NOT NULL DEFAULT 'none', recurrence_weekdays_json TEXT NOT NULL DEFAULT '[]', recurrence_interval INTEGER NOT NULL DEFAULT 1,
         source_url TEXT NOT NULL DEFAULT '', source_title TEXT NOT NULL DEFAULT '', verified_at TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL
       );
@@ -154,11 +174,20 @@ module.exports = function createMixin(deps) {
       CREATE INDEX IF NOT EXISTS idx_outbound_state_due ON outbound_deliveries(state,next_attempt_at,id);
       CREATE INDEX IF NOT EXISTS idx_outbound_conversation ON outbound_deliveries(conversation_id,state,id);
       CREATE INDEX IF NOT EXISTS idx_admin_tasks_state ON admin_task_runs(state,created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_processed_incoming_updated ON processed_incoming_messages(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_unrecognized_state_seen ON unrecognized_suggestions(state,last_seen_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_unrecognized_normalized ON unrecognized_suggestions(normalized_message,state);
       CREATE INDEX IF NOT EXISTS idx_professor_schedule_lookup ON professor_schedule_entries(academic_period,semester_number,day_of_week,active,start_minutes);
       CREATE INDEX IF NOT EXISTS idx_professor_schedule_professor ON professor_schedule_entries(professor_name,academic_period,active);
       CREATE INDEX IF NOT EXISTS idx_academic_calendar_date ON academic_calendar_events(start_date,end_date,active);
+      CREATE INDEX IF NOT EXISTS idx_change_history_entity ON change_history(entity_type,entity_id,id DESC);
+      CREATE INDEX IF NOT EXISTS idx_change_history_created ON change_history(created_at DESC);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_academic_calendar_package_key ON academic_calendar_events(package_key) WHERE package_key<>'';
     `);
+
+    this.ensureColumn('academic_calendar_events', 'recurrence_type', "TEXT NOT NULL DEFAULT 'none'");
+    this.ensureColumn('academic_calendar_events', 'recurrence_weekdays_json', "TEXT NOT NULL DEFAULT '[]'");
+    this.ensureColumn('academic_calendar_events', 'recurrence_interval', 'INTEGER NOT NULL DEFAULT 1');
 
     this.ensureColumn('outbound_deliveries', 'idempotency_key', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('outbound_deliveries', 'priority', 'INTEGER NOT NULL DEFAULT 0');
@@ -269,6 +298,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0108();
     if (seedBundledContent) this.migrateContentV0109();
     if (seedBundledContent) this.migrateContentV0110();
+    if (seedBundledContent) this.migrateContentV0130();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -1256,6 +1286,47 @@ module.exports = function createMixin(deps) {
       update.run(JSON.stringify(acronymTrigger(liveTrigger)), patchSnapshot(row.draft_json, acronymTrigger), patchSnapshot(row.package_snapshot_json, acronymTrigger), patchSnapshot(row.pending_package_json, acronymTrigger), nowIso(), Number(row.id));
     }
     this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0110_structured_schedule_calendar_typos','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
+
+  migrateContentV0130() {
+    if (asBool(this.getSetting('content_v0130_management_and_triggers', 'false'), false)) return;
+    const title = 'BSI — Contato da coordenação';
+    const row = this.db.prepare('SELECT id,trigger_json,draft_json,package_snapshot_json,pending_package_json FROM automatic_messages WHERE lower(title)=lower(?) ORDER BY id LIMIT 1').get(title);
+    const coordinatorSentences = [
+      'contato coordenador', 'contato do coordenador', 'contato da coordenação', 'contato coordenação',
+      'qual o contato do coordenador', 'qual é o contato do coordenador', 'qual e o contato do coordenador',
+      'qual o contato da coordenação', 'qual é o contato da coordenação', 'qual e o contato da coordenação',
+      'email do coordenador', 'e-mail do coordenador', 'email da coordenação', 'e-mail da coordenação',
+      'telefone do coordenador', 'telefone da coordenação', 'ramal do coordenador', 'ramal da coordenação',
+      'como falar com o coordenador', 'como falar com a coordenação', 'como entrar em contato com o coordenador',
+      'como entrar em contato com a coordenação', 'contato do coordenador de bsi', 'contato da coordenação de bsi',
+      'contato do coordenador de sistemas de informação', 'contato da coordenação de sistemas de informação',
+      'contato csi', 'coordenação bsi contato'
+    ];
+    if (row) {
+      const merge = value => {
+        const object = value && typeof value === 'object' ? value : {};
+        return normalizeTriggerRules({
+          ...object,
+          sentences: [...new Set([...(object.sentences || []), ...coordinatorSentences])],
+          typo_tolerance: Math.min(1, Number(object.typo_tolerance ?? 1)),
+          require_question_mark: true
+        });
+      };
+      const live = merge(parseJson(row.trigger_json || '{}', {}));
+      const patchSnapshot = value => {
+        if (!value) return value || '';
+        const object = parseJson(value, null);
+        if (!object || typeof object !== 'object') return value;
+        object.trigger = merge(object.trigger || live);
+        return JSON.stringify(object);
+      };
+      this.db.prepare('UPDATE automatic_messages SET trigger_json=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?')
+        .run(JSON.stringify(live), patchSnapshot(row.draft_json), patchSnapshot(row.package_snapshot_json), patchSnapshot(row.pending_package_json), nowIso(), Number(row.id));
+    }
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0130_management_and_triggers','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
     this.invalidate('settings', 'activeMessages', 'conflictReport');
   }
 

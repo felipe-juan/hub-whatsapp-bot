@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+SERVICE="hub-whatsapp-bot.service"
+ROOT="/home/ubuntu/hub-whatsapp-bot"
+ACTION="${1:-}"
+case "$ACTION" in
+  status) systemctl is-active "$SERVICE" ;;
+  start|stop|restart) systemctl "$ACTION" "$SERVICE" ;;
+  logs)
+    LIMIT="${2:-1000}"
+    [[ "$LIMIT" =~ ^[0-9]+$ ]] || LIMIT=1000
+    (( LIMIT > 5000 )) && LIMIT=5000
+    journalctl -u "$SERVICE" -n "$LIMIT" --no-pager -l
+    ;;
+  apply)
+    SCRIPT="${2:-}"
+    [[ -n "$SCRIPT" && -f "$SCRIPT" && ! -L "$SCRIPT" ]] || { echo "Script de atualização inválido." >&2; exit 2; }
+    REAL="$(readlink -f -- "$SCRIPT")"
+    case "$REAL" in "$ROOT/data/apply-update-"*.sh) ;; *) echo "Caminho de atualização não permitido." >&2; exit 2 ;; esac
+    OWNER="$(stat -c '%U' "$REAL")"
+    [[ "$OWNER" == "ubuntu" ]] || { echo "O script deve pertencer ao usuário ubuntu." >&2; exit 2; }
+    UNIT="hub-whatsapp-bot-update-$(date +%s)-$$"
+    systemd-run --unit="$UNIT" --collect --property=User=ubuntu --property=Group=ubuntu /bin/bash "$REAL"
+    echo "$UNIT"
+    ;;
+  *) echo "Uso: $0 {status|start|stop|restart|logs [linhas]|apply <script>}" >&2; exit 2 ;;
+esac

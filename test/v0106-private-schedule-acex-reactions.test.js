@@ -87,11 +87,11 @@ test('consulta sem semestre pede a informação e aceita resposta curta em segui
   const holder = temporaryDatabase();
   try {
     const engine = new BotEngine(holder.db);
-    const first = fakeMessage('qual é a aula de hoje?');
+    const first = fakeMessage('qual é a aula de hoje?', { from: '5577999999999@s.whatsapp.net' });
     await engine.handle(first.message);
     assert.match(first.replies[0], /Qual semestre/u);
 
-    const second = fakeMessage('terceiro semestre');
+    const second = fakeMessage('terceiro semestre', { from: '5577999999999@s.whatsapp.net' });
     await engine.handle(second.message);
     assert.match(second.replies[0], /LPII - Linguagem de Programação II/u);
     assert.equal(semesterFromFollowUp('3º semestre'), 3);

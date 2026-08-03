@@ -32,10 +32,17 @@ test('direct professor location phrases work without ?, but conversational text 
   try {
     for (const body of [
       'sala do professor Allan',
-      'onde fica o professor Allan',
       'qual é a sala do professor Allan',
       'em qual sala está o professor Allan',
-      'sala do docente Allan',
+      'sala do docente Allan'
+    ]) {
+      const result = engine.evaluate(body, { isGroup: false, ignorePermissions: true });
+      assert.equal(result.matched, true, body);
+      assert.equal(result.type, 'message', body);
+      assert.equal(result.matchedItem, 'Professor — Allan de Sousa Soares', body);
+    }
+    for (const body of [
+      'onde fica o professor Allan',
       'onde fica o docente Allan',
       'gabinete do docente Allan'
     ]) {

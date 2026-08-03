@@ -16,6 +16,9 @@ const createDirectoriesRepositoryMixin = require('./database/directories-reposit
 const createDeliveriesRepositoryMixin = require('./database/deliveries-repository');
 const createBackupsRepositoryMixin = require('./database/backups-repository');
 const createScheduleRepositoryMixin = require('./database/schedule-repository');
+const createIncomingRepositoryMixin = require('./database/incoming-repository');
+const createLearningRepositoryMixin = require('./database/learning-repository');
+const createChangeHistoryRepositoryMixin = require('./database/change-history-repository');
 
 const DEFAULT_SETTINGS = {
   bot_name: 'HUB Bot',
@@ -95,7 +98,17 @@ const DEFAULT_SETTINGS = {
   dashboard_stale_minutes: '120',
   professor_room_stale_days: '180',
   current_academic_period: '2026.2',
-  content_v0110_structured_schedule_calendar_typos: 'false'
+  content_v0110_structured_schedule_calendar_typos: 'false',
+  content_v0130_management_and_triggers: 'false',
+  private_context_without_reply: 'true',
+  external_backups_enabled: 'false',
+  external_backup_interval_hours: '24',
+  external_backup_remote: '',
+  external_backup_daily_keep: '7',
+  external_backup_weekly_keep: '4',
+  external_backup_preupdate_keep: '3',
+  update_github_repository: 'felipejuan/hub-whatsapp-bot',
+  update_github_branch: 'main'
 };
 
 const DEFAULT_LINKS = [
@@ -373,15 +386,20 @@ class Database {
     return { ...this.cache.settings };
   }
   getSetting(key, fallback = '') { const settings = this.getSettings(); return Object.hasOwn(settings, key) ? settings[key] : fallback; }
-  setSettings(values, useTransaction = true) {
+  setSettings(values, useTransaction = true, options = {}) {
     const allowed = new Set(Object.keys(DEFAULT_SETTINGS));
+    const before = this.getSettings();
+    const accepted = Object.fromEntries(Object.entries(values || {}).filter(([key]) => allowed.has(key)).map(([key,value]) => [key,String(value)]));
     const stmt = this.db.prepare('INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');
     if (useTransaction) this.db.exec('BEGIN');
     try {
-      for (const [key, value] of Object.entries(values || {})) if (allowed.has(key)) stmt.run(key, String(value));
+      for (const [key, value] of Object.entries(accepted)) stmt.run(key, value);
       if (useTransaction) this.db.exec('COMMIT');
       this.invalidate('settings');
-      if (Object.hasOwn(values || {}, 'log_retention_days')) this.pruneLogs();
+      if (Object.hasOwn(accepted, 'log_retention_days')) this.pruneLogs();
+      if (!options.skipHistory && Object.keys(accepted).some(key => before[key] !== accepted[key]) && typeof this.recordChangeHistory === 'function') {
+        this.recordChangeHistory({ entity_type:'settings', entity_id:'global', entity_label:'Configurações do bot', action:'updated', source:options.source || 'painel', before:Object.fromEntries(Object.keys(accepted).map(key => [key,before[key]])), after:accepted });
+      }
     } catch (error) { if (useTransaction) this.db.exec('ROLLBACK'); throw error; }
     return this.getSettings();
   }
@@ -757,7 +775,7 @@ class Database {
 
 }
 const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, crypto };
-for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin]) {
+for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin, createIncomingRepositoryMixin, createLearningRepositoryMixin, createChangeHistoryRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;
   Object.defineProperties(Database.prototype, descriptors);

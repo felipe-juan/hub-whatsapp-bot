@@ -105,9 +105,11 @@ function hasScheduleIntent(text) {
   if (/\b(?:aula|aulas) normal(?:mente)?\b/u.test(normalized)
     || /\b(?:nao|nunca) (?:vai ter|tera|tem|teremos) aula\b/u.test(normalized)
     || /\b(?:so|apenas|menos) (?:na |no )?(?:segunda|terca|quarta|quinta|sexta|sabado|domingo)\b.*\b(?:nao|sem) (?:teremos )?aula\b/u.test(normalized)
-    || /\ba semana toda\b/u.test(normalized)) return false;
+    || /\ba semana toda\b/u.test(normalized)
+    || /\b(?:a aula|as aulas|a materia|a disciplina)\b.*\b(?:foi|foram|estava|estavam|acabou|acabaram|comecou|comecaram)\b/u.test(normalized)) return false;
 
   const subject = '(?:aula|aulas|horario|horarios|grade|disciplina|disciplinas|materia|materias|cadeira|cadeiras|componente|componentes)';
+  if (new RegExp(`\\bsera que\\b.*\\b${subject}\\b`, 'u').test(normalized)) return true;
   const date = '(?:hoje|amanha|depois de amanha|ontem|domingo|segunda(?:-feira| feira)?|terca(?:-feira| feira)?|quarta(?:-feira| feira)?|quinta(?:-feira| feira)?|sexta(?:-feira| feira)?|sabado)';
 
   if (new RegExp(`\\b(?:qual|quais)(?:\\s+e)?(?:\\s+(?:o|a|os|as))?\\s+${subject}\\b`, 'u').test(normalized)) return true;
@@ -207,7 +209,13 @@ function classesForSemesterAndDay(semester, dayIndex, scheduleEntries = null) {
 function eventApplies(event, semester, iso) {
   if (event.active === false || String(event.start_date || '') > iso || String(event.end_date || event.start_date || '') < iso) return false;
   const semesters = Array.isArray(event.semester_numbers) ? event.semester_numbers.map(Number) : [];
-  return !semesters.length || semesters.includes(Number(semester));
+  if (semesters.length && !semesters.includes(Number(semester))) return false;
+  if (String(event.recurrence_type || 'none') !== 'weekly') return true;
+  const weekdays = Array.isArray(event.recurrence_weekdays) ? event.recurrence_weekdays.map(Number) : [];
+  const target = new Date(`${iso}T12:00:00Z`); const start = new Date(`${event.start_date}T12:00:00Z`);
+  if (!Number.isFinite(target.getTime()) || !Number.isFinite(start.getTime()) || !weekdays.includes(target.getUTCDay())) return false;
+  const weeks = Math.floor((target.getTime() - start.getTime()) / (7 * 86400000));
+  return weeks >= 0 && weeks % Math.max(1, Number(event.recurrence_interval || 1)) === 0;
 }
 
 function effectiveScheduleDay(dayIndex, events = []) {
@@ -290,6 +298,25 @@ function formatSemesterScheduleResponse(semester, targetOrDayIndex, { scheduleEn
   return `${title}\n\n${noticeText}${body}`.trim();
 }
 
+function scheduleDetailIntent(text) {
+  const normalized = normalizeText(text).replace(/^(?:e|mas|entao)\s+/, '').trim();
+  if (/^(?:qual|quais)?\s*(?:a )?(?:sala|salas|laboratorio|laboratorios|lab)(?:\s+(?:e|sao|serao))?$/u.test(normalized)) return 'rooms';
+  if (/^(?:quem|qual|quais)?\s*(?:e|sao|serao)?\s*(?:o|a|os|as)?\s*professor(?:a|es|as)?$/u.test(normalized)) return 'professors';
+  return '';
+}
+
+function formatSemesterScheduleDetail(semester, target, detail, { scheduleEntries = null, calendarEvents = [], academicPeriod = '2026.2' } = {}) {
+  const events = (calendarEvents || []).filter(event => eventApplies(event, semester, target.iso || dateIso(target.date)));
+  const scheduleDay = effectiveScheduleDay(target.dayIndex, events);
+  const regular = classesForSemesterAndDay(semester, scheduleDay, scheduleEntries);
+  const applied = applyCalendarExceptions(regular, events);
+  const title = semesterScheduleTitle(semester, target.dayIndex, target.date);
+  if (!applied.classes.length) return `${title}\n\nNenhuma aula disponível para essa continuação no quadro ${academicPeriod}.`;
+  if (detail === 'rooms') return `${title}\n\n${applied.classes.map(item => `*${item.discipline}*\nSala: ${item.room}`).join('\n\n')}`;
+  if (detail === 'professors') return `${title}\n\n${applied.classes.map(item => `*${item.discipline}*\nProfessor: ${item.professor}`).join('\n\n')}`;
+  return formatSemesterScheduleResponse(semester, target, { scheduleEntries, calendarEvents, academicPeriod });
+}
+
 function formatSemesterSchedulePrompt(dayIndex, date = null) {
   const datePart = date ? `, ${dateDisplay(date)}` : '';
   return [
@@ -344,11 +371,14 @@ module.exports = {
   semesterScheduleTitle,
   formatSemesterScheduleResponse,
   formatSemesterSchedulePrompt,
+  formatSemesterScheduleDetail,
+  scheduleDetailIntent,
   classifySemesterScheduleRequest,
   semesterFromFollowUp,
   zonedCalendarDate,
   dateIso,
   dateDisplay,
   applyCalendarExceptions,
-  effectiveScheduleDay
+  effectiveScheduleDay,
+  eventApplies
 };

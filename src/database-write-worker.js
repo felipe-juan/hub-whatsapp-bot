@@ -57,7 +57,7 @@ const DATABASE_CALL_ALLOWLIST = new Set([
   'saveAutomaticMessageDraft','saveAutomaticMessage','reorderAutomaticMessages','bulkAutomaticMessages',
   'publishAutomaticMessage','discardAutomaticMessageDraft','deleteAutomaticMessage','resolvePackageAutomaticMessageUpdate',
   'duplicateAutomaticMessage','restoreAutomaticMessageHistory','setAutomaticMessageAttachment','clearAutomaticMessageAttachment',
-  'applyProfessorScheduleImport','replaceProfessorScheduleEntries','syncProfessorScheduleRecord','saveAcademicCalendarEvent','deleteAcademicCalendarEvent','saveTeacher','deleteTeacher','saveSector','deleteSector','saveSynonymGroup','deleteSynonymGroup',
+  'applyProfessorScheduleImport','replaceProfessorScheduleEntries','syncProfessorScheduleRecord','saveProfessorScheduleEntry','deleteProfessorScheduleEntry','saveAcademicCalendarEvent','deleteAcademicCalendarEvent','saveTeacher','deleteTeacher','revertChangeHistory','saveSector','deleteSector','saveSynonymGroup','deleteSynonymGroup',
   'saveHubLinkDraft','publishHubLink','discardHubLinkDraft','deleteHubLink',
   'saveFaqDraft','publishFaq','discardFaqDraft','deleteFaq','saveCalculator','setGroupPermissions',
   'clearLogs','clearUsageStats','importData','updateLinkHealth','applyLinkHealthBatch',

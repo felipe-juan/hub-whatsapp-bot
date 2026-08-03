@@ -145,7 +145,7 @@ test('backup preserva quadro estruturado e exceções acadêmicas personalizadas
       course: 'bsi', semester_numbers: [3], discipline_code: 'LPII', new_room: 'H999', active: true
     });
     const backup = source.db.exportData();
-    assert.equal(backup.version, 11);
+    assert.equal(backup.version, 12);
     assert.ok(backup.professor_schedule_entries.length >= 60);
     assert.ok(backup.academic_calendar_events.some(event => event.title === 'Teste de backup'));
     target.db.importData(backup);

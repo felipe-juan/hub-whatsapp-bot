@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.13.1 — 2026-08-03
+
+- evita que perguntas de confirmação como `hoje tem aula de Pablo?`, `Amanda vai dar aula hoje?` e `vai ter aula com Alexandro amanhã?` ativem o quadro de horários ou o card docente;
+- trata essas mensagens como confirmação de presença, cancelamento ou realização efetiva da aula, informação que o bot não consegue verificar;
+- mantém funcionando perguntas objetivas sobre o quadro, como `quais dias Pablo dá aula?`, `qual sala de Pablo?` e `quais aulas hoje no 3º semestre?`;
+- no privado, impede também que esse caso específico receba a ajuda automática de mensagem não reconhecida;
+- adiciona testes de regressão para grupos, conversas privadas e consultas válidas ao quadro.
+
+## 0.13.0 — 2026-08-03
+
+- mantém por alguns minutos o contexto das consultas de aulas em conversas privadas mesmo sem reply, preservando a exigência de reply em grupos;
+- adiciona relatório automático de inconsistências para docentes, siglas, salas, choques de horário, anexos ausentes e exceções inválidas;
+- consolida a fila persistente de saída no painel, com retomada após reinício, tentativas, deduplicação e estados de falha ou resultado incerto;
+- adiciona a área **Sistema e manutenção**, com saúde da Oracle, memória, swap, disco, fila, logs, verificação e teste de envio;
+- permite verificar e instalar novas versões do GitHub pelo painel, criando backup completo, validando o pacote, executando testes e restaurando a versão anterior em caso de falha;
+- adiciona backup externo automático criptografado por AES-256-GCM, com destinos locais montados ou rclone e retenção diária, semanal e pré-atualização;
+- adiciona editor estruturado do quadro docente, sincronizando cards, consultas e referências de exceções sem substituir gatilhos ou anexos;
+- registra histórico de alterações de docentes, horários, calendário e configurações, com reversão pelo painel;
+- amplia os gatilhos do contato da Coordenação de BSI, incluindo `contato coordenador`, `contato coordenação` e variantes;
+- faz `qual sala de <professor>` abrir o card docente com as salas das aulas, em vez da sala de atendimento;
+- corrige a desambiguação de nomes para não confundir nomes claramente diferentes, como Pablo e Paulo, mantendo confirmação apenas para nomes realmente iguais ou foneticamente próximos;
+- adiciona integração segura com o serviço systemd da Oracle para atualização, reinício e download de logs pelo painel.
+
+## 0.12.0 — 2026-08-03
+
+- Adiciona comparação granular e aplicação seletiva ao importar o quadro de horários.
+- Preserva e-mail, anexo, gatilhos, escopo e demais personalizações dos cards docentes.
+- Permite continuações por reply nas consultas de aulas.
+- Adiciona aprendizado assistido com aprovação ou rejeição no painel.
+- Adiciona intervalos, recorrência semanal e importação CSV às exceções acadêmicas.
+- Persiste IDs de mensagens recebidas para bloquear respostas duplicadas após reconexão ou reinício.
+- Corrige reconhecimento de perguntas do tipo “será que tem aula hoje?”.
+- Corrige limpeza de registros estruturados quando o nome ou e-mail de um professor é atualizado.
+
 ## 0.11.0 — 2026-08-03
 
 - transforma o quadro docente em dados estruturados por professor, e-mail, disciplina, sigla, semestre, dia, início, fim, sala, período letivo e fonte;

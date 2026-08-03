@@ -56,7 +56,7 @@ async function execute(taskId, type, payload = {}) {
     }
     case 'professor.apply':
       progress(taskId, 30, 'Atualizando professores');
-      return db.applyProfessorScheduleImport(payload.records || []);
+      return db.applyProfessorScheduleImport(payload.records || [], payload.selectedChangeIds ?? null);
     case 'import.teachers':
       return importTeachersCsv(db, payload.csv || '');
     case 'import.links':

@@ -39,7 +39,11 @@ const {
   classifySemesterScheduleRequest,
   formatSemesterScheduleResponse,
   formatSemesterSchedulePrompt,
-  semesterFromFollowUp
+  semesterFromFollowUp,
+  parseSemester,
+  parseTargetDate,
+  formatSemesterScheduleDetail,
+  scheduleDetailIntent
 } = require('./semester-schedule');
 
 function asBool(value, fallback = false) {
@@ -129,6 +133,43 @@ class BotEngine {
     };
   }
 
+  unrecognizedSuggestion(body, evaluation = {}) {
+    const normalized = normalizeText(body);
+    if (!normalized || normalized.length < 3 || normalized.startsWith('!')) return null;
+    const teachers = this.db.listTeachers({ activeOnly: true });
+    const professorMatches = findProfessorDirectoryMatches(normalized, teachers);
+    if (professorMatches.length === 1) {
+      const teacher = professorMatches[0].teacher;
+      const card = this.db.listAutomaticMessages({ activeOnly: true })
+        .find(item => normalizeText(item.title) === normalizeText(`Professor — ${teacher.name}`));
+      if (card) return { suggested_message_id: Number(card.id), suggested_title: card.title, confidence: professorMatches[0].fuzzy ? 0.84 : 0.94,
+        reasons: ['nome de professor reconhecido; intenção ainda não cadastrada'] };
+    }
+    const ranked = [...(evaluation.analysis || [])]
+      .filter(item => Number(item.id) > 0 && Number(item.score || 0) > 0)
+      .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+    const best = ranked[0];
+    if (!best) return null;
+    const second = ranked[1];
+    if (second && Number(best.score || 0) - Number(second.score || 0) < 1) return null;
+    return { suggested_message_id: Number(best.id), suggested_title: best.title, confidence: Math.min(0.9, 0.45 + Number(best.score || 0) / 100),
+      reasons: [...(best.reasons || []), ...(best.blockedReasons || [])].slice(0, 6) };
+  }
+
+  recordUnrecognizedSuggestion(body, evaluation, chat) {
+    if (!this.db.addUnrecognizedSuggestion) return;
+    const suggestion = this.unrecognizedSuggestion(body, evaluation);
+    if (!suggestion) return;
+    try {
+      this.db.addUnrecognizedSuggestion({
+        message_excerpt: String(body || '').slice(0, 300), normalized_message: normalizeText(body),
+        chat_type: chat?.isGroup ? 'group' : 'private', chat_name: chat?.name || '', ...suggestion
+      });
+    } catch (error) {
+      console.warn('Não foi possível registrar sugestão de aprendizado assistido:', error.message);
+    }
+  }
+
   activeContent({ includeDrafts = false } = {}) {
     let messages = this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false });
     if (includeDrafts) {
@@ -188,13 +229,61 @@ class BotEngine {
     };
   }
 
+  professorAttendanceConfirmation(text) {
+    const normalized = normalizeText(text);
+    if (!normalized) return false;
+
+    const target = parseTargetDate(text, Date.now());
+    if (!target.matched) return false;
+
+    const teachers = this.db.listTeachers({ activeOnly: true });
+    const exactTeacherMatches = findProfessorDirectoryMatches(normalized, teachers)
+      .filter(match => !match.fuzzy);
+    if (!exactTeacherMatches.length) return false;
+
+    // Perguntas abertas sobre o quadro continuam respondíveis. O bloqueio é
+    // restrito a confirmações factuais do tipo “vai ter mesmo?”, que dependem
+    // de presença, cancelamento ou decisão de última hora do docente.
+    const asksWhichInformation = /\b(?:qual|quais|onde|quando|que horas|qual horario|quais horarios|quais dias|que materia|qual materia|quais materias|que disciplina|qual disciplina|quais disciplinas|em qual sala)\b/u.test(normalized);
+    if (asksWhichInformation) return false;
+
+    const confirmationPatterns = [
+      /\b(?:tem|tera|vai ter|havera|vai haver)\s+aula\s+(?:de|do|da|com)\b/u,
+      /\b(?:vai|ira)\s+(?:dar|ministrar|lecionar)\s+aula\b/u,
+      /\b(?:da|dara|ministra|ministrara|leciona|lecionara)\s+aula\b/u,
+      /\baula\s+(?:de|do|da|com)\b[\s\S]{0,100}\b(?:acontece|acontecera|vai acontecer|esta confirmada|foi confirmada|vai rolar|rola)\b/u,
+      /\b(?:vem|vira|vai vir|aparece|vai aparecer|comparece|vai comparecer)\b[\s\S]{0,100}\b(?:hoje|amanha|depois de amanha|domingo|segunda|terca|quarta|quinta|sexta|sabado)\b/u
+    ];
+    return confirmationPatterns.some(pattern => pattern.test(normalized));
+  }
+
+  professorAttendanceIgnoredEvaluation(text, context = {}) {
+    if (!this.professorAttendanceConfirmation(text)) return null;
+    return {
+      matched: false,
+      type: 'none',
+      text: '',
+      signature: '',
+      matchedItem: '',
+      redactLog: false,
+      reasons: ['confirmação sobre presença do professor ou realização efetiva da aula não pode ser verificada pelo bot'],
+      candidates: [],
+      conflict: false,
+      blockedBy: 'teacher-attendance-unverifiable',
+      topic: 'Horários de BSI',
+      context: { ...context },
+      analysis: [],
+      suppressPrivateFallback: true
+    };
+  }
+
   professorCardIntent(text) {
     const normalized = normalizeText(text);
     if (!normalized) return false;
     const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas)\b/u.test(normalized);
     if (!topic) return false;
-    if (implicitQuestionStructure(text)) return true;
-    if (/^(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|sala|laboratorio|lab)\b/u.test(normalized)) return true;
+    if (/\?\s*$/.test(String(text || '')) || implicitQuestionStructure(text)) return true;
+    if (/^(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|sala|laboratorio|lab|qual\s+(?:e\s+)?(?:a\s+)?sala|em\s+qual\s+sala)\b/u.test(normalized)) return true;
     return /\b(?:da|dar|dá|ministra|ensina|leciona) aula\b[\s\S]{0,80}\b(?:quais|qual|quando|onde|dias|materias|disciplinas|sala)\b/u.test(String(text || '').toLowerCase());
   }
 
@@ -263,7 +352,14 @@ class BotEngine {
       type: 'semester_schedule',
       text: request.text,
       signature: `semester-schedule:${request.iso}:${request.semester}`,
-      matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${request.semester}º semestre`
+      matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${request.semester}º semestre`,
+      contextSubject: {
+        kind: 'semester_schedule',
+        title: SEMESTER_SCHEDULE_CARD_TITLE,
+        targetDate: request.iso,
+        dayIndex: request.dayIndex,
+        semester: request.semester
+      }
     };
   }
 
@@ -275,13 +371,26 @@ class BotEngine {
     // A Coordenação de BSI possui um card de contato completo com o nome do
     // coordenador. Para essa intenção específica, o card tem precedência sobre
     // a resposta resumida do diretório estruturado.
-    if (normalizeText(sector.acronym || '') === 'csi' && intent === 'contact') {
+    if (normalizeText(sector.acronym || '') === 'csi' && ['contact', 'email', 'phone', 'whatsapp'].includes(intent)) {
       const normalizedRequest = normalizeText(text);
-      const asksCoordinationOffice = /\b(?:coordenacao|csi)\b/u.test(normalizedRequest)
-        && !/\bcoordenador(?:a)?\b/u.test(normalizedRequest);
-      const hasCoordinationCard = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) }).messages
-        .some(item => normalizeText(item.title) === normalizeText('BSI — Contato da coordenação'));
-      if (asksCoordinationOffice && hasCoordinationCard) return null;
+      const asksCoordinationContact = /\b(?:coordenacao|coordenador(?:a)?|csi)\b/u.test(normalizedRequest);
+      const coordinationCard = this.activeContent({ includeDrafts: Boolean(context.includeDrafts) }).messages
+        .find(item => normalizeText(item.title) === normalizeText('BSI — Contato da coordenação'));
+      if (asksCoordinationContact && coordinationCard) {
+        return {
+          matched: true, type: 'message', text: coordinationCard.response_text,
+          signature: `message:${coordinationCard.id}`, matchedItem: coordinationCard.title,
+          topic: coordinationCard.topic || coordinationCard.title, attachment: coordinationCard.attachment || null,
+          details_text: coordinationCard.details_text || '', source_url: coordinationCard.source_url || '',
+          source_title: coordinationCard.source_title || '', verified_at: coordinationCard.verified_at || '',
+          reasons: ['contato completo da Coordenação de BSI'], candidates: [], conflict: false, redactLog: false,
+          context: { ...context }, analysis: [], contextSubject: {
+            kind: 'message', id: Number(coordinationCard.id || 0), title: coordinationCard.title,
+            topic: coordinationCard.topic || coordinationCard.title, details_text: coordinationCard.details_text || '',
+            source_url: coordinationCard.source_url || '', source_title: coordinationCard.source_title || '', verified_at: coordinationCard.verified_at || ''
+          }
+        };
+      }
     }
     if (/\?\s*$/.test(String(text || '')) || implicitQuestionStructure(text)) {
       const intentLabel = intent === 'location' ? 'onde fica' : intent === 'services' ? 'o que resolve' : intent === 'source' ? 'qual a fonte' : 'contato';
@@ -360,6 +469,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       reasons: [], candidates: [], conflict: false, blockedBy: '', topic: '', context: { ...context }, analysis: []
     };
     if (!text) return result;
+
+    const attendanceConfirmation = this.professorAttendanceIgnoredEvaluation(text, context);
+    if (attendanceConfirmation) return attendanceConfirmation;
 
     if (isHelpCommand(text)) {
       if (!this.featureAllowed(context, 'help', settings)) return { ...result, blockedBy: 'group-help-disabled', reasons: ['ajuda desativada neste grupo'] };
@@ -493,7 +605,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const raw = String(body || '').trim();
     const normalized = normalizeText(raw.replace(/[?]+\s*$/, '')).replace(/^(?:e|mas|entao|então)\s+/, '').trim();
     const hasQuestion = /\?\s*$/.test(raw);
+    const isGroup = String(message?.from || '').endsWith('@g.us') || Boolean(message?.isGroup);
     if (stored.kind === 'semester_schedule_prompt') {
+      if (isGroup && !message.quotedFromMe) return null;
       const semester = semesterFromFollowUp(raw);
       if (!semester) return null;
       const dayIndex = Number(stored.dayIndex);
@@ -510,7 +624,41 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         signature: `semester-schedule:${stored.targetDate || 'context'}:${semester}`,
         matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${semester}º semestre`,
         topic: 'Horários de BSI', reasons: ['semestre informado como continuação da consulta'],
-        candidates: [], conflict: false, redactLog: false, attachment: null
+        candidates: [], conflict: false, redactLog: false, attachment: null,
+        contextSubject: { kind: 'semester_schedule', title: SEMESTER_SCHEDULE_CARD_TITLE,
+          targetDate: stored.targetDate || '', dayIndex, semester }
+      };
+    }
+    if (stored.kind === 'semester_schedule') {
+      const contextualLead = /^(?:e|mas|entao|então)\b/u.test(normalizeText(raw));
+      const privateNoReplyAllowed = !isGroup && asBool(settings.private_context_without_reply, true) && contextualLead;
+      if (!message.quotedFromMe && !privateNoReplyAllowed) return null;
+      const dateRequest = parseTargetDate(raw, message.timestampMs || Date.now());
+      const semester = parseSemester(raw) || Number(stored.semester || 0);
+      const detail = scheduleDetailIntent(raw);
+      const changedDate = Boolean(dateRequest?.matched);
+      const changedSemester = Boolean(parseSemester(raw));
+      if (!changedDate && !changedSemester && !detail) return null;
+      if (!semester || semester < 1 || semester > 8) return null;
+      const storedDate = stored.targetDate ? new Date(`${stored.targetDate}T12:00:00Z`) : null;
+      const target = changedDate
+        ? { dayIndex: dateRequest.dayIndex, iso: dateRequest.iso, date: dateRequest.date }
+        : { dayIndex: Number(stored.dayIndex), iso: stored.targetDate || '', date: storedDate };
+      if (!Number.isInteger(target.dayIndex) || target.dayIndex < 0 || target.dayIndex > 6) return null;
+      const academicPeriod = String(settings.current_academic_period || '2026.2');
+      const scheduleEntries = this.db.listProfessorScheduleEntries?.({ academicPeriod, activeOnly: true }) || [];
+      const calendarEvents = this.db.listAcademicCalendarEvents?.({ activeOnly: true, course: 'bsi' }) || [];
+      const text = detail
+        ? formatSemesterScheduleDetail(semester, target, detail, { scheduleEntries, calendarEvents, academicPeriod })
+        : formatSemesterScheduleResponse(semester, target, { scheduleEntries, calendarEvents, academicPeriod });
+      return {
+        matched: true, type: detail ? `semester_schedule_${detail}` : 'semester_schedule', text,
+        signature: `semester-schedule:${target.iso || 'context'}:${semester}:${detail || 'full'}`,
+        matchedItem: `${SEMESTER_SCHEDULE_CARD_TITLE} — ${semester}º semestre`, topic: 'Horários de BSI',
+        reasons: ['continuação contextual da consulta de aulas'], candidates: [], conflict: false,
+        redactLog: false, attachment: null,
+        contextSubject: { kind: 'semester_schedule', title: SEMESTER_SCHEDULE_CARD_TITLE,
+          targetDate: target.iso || '', dayIndex: target.dayIndex, semester }
       };
     }
     if (stored.kind === 'sector') {
@@ -772,12 +920,17 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       return;
     }
 
-    let evaluation = this.contextualFollowUpEvaluation(message, body, settings)
+    const ignoredAttendanceConfirmation = this.professorAttendanceIgnoredEvaluation(body, {
+      isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now()
+    });
+    let evaluation = ignoredAttendanceConfirmation
+      || this.contextualFollowUpEvaluation(message, body, settings)
       || this.evaluate(body, { isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now() });
+    if (!evaluation.matched) this.recordUnrecognizedSuggestion(body, evaluation, chat);
     if (!evaluation.matched && !this.isAdminCommand(body) && this.botMentioned(message, body, settings) && this.featureAllowed({ isGroup: Boolean(chat.isGroup), groupId }, 'help', settings)) {
       evaluation = this.unknownMentionEvaluation(settings);
     }
-    if (!evaluation.matched && !chat.isGroup) evaluation = this.privateUnknownEvaluation(settings);
+    if (!evaluation.matched && !chat.isGroup && !evaluation.suppressPrivateFallback) evaluation = this.privateUnknownEvaluation(settings);
     if (!evaluation.matched) {
       this.diagnostic({ type: 'ignored', outcome: 'ignored', matchedItem: '', summary: evaluation.blockedBy || evaluation.reasons.join('; ') || 'Nenhuma regra correspondeu.', details: this.analysisDetails(evaluation), ...diagnosticBase }, settings);
       return;

@@ -5,6 +5,7 @@ const { BotEngine } = require('./bot-engine');
 const { WhatsAppManager } = require('./whatsapp');
 const { AdminServer } = require('./admin-server');
 const { BackupManager } = require('./backup-manager');
+const { ExternalBackupManager } = require('./external-backup-manager');
 const { LinkChecker } = require('./link-checker');
 const { UpdateManager } = require('./update-manager');
 const { DiagnosticBus } = require('./diagnostics');
@@ -44,6 +45,7 @@ async function main() {
   });
   const whatsapp = new WhatsAppManager({ config, database, engine, realtime, writeQueue });
   const backups = new BackupManager({ database, backupDir: config.backupDir, dataDir: config.dataDir, attachmentsDir: config.attachmentsDir, authDir: config.authDir, rootDir: config.rootDir, autoSchedule: false });
+  const externalBackups = new ExternalBackupManager({ database, backupManager: backups, dataDir: config.dataDir });
   const linkChecker = new LinkChecker({ database });
   const updates = new UpdateManager({ rootDir: config.rootDir, dataDir: config.dataDir });
   const adminTasks = new AdminTaskRunner({ database, realtime });
@@ -71,11 +73,12 @@ async function main() {
   engine.setServices({ whatsapp, backupManager: backupProxy, linkChecker: linksProxy, attachments, writeQueue });
 
   database.onChange(event => realtime.publish('database-change', event));
-  const admin = new AdminServer({ config, database, whatsapp, engine, backupManager: backups, linkChecker, updateManager: updates, diagnostics, attachments, adminTasks, adminScheduler, realtime, writeQueue, coreIpc });
+  const admin = new AdminServer({ config, database, whatsapp, engine, backupManager: backups, externalBackupManager: externalBackups, linkChecker, updateManager: updates, diagnostics, attachments, adminTasks, adminScheduler, realtime, writeQueue, coreIpc });
   await attachments.cleanup(database.referencedAttachmentNames());
 
   await admin.start();
   await adminScheduler.start();
+  externalBackups.start();
   whatsapp.start().catch(error => console.error('Erro ao iniciar WhatsApp:', error));
 
   let shuttingDown = false;
@@ -84,6 +87,7 @@ async function main() {
     shuttingDown = true;
     console.log(`\n${signal}: encerrando...`);
     adminScheduler.stop();
+    externalBackups.stop();
     const forcedExit = setTimeout(() => process.exit(1), 18_000);
     forcedExit.unref?.();
     coreIpc.close();

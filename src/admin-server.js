@@ -4,8 +4,12 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const os = require('node:os');
 const { URL } = require('node:url');
+const { execFileSync, spawn } = require('node:child_process');
+const { runConsistencyCheck } = require('./consistency-checker');
+const { systemHealth } = require('./system-health');
 const { importTeachersCsv, importLinksCsv, importAutomaticMessagesCsv } = require('./csv-import');
 const { parseProfessorScheduleFile } = require('./professor-schedule-import');
+const { parseAcademicCalendarCsv } = require('./academic-calendar-import');
 
 const MAX_STREAM_BUFFER_BYTES = 512 * 1024;
 function safeStreamWrite(res, payload) {
@@ -101,9 +105,9 @@ async function readBody(req, limit = 1024 * 1024) {
 }
 
 class AdminServer {
-  constructor({ config, database, whatsapp, engine, backupManager, linkChecker, updateManager, diagnostics, attachments, adminTasks = null, adminScheduler = null, realtime = null, coreIpc = null, writeQueue = null }) {
+  constructor({ config, database, whatsapp, engine, backupManager, externalBackupManager = null, linkChecker, updateManager, diagnostics, attachments, adminTasks = null, adminScheduler = null, realtime = null, coreIpc = null, writeQueue = null }) {
     this.config = config; this.db = database; this.whatsapp = whatsapp; this.engine = engine;
-    this.backups = backupManager; this.linkChecker = linkChecker; this.updates = updateManager;
+    this.backups = backupManager; this.externalBackups = externalBackupManager; this.linkChecker = linkChecker; this.updates = updateManager;
     this.diagnostics = diagnostics; this.attachments = attachments; this.adminTasks = adminTasks; this.adminScheduler = adminScheduler; this.realtime = realtime; this.coreIpc = coreIpc; this.writeQueue = writeQueue;
     this.sessions = new Map(); this.loginAttempts = new Map(); this.loginVerifications = new Set();
     this.maxConcurrentLoginVerifications = 4;
@@ -181,13 +185,16 @@ class AdminServer {
     const analytics = this.cachedStatusPart('analytics30', 60_000, () => this.db.getUsageStats(30));
     const databaseHealth = this.cachedStatusPart('database-health', 60_000, () => this.db.healthCheck());
     return {
-      version: this.updates?.status?.().currentVersion || '0.11.0', whatsapp: this.whatsapp.getStatus(),
+      version: this.updates?.status?.().currentVersion || '0.13.1', whatsapp: this.whatsapp.getStatus(),
       stats,
       analytics,
       health: {
         process: { pid: process.pid, uptimeSeconds: Math.floor(process.uptime()), rssBytes: memory.rss, heapUsedBytes: memory.heapUsed, heapTotalBytes: memory.heapTotal, nodeVersion: process.version },
         database: { ...databaseHealth, wal: this.cachedStatusPart('database-wal', 15_000, () => this.db.walStatus?.() || null) }, engine: this.engine?.getMetrics?.() || {},
+        system: this.cachedStatusPart('system-health', 5_000, () => systemHealth(this.config.rootDir)),
+        consistency: this.cachedStatusPart('consistency', 60_000, () => runConsistencyCheck(this.db, { attachmentsDir: this.config.attachmentsDir })),
         backups: this.cachedStatusPart('backups-status', 15_000, () => this.backups?.status?.() || null),
+        externalBackups: this.cachedStatusPart('external-backups-status', 15_000, () => this.externalBackups?.status?.() || null),
         links: this.cachedStatusPart('links-status', 5_000, () => this.linkChecker?.status?.() || null),
         update: this.cachedStatusPart('update-status', 3_000, () => this.updates?.status?.() || null),
         diagnostics: this.diagnostics?.stats?.() || null,
@@ -198,6 +205,32 @@ class AdminServer {
         databaseWriter: this.writeQueue?.status?.() || null
       }
     };
+  }
+
+  controlHelper() { return '/usr/local/sbin/hub-whatsapp-bot-control'; }
+
+  runControl(action, args = [], options = {}) {
+    const helper = this.controlHelper();
+    if (!fs.existsSync(helper)) throw httpError('Integração com o serviço Oracle não instalada. Execute: sudo bash scripts/install-oracle-management.sh', 503);
+    return execFileSync('sudo', ['-n', helper, action, ...args.map(String)], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: options.timeout || 30_000 });
+  }
+
+  scheduleServiceRestart() {
+    const helper = this.controlHelper();
+    if (!fs.existsSync(helper)) throw httpError('Integração com o serviço Oracle não instalada. Execute: sudo bash scripts/install-oracle-management.sh', 503);
+    const child = spawn('/bin/bash', ['-lc', `sleep 1; sudo -n ${helper} restart`], { detached: true, stdio: 'ignore' });
+    child.unref();
+    return true;
+  }
+
+  async prepareUpdateBackups(reason = 'pre-update') {
+    const local = this.adminTasks
+      ? await this.adminTasks.run('backup.full', { includeSession: true }, { timeoutMs: 20 * 60 * 1000 })
+      : await this.backups.createFullZip({ includeSession: true });
+    let external = null;
+    const externalStatus = this.externalBackups?.status?.();
+    if (externalStatus?.settings?.enabled) external = await this.externalBackups.run(reason);
+    return { local, external };
   }
 
   publish(type, payload = {}) { this.realtime?.publish?.(type, payload); }
@@ -352,7 +385,7 @@ class AdminServer {
     }
     if (route === '/api/settings' && req.method === 'GET') return json(res, 200, this.db.getSettings());
     if (route === '/api/settings' && req.method === 'PUT') {
-      const result = await this.mutateDatabase('setSettings', [await readBody(req)], { reason: 'settings', reloadRules: false }); this.backups?.reload?.().catch?.(error => console.warn('Falha ao recarregar backups:', error.message)); this.adminScheduler?.reload?.(); this.publish('settings-changed', {}); return json(res, 200, result);
+      const result = await this.mutateDatabase('setSettings', [await readBody(req)], { reason: 'settings', reloadRules: false }); this.backups?.reload?.().catch?.(error => console.warn('Falha ao recarregar backups:', error.message)); this.externalBackups?.reload?.(); this.adminScheduler?.reload?.(); this.publish('settings-changed', {}); return json(res, 200, result);
     }
     if (route === '/api/security/password' && req.method === 'POST') {
       const body = await readBody(req); await this.mutateDatabase('changeAdminPassword', [body.current_password || '', body.new_password || ''], { reason: 'password', reloadRules: false }); this.clearSessions();
@@ -453,7 +486,7 @@ class AdminServer {
     }
     if (route === '/api/import/professor-schedule/apply' && req.method === 'POST') {
       const body = await readBody(req, 10 * 1024 * 1024);
-      const result = await this.mutateDatabase('applyProfessorScheduleImport', [body.records || []], { reason: 'professor-import', timeoutMs: 180_000 });
+      const result = await this.mutateDatabase('applyProfessorScheduleImport', [body.records || [], body.selected_change_ids ?? null], { reason: 'professor-import', timeoutMs: 180_000 });
       return json(res, 200, result);
     }
     if (route === '/api/templates/professor-schedule.csv' && req.method === 'GET') return text(res, 200,
@@ -470,6 +503,22 @@ Allan de Sousa Soares,allansoares@ifba.edu.br,Matemática Discreta I,1º semestr
       dayOfWeek: url.searchParams.has('day') ? Number(url.searchParams.get('day')) : null,
       professor: url.searchParams.get('professor') || '', discipline: url.searchParams.get('discipline') || ''
     }));
+    if (route === '/api/professor-schedule-entries' && req.method === 'POST') return json(res, 201, await this.mutateDatabase('saveProfessorScheduleEntry', [await readBody(req)], { reason: 'structured-schedule-created' }));
+    const structuredScheduleMatch = route.match(/^\/api\/professor-schedule-entries\/(\d+)$/);
+    if (structuredScheduleMatch && req.method === 'PUT') return json(res, 200, await this.mutateDatabase('saveProfessorScheduleEntry', [await readBody(req), structuredScheduleMatch[1]], { reason: 'structured-schedule-updated' }));
+    if (structuredScheduleMatch && req.method === 'DELETE') return json(res, 200, { deleted: await this.mutateDatabase('deleteProfessorScheduleEntry', [structuredScheduleMatch[1]], { reason: 'structured-schedule-deleted' }) });
+    if (route === '/api/import/academic-calendar/preview' && req.method === 'POST') {
+      const buffer = await readBuffer(req, 5 * 1024 * 1024);
+      return json(res, 200, parseAcademicCalendarCsv(buffer.toString('utf8')));
+    }
+    if (route === '/api/import/academic-calendar/apply' && req.method === 'POST') {
+      const body = await readBody(req, 5 * 1024 * 1024);
+      return json(res, 200, await this.mutateDatabase('applyAcademicCalendarImport', [body.events || []], { reason: 'academic-calendar-import', reloadRules: false }));
+    }
+    if (route === '/api/templates/academic-calendar.csv' && req.method === 'GET') return text(res, 200,
+      'tipo,data_inicial,data_final,titulo,descricao,curso,semestres,disciplina,professor,sala_anterior,nova_sala,dia_de_reposicao,hora_inicial,hora_final,recorrencia,dias_da_semana,intervalo_semanas,url_fonte,fonte,verificada_em,ativo\nMudança de sala,10/08/2026,31/08/2026,LPII na H105,,bsi,3,LPII,,H108,H105,,,,semanal,segunda,1,,,03/08/2026,sim\n',
+      'text/csv; charset=utf-8', { 'Content-Disposition': 'attachment; filename="excecoes-academicas-modelo.csv"' });
+
     if (route === '/api/academic-calendar' && req.method === 'GET') return json(res, 200, this.db.listAcademicCalendarEvents({
       startDate: url.searchParams.get('start') || '', endDate: url.searchParams.get('end') || '',
       activeOnly: url.searchParams.get('all') !== '1', course: url.searchParams.get('course') || ''
@@ -531,10 +580,40 @@ Allan de Sousa Soares,allansoares@ifba.edu.br,Matemática Discreta I,1º semestr
     const groupMatch = route.match(/^\/api\/groups\/(.+)$/);
     if (groupMatch && req.method === 'PUT') return json(res, 200, await this.mutateDatabase('setGroupPermissions', [decodeURIComponent(groupMatch[1]), await readBody(req)], { reason: 'group-permissions', reloadRules: false }));
 
+    if (route === '/api/learning-suggestions' && req.method === 'GET') return json(res, 200, this.db.listUnrecognizedSuggestions({ state: url.searchParams.get('state') || 'pending', limit: url.searchParams.get('limit') || 200 }));
+    const approveLearning = route.match(/^\/api\/learning-suggestions\/(\d+)\/approve$/);
+    if (approveLearning && req.method === 'POST') return json(res, 200, await this.mutateDatabase('approveUnrecognizedSuggestion', [approveLearning[1]], { reason: 'learning-suggestion-approved', reloadRules: true }));
+    const rejectLearning = route.match(/^\/api\/learning-suggestions\/(\d+)\/reject$/);
+    if (rejectLearning && req.method === 'POST') return json(res, 200, await this.mutateDatabase('rejectUnrecognizedSuggestion', [rejectLearning[1]], { reason: 'learning-suggestion-rejected', reloadRules: false }));
+
     if (route === '/api/logs' && req.method === 'GET') return json(res, 200, this.db.listLogs(url.searchParams.get('limit') || 200));
     if (route === '/api/logs' && req.method === 'DELETE') { await this.mutateDatabase('clearLogs', [], { reason: 'logs-cleared', reloadRules: false }); return json(res, 200, { ok: true }); }
     if (route === '/api/analytics' && req.method === 'GET') return json(res, 200, this.db.getUsageStats(url.searchParams.get('days') || 30));
     if (route === '/api/analytics' && req.method === 'DELETE') { await this.mutateDatabase('clearUsageStats', [], { reason: 'analytics-cleared', reloadRules: false }); return json(res, 200, { ok: true }); }
+
+    if (route === '/api/consistency' && req.method === 'GET') {
+      const report = runConsistencyCheck(this.db, { attachmentsDir: this.config.attachmentsDir });
+      this.statusParts.set('consistency', { value: report, expiresAt: Date.now() + 60_000 });
+      return json(res, 200, report);
+    }
+    if (route === '/api/system/verify' && req.method === 'POST') {
+      const database = this.db.healthCheck({ deep: true });
+      const consistency = runConsistencyCheck(this.db, { attachmentsDir: this.config.attachmentsDir });
+      this.statusParts.delete('database-health'); this.statusParts.delete('consistency');
+      return json(res, 200, { ok: database.ok && consistency.ok, database, consistency });
+    }
+    if (route === '/api/system/test-send' && req.method === 'POST') return json(res, 202, await this.whatsapp.sendSelfTest());
+    if (route === '/api/system/restart' && req.method === 'POST') { this.scheduleServiceRestart(); return json(res, 202, { ok: true, message: 'Reinício agendado.' }); }
+    if (route === '/api/system/logs' && req.method === 'GET') {
+      const output = this.runControl('logs', [url.searchParams.get('limit') || '1000'], { timeout: 30_000 });
+      return text(res, 200, output, 'text/plain; charset=utf-8', { 'Content-Disposition': `attachment; filename="hub-whatsapp-bot-logs-${new Date().toISOString().slice(0,10)}.txt"` });
+    }
+    if (route === '/api/change-history' && req.method === 'GET') return json(res, 200, this.db.listChangeHistory({ limit: url.searchParams.get('limit') || 200, entityType: url.searchParams.get('entity_type') || '', entityId: url.searchParams.get('entity_id') || '' }));
+    const revertHistory = route.match(/^\/api\/change-history\/(\d+)\/revert$/);
+    if (revertHistory && req.method === 'POST') return json(res, 200, await this.mutateDatabase('revertChangeHistory', [revertHistory[1]], { reason: 'change-history-reverted' }));
+    if (route === '/api/external-backups' && req.method === 'GET') return json(res, 200, this.externalBackups?.status?.() || { configured: false });
+    if (route === '/api/external-backups/run' && req.method === 'POST') { if (!this.externalBackups) throw httpError('Backup externo indisponível.', 503); return json(res, 201, await this.externalBackups.run('manual')); }
+    if (route === '/api/outbound' && req.method === 'GET') return json(res, 200, { stats: this.db.outboundDeliveryStats(), items: this.db.listOutboundDeliveries({ state: url.searchParams.get('state') || '', limit: url.searchParams.get('limit') || 100 }) });
 
     if (route === '/api/outbound/uncertain' && req.method === 'GET') {
       const items = this.db.listUncertainOutboundDeliveries(url.searchParams.get('limit') || 100)
@@ -586,10 +665,23 @@ Allan de Sousa Soares,allansoares@ifba.edu.br,Matemática Discreta I,1º semestr
     const backupDelete = route.match(/^\/api\/backups\/([^/]+)$/); if (backupDelete && req.method === 'DELETE') return json(res, 200, { deleted: await this.backups.delete(decodeURIComponent(backupDelete[1])) });
 
     if (route === '/api/update' && req.method === 'GET') return json(res, 200, this.updates?.status?.() || { state: 'unavailable' });
+    if (route === '/api/update/remote' && req.method === 'GET') {
+      if (!this.updates) throw httpError('Gerenciador de atualizações indisponível.', 503);
+      const settings = this.db.getSettings();
+      return json(res, 200, await this.updates.checkRemote(settings.update_github_repository, settings.update_github_branch));
+    }
+    if (route === '/api/update/remote/apply' && req.method === 'POST') {
+      if (!this.updates) throw httpError('Gerenciador de atualizações indisponível.', 503);
+      const settings = this.db.getSettings();
+      const backups = await this.prepareUpdateBackups('pre-update');
+      const result = await this.updates.downloadRemoteAndApply(settings.update_github_repository, settings.update_github_branch);
+      return json(res, 202, { ...result, backups });
+    }
     if (route === '/api/update/upload' && req.method === 'POST') {
       if (!this.updates) throw new Error('Gerenciador de atualizações indisponível.');
       const fileName = decodeURIComponent(String(req.headers['x-update-filename'] || 'update.zip'));
       const buffer = await readBuffer(req, 100 * 1024 * 1024);
+      await this.prepareUpdateBackups('pre-update');
       const result = this.adminTasks
         ? await this.withTemporaryUpload(buffer, fileName, filePath => this.adminTasks.run('update.stage', { filePath, fileName }, { timeoutMs: 20 * 60 * 1000 }))
         : this.updates.stageAndApply(buffer, fileName);

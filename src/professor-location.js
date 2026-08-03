@@ -124,23 +124,61 @@ function fuzzyAliasInMessage(normalized, alias, tolerance = 2) {
   return false;
 }
 
+function portuguesePhoneticKey(value) {
+  return normalizeText(value).split(/\s+/)[0]
+    .replace(/ph/g, 'f').replace(/[wy]/g, 'i').replace(/nh/g, 'n').replace(/lh/g, 'l')
+    .replace(/ch/g, 'x').replace(/[ckq]/g, 'k').replace(/g(?=[ei])/g, 'j')
+    .replace(/s{2,}/g, 's').replace(/(.)\1+/g, '$1').replace(/[aeiou]+/g, 'a');
+}
+
+function fuzzyDistanceInMessage(normalized, alias) {
+  const messageTokens = tokenize(normalized); const aliasTokens = tokenize(alias);
+  if (!aliasTokens.length || messageTokens.length < aliasTokens.length) return Infinity;
+  let best = Infinity;
+  for (let start = 0; start <= messageTokens.length - aliasTokens.length; start += 1) {
+    let total = 0; let okay = true;
+    for (let offset = 0; offset < aliasTokens.length; offset += 1) {
+      const expected = aliasTokens[offset]; const actual = messageTokens[start + offset];
+      if (actual === expected) continue;
+      const effective = professorNameTolerance(expected, actual, 2);
+      if (!effective || !levenshteinWithin(actual, expected, effective)) { okay = false; break; }
+      let distance = 0; const max = Math.max(actual.length, expected.length);
+      for (let index = 0; index < max; index += 1) if (actual[index] !== expected[index]) distance += 1;
+      total += distance;
+    }
+    if (okay) best = Math.min(best, total);
+  }
+  return best;
+}
+
 function findTeacherMatches(normalized, teachers) {
-  const matches = [];
+  const exact = []; const fuzzy = [];
   for (const teacher of teachers || []) {
     if (teacher?.active === false) continue;
     const aliases = teacherAliases(teacher);
     const alias = aliases.find(candidate => containsPhrase(normalized, candidate));
-    const fuzzyAlias = alias ? '' : aliases.find(candidate => fuzzyAliasInMessage(normalized, candidate, 2));
-    const matchedAlias = alias || fuzzyAlias;
-    if (!matchedAlias) continue;
-    matches.push({ teacher, alias: matchedAlias, specificity: tokenize(matchedAlias).length, fuzzy: Boolean(fuzzyAlias) });
+    if (alias) { exact.push({ teacher, alias, specificity: tokenize(alias).length, fuzzy: false, distance: 0 }); continue; }
+    for (const candidate of aliases) {
+      const distance = fuzzyDistanceInMessage(normalized, candidate);
+      if (Number.isFinite(distance)) { fuzzy.push({ teacher, alias: candidate, specificity: tokenize(candidate).length, fuzzy: true, distance }); break; }
+    }
   }
+  const matches = exact.length ? exact : fuzzy;
   if (matches.length <= 1) return matches;
   const maxSpecificity = Math.max(...matches.map(item => item.specificity));
-  const mostSpecific = matches.filter(item => item.specificity === maxSpecificity);
-  // Um nome completo ou apelido mais específico vence aliases menores que estejam
-  // contidos nele. Empates reais, como dois docentes chamados João, permanecem.
-  return mostSpecific.length === 1 ? mostSpecific : matches;
+  let finalists = matches.filter(item => item.specificity === maxSpecificity);
+  if (finalists.length <= 1) return finalists;
+  if (!exact.length) {
+    const minDistance = Math.min(...finalists.map(item => item.distance));
+    finalists = finalists.filter(item => item.distance === minDistance);
+    if (finalists.length <= 1) return finalists;
+  }
+  const firstNames = finalists.map(item => normalizeText(item.teacher.name).split(/\s+/)[0]);
+  const sameLiteral = firstNames.every(name => name === firstNames[0]);
+  const phonetics = firstNames.map(portuguesePhoneticKey);
+  const samePhonetic = phonetics.every(key => key === phonetics[0]);
+  if (sameLiteral || samePhonetic) return finalists;
+  return [finalists.sort((a, b) => a.distance - b.distance || b.specificity - a.specificity || String(a.teacher.name).localeCompare(String(b.teacher.name), 'pt-BR'))[0]];
 }
 
 function classifyProfessorLocationRequest(rawMessage, teachers = []) {
@@ -154,7 +192,11 @@ function classifyProfessorLocationRequest(rawMessage, teachers = []) {
   let matches = questionLike ? findTeacherMatches(normalized, teachers) : exactDirectTeacherMatches(normalized, teachers);
   const professorContext = hasProfessorTerm(normalized) || matches.length > 0;
 
-  if (isClassroomRequest(normalized) && professorContext) {
+  const bareRoomByProfessor = matches.length > 0
+    && /(?:^|\s)sala(?:\s|$)/u.test(normalized)
+    && !/\b(?:atendimento|gabinete|localizacao)\b/u.test(normalized)
+    && !/(?:^|\s)onde\s+(?:fica|esta|encontro|achar|acho|localizo|localizar)(?:\s|$)/u.test(normalized);
+  if ((isClassroomRequest(normalized) || bareRoomByProfessor) && professorContext) {
     // Quando o professor foi reconhecido, deixe o cartão individual responder:
     // ele contém a sala correta de cada disciplina no quadro 2026.2.
     if (matches.length) return { matched: false, reason: 'handled-by-professor-card' };
@@ -256,6 +298,7 @@ module.exports = {
   directPhrasesForAlias,
   fuzzyAliasInMessage,
   professorNameTolerance,
+  portuguesePhoneticKey,
   findTeacherMatches,
   classifyProfessorLocationRequest,
   validIsoDate,

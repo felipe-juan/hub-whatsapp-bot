@@ -1,4 +1,4 @@
-# HUB WhatsApp Bot v0.11.0
+# HUB WhatsApp Bot v0.13.1
 
 Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB Arquivos IFBA. Cada automação reúne **gatilhos editáveis** e a **resposta completa** que será enviada.
 
@@ -11,6 +11,49 @@ Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB A
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA. Respostas simultâneas são organizadas por conversa, mas nenhuma integração não oficial garante que a conta nunca será restringida.
 
 
+
+
+## Gestão da Oracle, integridade e manutenção — v0.13.0
+
+- contexto curto sem reply em conversas privadas para continuações como `e sexta?`, mantendo reply obrigatório em grupos;
+- relatório de consistência para e-mails, siglas, salas, choques de horário, anexos e exceções acadêmicas;
+- fila persistente de saída visível no painel, com retomada após reinícios, tentativas e deduplicação;
+- nova área **Sistema e manutenção** com memória, swap, disco, logs, teste de envio, verificação e reinício do serviço;
+- atualização da Oracle pelo painel a partir do GitHub, com backup completo, integridade SHA-256, testes, health check e rollback automático;
+- backup externo criptografado, com retenções diária, semanal e pré-atualização e suporte a diretório montado ou `rclone`;
+- editor estruturado de professor, disciplina, sigla, semestre, dia, horário e sala, preservando os cards personalizados;
+- histórico e reversão de alterações em docentes, horários, calendário e configurações;
+- gatilhos corrigidos para contato da Coordenação de BSI e consultas de sala de aula por professor;
+- desambiguação mais conservadora, sem confundir nomes claramente diferentes como Pablo e Paulo.
+
+### Ativação dos controles da Oracle
+
+Depois de instalar a versão na VM, execute uma única vez:
+
+```bash
+sudo bash scripts/install-oracle-management.sh
+```
+
+Esse comando instala um auxiliar restrito para consultar registros, reiniciar o serviço e aplicar pacotes já validados pelo próprio bot. O painel não recebe acesso geral a `sudo`.
+
+Para backups externos criptografados, defina no `.env` da VM uma frase secreta com pelo menos 12 caracteres:
+
+```env
+HUB_BACKUP_PASSPHRASE=troque-por-uma-frase-longa-e-unica
+```
+
+Depois, em **Sistema e manutenção**, informe um destino `file:/caminho/montado` ou um remoto do `rclone`. A frase secreta não é exibida nem armazenada no banco.
+
+## Atualização segura, contexto e confiabilidade — v0.12.0
+
+- importação do quadro docente com prévia granular e aplicação seletiva de mudanças;
+- preservação de e-mails, anexos, gatilhos, escopo e personalizações dos cards;
+- continuação contextual por reply para dia, semestre, sala e professor;
+- aprendizado assistido de mensagens não reconhecidas, sempre sujeito à aprovação no painel;
+- detecção mais segura entre perguntas e comentários sobre aulas;
+- exceções acadêmicas em intervalos, recorrências semanais e importação por CSV;
+- deduplicação persistente de mensagens recebidas, inclusive após reinicializações;
+- correções de integridade na sincronização estruturada de professores e no reconhecimento de intenção.
 
 ## Quadro estruturado, calendário e tolerância contextual — v0.11.0
 

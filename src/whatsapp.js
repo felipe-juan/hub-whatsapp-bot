@@ -85,6 +85,7 @@ class WhatsAppManager {
     const recoveredAtStartup = Number(this.db.recoverInterruptedOutboundDeliveries?.() || 0);
     if (recoveredAtStartup) this.engine?.performance?.increment?.('deliveries_recovered_after_restart', recoveredAtStartup);
     this.db.pruneOutboundDeliveries?.();
+    this.db.pruneProcessedIncomingMessages?.(7);
     this.outboundPausedUntil = 0;
     this.consecutiveReconnects = 0;
     this.watchdog = new HealthWatchdog({
@@ -137,6 +138,8 @@ class WhatsAppManager {
       watchdog: null,
       persistentDeliveries: this.db.outboundDeliveryStats?.() || {},
       pendingLateSendCount: 0,
+      lastMessageReceivedAt: '',
+      lastSendCompletedAt: '',
       updatedAt: new Date().toISOString()
     };
   }
@@ -182,6 +185,7 @@ class WhatsAppManager {
       : Promise.resolve(this.db.maybeCheckpoint?.({ force: false }) || {});
     Promise.resolve(task).then(result => {
       this.lastSqliteMaintenanceAt = Date.now();
+      this.db.pruneProcessedIncomingMessages?.(7);
       this.update({ lastDatabaseMaintenanceAt: new Date(this.lastSqliteMaintenanceAt).toISOString(), databaseMaintenance: result });
     }).catch(error => {
       this.update({ databaseMaintenanceError: error.message });
@@ -576,8 +580,15 @@ class WhatsAppManager {
       if (this.wasSeen(raw)) continue;
       this.rememberMessage(raw);
       this.lastMessageReceivedAt = Date.now();
+      this.update({ lastMessageReceivedAt: new Date(this.lastMessageReceivedAt).toISOString() });
       const adapter = createMessageAdapter({ raw, socket, metadataCache: this.groupMetadataCache, sendMessage: (jid, content, options, metadata) => this.enqueueSend(socket, jid, content, options, metadata) });
       if (!adapter.body) continue;
+      const remoteJid = String(raw?.key?.remoteJid || adapter.from || '');
+      const messageId = String(raw?.key?.id || adapter.messageId || '');
+      if (this.db.claimIncomingMessage && !this.db.claimIncomingMessage(remoteJid, messageId)) {
+        this.engine?.performance?.increment?.('incoming_duplicates_blocked');
+        continue;
+      }
       // Cada conversa possui sua própria fila: mensagens do mesmo grupo ou
       // privado mantêm a ordem de chegada, enquanto conversas diferentes são
       // processadas simultaneamente e sem intervalo artificial.
@@ -585,9 +596,16 @@ class WhatsAppManager {
       const queuedAt = performance.now();
       const receivedLatency = Math.max(0, Date.now() - this.messageTimestampMs(raw));
       this.engine?.performance?.observe?.('receive_transport_latency_ms', receivedLatency);
-      tasks.push(this.processingQueue.enqueue(conversationId, () => {
+      tasks.push(this.processingQueue.enqueue(conversationId, async () => {
         this.engine?.performance?.observe?.('conversation_queue_wait_ms', performance.now() - queuedAt);
-        return this.engine.handle(adapter);
+        try {
+          const result = await this.engine.handle(adapter);
+          this.db.completeIncomingMessage?.(remoteJid, messageId);
+          return result;
+        } catch (error) {
+          this.db.failIncomingMessage?.(remoteJid, messageId, error);
+          throw error;
+        }
       }));
     }
     if (!tasks.length) return;
@@ -887,7 +905,7 @@ class WhatsAppManager {
       this.lastSendProgressAt = Date.now();
       this.engine?.performance?.observe?.('whatsapp_send_ms', Date.now() - startedAt);
       this.engine?.performance?.increment?.('deliveries_sent');
-      this.update({ persistentDeliveries: this.db.outboundDeliveryStats?.() || {} });
+      this.update({ lastSendCompletedAt: new Date(this.lastSendCompletedAt).toISOString(), persistentDeliveries: this.db.outboundDeliveryStats?.() || {} });
       return persistenceWarning ? { ...result, persistenceWarning: true } : result;
     } finally {
       this.activeSendStarted.delete(Number(delivery.id));
@@ -946,6 +964,15 @@ class WhatsAppManager {
       const remaining = this.db.listDueOutboundDeliveries?.(1) || [];
       if (remaining.length) this.scheduleOutboundDrain(500);
     } finally { this.outboundDrainRunning = false; }
+  }
+
+  async sendSelfTest() {
+    if (!this.socket || this.status.state !== 'ready') throw new Error('WhatsApp não está conectado.');
+    const jid = String(this.socket.user?.id || this.socket.user?.lid || '').trim();
+    if (!jid) throw new Error('Não foi possível identificar a conta do bot para o teste.');
+    const text = `✅ Teste de envio do HUB WhatsApp Bot\n\nServidor e fila persistente funcionando em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Bahia' })}.`;
+    const result = await this.enqueueSend(this.socket, jid, { text }, undefined, { kind: 'health-test', priority: 100 });
+    return { ok: true, jid, messageId: result?.key?.id || '' };
   }
 
   async closeSocket({ logout = false } = {}) {

@@ -6,10 +6,11 @@ module.exports = function createMixin(deps) {
     this.db.exec('BEGIN');
     try {
       const payload = {
-        format: 'hub-whatsapp-bot-backup', version: 11, exported_at: nowIso(), settings: this.getSettings(),
+        format: 'hub-whatsapp-bot-backup', version: 12, exported_at: nowIso(), settings: this.getSettings(),
         teachers: this.listTeachers(), sectors: this.listSectors(),
         professor_schedule_entries: this.listProfessorScheduleEntries({ activeOnly: false }),
         academic_calendar_events: this.listAcademicCalendarEvents({ activeOnly: false }),
+        unrecognized_suggestions: this.listUnrecognizedSuggestions({ state: 'all', limit: 1000 }),
         automatic_messages: this.listAutomaticMessages(),
         automatic_message_history: this.db.prepare('SELECT id,message_id,action,snapshot_json,created_at FROM automatic_message_history ORDER BY message_id,id').all()
           .map(row => ({ id: row.id, message_id: row.message_id, action: row.action, snapshot: parseJson(row.snapshot_json, {}), created_at: row.created_at })),
@@ -71,6 +72,14 @@ module.exports = function createMixin(deps) {
           .run(sourceType, String(item.package_key || ''), item.package_snapshot ? JSON.stringify(item.package_snapshot) : '',
             item.pending_package_update ? JSON.stringify(item.pending_package_update) : '', boolToDb(item.customized !== false), Number(saved.id));
         if (item.id !== undefined && item.id !== null) importedMessageIds.set(Number(item.id), Number(saved.id));
+      }
+      if (Array.isArray(payload.unrecognized_suggestions)) {
+        this.db.prepare('DELETE FROM unrecognized_suggestions').run();
+        const suggestionStmt = this.db.prepare(`INSERT INTO unrecognized_suggestions(normalized_message,message_excerpt,chat_type,chat_name,suggested_message_id,suggested_title,confidence,reasons_json,state,occurrences,created_at,last_seen_at,reviewed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        for (const item of payload.unrecognized_suggestions) {
+          const mappedId = item.suggested_message_id ? (importedMessageIds.get(Number(item.suggested_message_id)) || null) : null;
+          suggestionStmt.run(String(item.normalized_message || normalizeText(item.message_excerpt || '')).slice(0,300),String(item.message_excerpt || '').slice(0,300),String(item.chat_type || 'private'),String(item.chat_name || '').slice(0,160),mappedId,String(item.suggested_title || '').slice(0,180),Number(item.confidence || 0),JSON.stringify(item.reasons || parseJson(item.reasons_json || '[]', [])),['pending','approved','rejected'].includes(item.state)?item.state:'pending',Math.max(1,Number(item.occurrences || 1)),String(item.created_at || nowIso()),String(item.last_seen_at || item.created_at || nowIso()),String(item.reviewed_at || ''));
+        }
       }
       if (Array.isArray(payload.automatic_message_history)) {
         this.db.prepare('DELETE FROM automatic_message_history').run();

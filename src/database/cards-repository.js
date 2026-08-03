@@ -1,3 +1,7 @@
+'use strict';
+
+const { buildProfessorScheduleImportPlan, buildEffectiveProfessorScheduleRecords } = require('../schedule-import-plan');
+
 module.exports = function createMixin(deps) {
   const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, crypto } = deps;
   return class {
@@ -316,6 +320,9 @@ module.exports = function createMixin(deps) {
 
   previewProfessorScheduleImport(records = []) {
     const clean = Array.isArray(records) ? records : [];
+    const periods = [...new Set(clean.map(record => String(record.academic_period || '').trim()).filter(Boolean))];
+    const currentEntries = periods.flatMap(period => this.listProfessorScheduleEntries({ academicPeriod: period, activeOnly: true }));
+    const plan = buildProfessorScheduleImportPlan(clean, currentEntries);
     const disciplineOwners = new Map();
     for (const record of clean) for (const entry of record.classes || []) {
       const key = normalizeText(entry.discipline);
@@ -324,10 +331,13 @@ module.exports = function createMixin(deps) {
     const items = clean.map(record => {
       const current = this.findProfessorMessageForImport(record);
       const shared = (record.classes || []).filter(entry => (disciplineOwners.get(normalizeText(entry.discipline))?.size || 0) > 1).map(entry => entry.discipline);
+      const professor = plan.professors.find(item => normalizeText(item.name) === normalizeText(record.name) && String(item.academic_period || '') === String(record.academic_period || ''));
       return {
         name: record.name, email: record.email || '', academic_period: record.academic_period || '',
         classes: (record.classes || []).length, action: current ? 'update' : 'create', current_id: current?.id || null,
-        preserves_custom_triggers: Boolean(current), shared_disciplines: [...new Set(shared)]
+        preserves_custom_triggers: Boolean(current), preserves_attachment: Boolean(current?.attachment),
+        change_ids: professor?.changes || [], changes: (professor?.changes || []).length,
+        shared_disciplines: [...new Set(shared)]
       };
     });
     return {
@@ -335,16 +345,19 @@ module.exports = function createMixin(deps) {
       creates: items.filter(item => item.action === 'create').length,
       updates: items.filter(item => item.action === 'update').length,
       shared_disciplines: [...new Set(items.flatMap(item => item.shared_disciplines))],
-      items
+      items,
+      plan
     };
   }
 
   syncStructuredTeacherFromSchedule(record = {}) {
-    const email = String(record.email || '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-    const existingRow = this.db.prepare('SELECT id FROM teachers WHERE lower(email)=? ORDER BY id LIMIT 1').get(email);
+    const importedEmail = String(record.email || '').trim().toLowerCase();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(importedEmail);
+    const existingRow = emailValid ? this.db.prepare('SELECT id FROM teachers WHERE lower(email)=? ORDER BY id LIMIT 1').get(importedEmail) : null;
     const byName = existingRow ? null : this.listTeachers().find(item => normalizeText(item.name) === normalizeText(record.name));
     const existing = existingRow ? this.mapTeacher(this.db.prepare('SELECT * FROM teachers WHERE id=?').get(existingRow.id)) : byName;
+    const email = emailValid ? importedEmail : String(existing?.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
     const disciplines = [...new Set((record.classes || []).map(entry => String(entry.discipline || '').trim()).filter(Boolean))];
     const schedule = (record.classes || []).map(entry => ({
       discipline: String(entry.discipline || '').trim(), semester: String(entry.semester || '').trim(),
@@ -360,16 +373,23 @@ module.exports = function createMixin(deps) {
     }, existing?.id || null);
   }
 
-  applyProfessorScheduleImport(records = []) {
+  applyProfessorScheduleImport(records = [], selectedChangeIds = null) {
     const clean = Array.isArray(records) ? records : [];
     if (!clean.length) throw new Error('Nenhum professor válido foi encontrado na planilha.');
-    const report = { total: clean.length, created: 0, updated: 0, errors: [], preservedTriggers: 0 };
+    const periods = [...new Set(clean.map(record => String(record.academic_period || '').trim()).filter(Boolean))];
+    const currentEntries = periods.flatMap(period => this.listProfessorScheduleEntries({ academicPeriod: period, activeOnly: true }));
+    const effective = buildEffectiveProfessorScheduleRecords(clean, currentEntries, selectedChangeIds);
+    if (!effective.records.length) return {
+      total: clean.length, created: 0, updated: 0, skipped: clean.length, errors: [], preservedTriggers: 0,
+      appliedChanges: 0, selectedChangeIds: effective.selected_change_ids
+    };
+    const report = { total: clean.length, created: 0, updated: 0, skipped: clean.length - effective.records.length, errors: [], preservedTriggers: 0, appliedChanges: 0, selectedChangeIds: effective.selected_change_ids };
     const disciplineOwners = new Map();
     for (const record of clean) for (const entry of record.classes || []) {
       const key = normalizeText(entry.discipline);
       const owners = disciplineOwners.get(key) || new Set(); owners.add(normalizeText(record.name)); disciplineOwners.set(key, owners);
     }
-    for (const record of clean) {
+    for (const record of effective.records) {
       try {
         const current = this.findProfessorMessageForImport(record);
         const response = buildProfessorScheduleResponse(record);
@@ -385,6 +405,9 @@ module.exports = function createMixin(deps) {
               draftJson = JSON.stringify(draft);
             }
           }
+          // Gatilhos, escopo, prioridade, anexos e demais personalizações não
+          // entram neste UPDATE. A importação altera somente título e conteúdo
+          // derivado do quadro, preservando o restante do card.
           this.db.prepare(`UPDATE automatic_messages SET title=?,response_text=?,tags_json='[]',active=1,archived=0,published=1,draft_json=?,customized=1,updated_at=? WHERE id=?`)
             .run(`Professor — ${record.name}`, response, draftJson, nowIso(), Number(current.id));
           report.updated += 1; report.preservedTriggers += 1;
@@ -413,6 +436,7 @@ module.exports = function createMixin(deps) {
           source_version: record.source_version || '',
           source_date: record.source_date || new Date().toISOString().slice(0, 10)
         });
+        report.appliedChanges += (record.selected_change_ids || []).length;
       } catch (error) { report.errors.push({ professor: record?.name || '', error: error.message }); }
     }
     this.invalidate('activeMessages', 'conflictReport');

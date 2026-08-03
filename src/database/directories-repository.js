@@ -32,7 +32,7 @@ module.exports = function createMixin(deps) {
     const roomConfirmedAt = String(input.room_confirmed_at || '').trim();
     const roomSource = String(input.room_source || '').trim();
     if (!name) throw new Error('Nome do professor é obrigatório.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('E-mail inválido.');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('E-mail inválido.');
     if (name.length > 180 || email.length > 254) throw new Error('Nome ou e-mail excede o tamanho permitido.');
     if (room.length > 120 || building.length > 120 || roomSource.length > 300) throw new Error('Os dados de localização excedem o tamanho permitido.');
     if (room && !/^\d{4}-\d{2}-\d{2}$/.test(roomConfirmedAt)) throw new Error('Informe a data de confirmação da sala no formato AAAA-MM-DD.');
@@ -65,20 +65,25 @@ module.exports = function createMixin(deps) {
   }
   saveTeacher(input, id = null) {
     const item = this.validateTeacher(input); const timestamp = nowIso();
+    const skipHistory = Boolean(input?._skip_history);
+    const before = id ? this.mapTeacher(this.db.prepare('SELECT * FROM teachers WHERE id=?').get(Number(id))) : null;
     if (id) {
       const result = this.db.prepare(`UPDATE teachers SET name=?,email=?,aliases_json=?,notes=?,room=?,building=?,room_confirmed_at=?,room_source=?,disciplines_json=?,schedule_json=?,academic_period=?,active=?,updated_at=? WHERE id=?`)
         .run(item.name, item.email, JSON.stringify(item.aliases), item.notes, item.room, item.building, item.room_confirmed_at, item.room_source,
           JSON.stringify(item.disciplines), JSON.stringify(item.schedule), item.academic_period, boolToDb(item.active), timestamp, Number(id));
       if (!result.changes) throw new Error('Professor não encontrado.');
-      this.invalidate('activeTeachers'); return this.mapTeacher(this.db.prepare('SELECT * FROM teachers WHERE id=?').get(Number(id)));
+    } else {
+      id = this.db.prepare(`INSERT INTO teachers(name,email,aliases_json,notes,room,building,room_confirmed_at,room_source,disciplines_json,schedule_json,academic_period,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        .run(item.name, item.email, JSON.stringify(item.aliases), item.notes, item.room, item.building, item.room_confirmed_at, item.room_source,
+          JSON.stringify(item.disciplines), JSON.stringify(item.schedule), item.academic_period, boolToDb(item.active), timestamp, timestamp).lastInsertRowid;
     }
-    const result = this.db.prepare(`INSERT INTO teachers(name,email,aliases_json,notes,room,building,room_confirmed_at,room_source,disciplines_json,schedule_json,academic_period,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run(item.name, item.email, JSON.stringify(item.aliases), item.notes, item.room, item.building, item.room_confirmed_at, item.room_source,
-        JSON.stringify(item.disciplines), JSON.stringify(item.schedule), item.academic_period, boolToDb(item.active), timestamp, timestamp);
-    this.invalidate('activeTeachers'); return this.mapTeacher(this.db.prepare('SELECT * FROM teachers WHERE id=?').get(result.lastInsertRowid));
+    this.invalidate('activeTeachers');
+    const after = this.mapTeacher(this.db.prepare('SELECT * FROM teachers WHERE id=?').get(Number(id)));
+    if (!skipHistory && typeof this.recordChangeHistory === 'function') this.recordChangeHistory({ entity_type:'teacher', entity_id:String(id), entity_label:after.name, action:before?'updated':'created', source:'painel', before, after });
+    return after;
   }
-  upsertTeacherByEmail(input) { const email = String(input.email || '').trim().toLowerCase(); const found = this.db.prepare('SELECT id FROM teachers WHERE lower(email)=?').get(email); return { item: this.saveTeacher(input, found?.id || null), created: !found }; }
-  deleteTeacher(id) { const deleted = Boolean(this.db.prepare('DELETE FROM teachers WHERE id=?').run(Number(id)).changes); if (deleted) this.invalidate('activeTeachers'); return deleted; }
+  upsertTeacherByEmail(input) { const email = String(input.email || '').trim().toLowerCase(); const found = email ? this.db.prepare('SELECT id FROM teachers WHERE lower(email)=?').get(email) : null; return { item: this.saveTeacher(input, found?.id || null), created: !found }; }
+  deleteTeacher(id, options = {}) { const before=this.mapTeacher(this.db.prepare('SELECT * FROM teachers WHERE id=?').get(Number(id))); const deleted = Boolean(this.db.prepare('DELETE FROM teachers WHERE id=?').run(Number(id)).changes); if (deleted) { this.invalidate('activeTeachers'); if(!options.skipHistory&&typeof this.recordChangeHistory==='function')this.recordChangeHistory({entity_type:'teacher',entity_id:String(id),entity_label:before?.name||'Professor',action:'deleted',source:'painel',before,after:null}); } return deleted; }
 
   listSectors({ activeOnly = false, search = '' } = {}) {
     if (activeOnly && !search && this.cache.activeSectors) return clone(this.cache.activeSectors);

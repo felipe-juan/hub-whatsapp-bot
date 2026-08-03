@@ -82,7 +82,7 @@ test('room questions resolve to the specific BSI card and generic room text reso
       ['qual é a sala da coordenação de bsi?', true, 'CSI — location'],
       ['qual é a sala do laboratório de redes de sistemas de informação?', true, 'BSI — Laboratórios de redes'],
       ['qual é a sala do miniauditório de sistemas de informação?', true, 'BSI — Miniauditório e salas dos professores'],
-      ['em qual sala está o professor Allan?', true, 'Localização — Allan de Sousa Soares']
+      ['em qual sala está o professor Allan?', true, 'Professor — Allan de Sousa Soares']
     ];
     for (const [body, matched, title] of cases) {
       const result = engine.evaluate(body, { isGroup: false, ignorePermissions: true });

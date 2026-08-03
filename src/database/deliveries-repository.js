@@ -118,6 +118,15 @@ module.exports = function createMixin(deps) {
     const rows = this.prepared.outboundStats.all();
     return Object.fromEntries(rows.map(row => [row.state, Number(row.count || 0)]));
   }
+  listOutboundDeliveries({ state = '', limit = 100 } = {}) {
+    const allowed = new Set(['pending','sending','retry','sent','failed','uncertain']);
+    const cleanState = allowed.has(String(state || '')) ? String(state) : '';
+    const rows = cleanState
+      ? this.db.prepare('SELECT * FROM outbound_deliveries WHERE state=? ORDER BY updated_at DESC,id DESC LIMIT ?').all(cleanState, Math.max(1, Math.min(500, Number(limit || 100))))
+      : this.db.prepare('SELECT * FROM outbound_deliveries ORDER BY updated_at DESC,id DESC LIMIT ?').all(Math.max(1, Math.min(500, Number(limit || 100))));
+    return rows.map(row => this.mapOutboundDelivery(row));
+  }
+
 
   pruneOutboundDeliveries({ sentDays = 7, failedDays = 30, uncertainDays = 90 } = {}) {
     const sentCutoff = new Date(Date.now() - Math.max(1, Number(sentDays || 7)) * 86400000).toISOString();

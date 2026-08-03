@@ -205,6 +205,7 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
 
   return {
     fromMe: Boolean(raw?.key?.fromMe),
+    messageId: sourceMessageId,
     from: remoteJid,
     author: participant,
     body,
