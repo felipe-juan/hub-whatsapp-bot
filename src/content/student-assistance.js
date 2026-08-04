@@ -81,33 +81,100 @@ const STUDENT_ASSISTANCE_CARDS = Object.freeze([
   {
     "key": "ifba-bsi-v095-paae-bolsas-e-auxilios",
     "message": {
-      "title": "PAAE — Bolsas e auxílios",
-      "response_text": "*Modalidades publicadas do PAAE*\n\n• Bolsa vinculada ao PINA;\n• Bolsa de Estudo;\n• Auxílio Transporte;\n• Auxílio Moradia;\n• Auxílio para Aquisições/Almoxarifado Social;\n• Auxílio Alimentação;\n• Auxílio Cópia e Impressão.\n\nA oferta efetiva depende do edital, da avaliação, da demanda e das vagas disponíveis.",
-      "priority": 64,
+      "title": "PAAE — Guia de Auxílios e Bolsas",
+      "response_text": "*PAAE — auxílios e bolsas no IFBA Vitória da Conquista*\n\nO Programa de Assistência e Apoio ao Estudante atende estudantes regularmente matriculados em situação de vulnerabilidade socioeconômica. A seleção considera renda, composição e relações familiares, moradia, saúde, participação em programas sociais e histórico acadêmico.\n\n*Modalidades divulgadas pelo campus*\n\n• *Bolsa Estudo:* apoio financeiro mensal para permanência acadêmica;\n• *Bolsa PINA:* vinculada a Projetos de Incentivo à Aprendizagem;\n• *Auxílio Transporte:* ajuda no deslocamento até o campus;\n• *Auxílio Moradia:* contribuição para aluguel, conforme os critérios do edital;\n• *Auxílio para Aquisições/Almoxarifado Social:* materiais escolares, fardamento ou outros itens acadêmicos;\n• *Auxílio Alimentação:* uma refeição diária, quando ofertada;\n• *Auxílio Cópia e Impressão:* apoio para materiais didáticos.\n\n*Como solicitar*\n\n1. Acompanhe a publicação do edital do PAAE;\n2. Faça ou atualize a caracterização socioeconômica no SUAP;\n3. Inscreva-se no edital e envie toda a documentação exigida;\n4. Acompanhe homologação, resultado preliminar, recursos e resultado final pelo SUAP.\n\nA inscrição não garante o auxílio. A modalidade e o valor dependem da avaliação social, da demanda, das vagas e do orçamento disponível.\n\n*Onde acompanhar*\nhttps://portal.ifba.edu.br/conquista/ensino/servico-social-1\nhttps://suap.ifba.edu.br/",
+      "priority": 72,
       "active": true,
       "archived": false,
       "scope": "both",
-      "tags": [
-        "paae",
-        "auxilios",
-        "bolsas"
-      ],
+      "tags": ["paae", "auxilios", "bolsas", "assistencia-estudantil"],
       "trigger": {
         "match_mode": "all",
         "sentences": [
-          "quais tipos de auxílio existem",
-          "quais auxílios o paae oferece",
-          "existe auxílio transporte",
-          "existe auxílio moradia",
-          "existe auxílio alimentação",
-          "existe auxílio para cópia e impressão",
-          "existe bolsa de estudo",
-          "quais bolsas da assistência estudantil"
+          "como recebo os auxílios",
+          "como recebo os auxilios",
+          "como conseguir auxílio estudantil",
+          "como conseguir auxilio estudantil",
+          "como pedir auxílio no ifba",
+          "como solicitar auxílio no ifba",
+          "como se inscrever no paae",
+          "como funciona o paae",
+          "como funciona a assistência estudantil",
+          "tenho direito a auxílio estudantil",
+          "quem tem direito aos auxílios",
+          "quais auxílios existem no ifba",
+          "quais bolsas e auxílios o paae oferece",
+          "onde vejo os auxílios do ifba",
+          "me explica o paae"
         ],
         "keywords": [],
         "required_words": [],
         "excluded_words": [],
-        "exact_phrases": [],
+        "exact_phrases": [
+          "paae",
+          "auxílio",
+          "auxilio",
+          "auxílios",
+          "auxilios",
+          "assistência estudantil",
+          "assistencia estudantil",
+          "bolsas e auxílios",
+          "bolsas e auxilios"
+        ],
+        "require_question_mark": true,
+        "regex_pattern": "",
+        "regex_flags": "iu",
+        "typo_tolerance": 0,
+        "synonym_group_ids": [],
+        "negative_examples": [
+          "auxílio doença do inss",
+          "auxílio brasil",
+          "auxílio emergencial do governo",
+          "bolsa família"
+        ]
+      },
+      "source_url": "https://portal.ifba.edu.br/conquista/ensino/servico-social-1",
+      "source_title": "Serviço Social do IFBA Vitória da Conquista",
+      "verified_at": "2026-08-04",
+      "details_text": ""
+    },
+    "legacyGroup": "bsi"
+  },
+  {
+    "key": "ifba-bsi-v0157-paae-valores-cronograma",
+    "message": {
+      "title": "PAAE — Valores e Cronograma Recente",
+      "response_text": "*PAAE — valores e datas recentes em Vitória da Conquista*\n\n*Último edital com valores detalhados publicados pelo campus — 2025*\n\n• *Bolsa Estudo:* R$ 759,00 por mês;\n• *Auxílio Transporte:* R$ 240,00 por mês para residentes em Vitória da Conquista e R$ 300,00 para residentes em outros municípios, distritos ou zona rural do município;\n• *Auxílio Moradia:* R$ 450,00 por mês;\n• *Auxílio Cópia e Impressão:* R$ 80,00 por mês;\n• *Auxílio Alimentação:* uma refeição diária no refeitório;\n• *Auxílio para Aquisições:* valor definido conforme a necessidade analisada e a comprovação dos gastos.\n\nEsses foram os valores divulgados em 2025. *Não considere que serão automaticamente os mesmos em outro edital.* O valor efetivamente concedido aparece no resultado individual do SUAP.\n\n*Como foi o processo recente*\n\n• *2025 — novos cadastros:* inscrições de 17 de março a 3 de abril; resultado final divulgado em 8 de agosto de 2025.\n• *2026:* o resultado preliminar foi divulgado em 11 de junho de 2026; os recursos puderam ser enviados de 12 a 15 de junho pelo SUAP.\n\n*Quando costuma abrir?*\nNos dois processos recentes, as inscrições ou atualizações começaram entre fevereiro e março. Isso é apenas uma referência histórica: o edital pode sair em outro período.\n\n*Quando sai o resultado?*\nO prazo varia bastante conforme o número de inscritos e a análise documental. Em 2025, o resultado final dos editais foi publicado em agosto; em 2026, o preliminar saiu em junho.\n\n*Quando começa o pagamento?*\nO campus não publica uma data anual fixa. O pagamento depende do resultado final, da concordância com os termos, do cadastro de conta bancária em nome do estudante e do processamento administrativo. Pode levar algumas semanas; confirme a previsão no SUAP ou com o Serviço Social.\n\n*Consulta individual*\nhttps://suap.ifba.edu.br/\n\n*Fontes oficiais*\nValores e inscrições de 2025: https://portal.ifba.edu.br/conquista/ifba-abre-inscricoes-para-programa-de-assistencia-estudantil-em-2025\nResultado final de 2025: https://portal.ifba.edu.br/conquista/noticias-periodo-de-eleicoes/divulgado-resultado-final-dos-editais-01-e-05-de-2025-para-recebimento-de-auxilios-de-bolsas-do-paae\nResultado preliminar de 2026: https://portal.ifba.edu.br/conquista/paae-2026",
+      "priority": 76,
+      "active": true,
+      "archived": false,
+      "scope": "both",
+      "tags": ["paae", "valores", "cronograma", "pagamento", "resultado"],
+      "trigger": {
+        "match_mode": "all",
+        "sentences": [
+          "quanto é o auxílio",
+          "quanto e o auxilio",
+          "qual o valor do auxílio",
+          "qual o valor dos auxílios",
+          "quanto paga o paae",
+          "qual o valor do paae",
+          "quando abre o paae",
+          "quando começam as inscrições do paae",
+          "quando sai o edital do paae",
+          "quando sai o resultado do paae",
+          "quando sai o resultado dos auxílios",
+          "quando começa o pagamento do paae",
+          "quando o auxílio começa a pagar",
+          "que dia paga o auxílio",
+          "como foi o último paae",
+          "como foi o ultimo paae",
+          "quais foram os valores do último paae"
+        ],
+        "keywords": [],
+        "required_words": [],
+        "excluded_words": [],
+        "exact_phrases": ["valor do paae", "pagamento do paae", "resultado do paae"],
         "require_question_mark": true,
         "regex_pattern": "",
         "regex_flags": "iu",
@@ -116,11 +183,11 @@ const STUDENT_ASSISTANCE_CARDS = Object.freeze([
         "negative_examples": []
       },
       "source_url": "https://portal.ifba.edu.br/conquista/ensino/servico-social-1",
-      "source_title": "Página oficial do IFBA",
-      "verified_at": "2026-08-01",
+      "source_title": "Serviço Social e publicações oficiais do IFBA Vitória da Conquista",
+      "verified_at": "2026-08-04",
       "details_text": ""
     },
-    "legacyGroup": "bsi"
+    "legacyGroup": "v0157"
   },
   {
     "key": "ifba-bsi-v095-paae-editais-atuais",

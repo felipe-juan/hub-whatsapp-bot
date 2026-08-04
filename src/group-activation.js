@@ -1,0 +1,44 @@
+'use strict';
+
+const GROUP_PREFIX_PATTERN = /^(?:bot|rob[oô]|escravo\s+do\s+juan)(?=$|[\s,.:;!?\-])/iu;
+
+function stripOwnMentionTokens(body, ownMentionNumbers = []) {
+  let text = String(body || '');
+  for (const number of ownMentionNumbers || []) {
+    const digits = String(number || '').replace(/\D/g, '');
+    if (!digits) continue;
+    text = text.replace(new RegExp(`@${digits}(?=$|\\s|[,.!?;:])`, 'gu'), ' ');
+  }
+  return text.replace(/\s{2,}/gu, ' ').trim();
+}
+
+function stripNamedPrefix(body) {
+  const text = String(body || '').trimStart();
+  const match = text.match(GROUP_PREFIX_PATTERN);
+  if (!match) return null;
+  return text.slice(match[0].length).replace(/^[\s,.:;!?\-]+/u, '').trim();
+}
+
+function resolveGroupActivation(message = {}) {
+  const originalBody = String(message.body || '').trim();
+  if (!message.isGroup) return { active: true, body: originalBody, mode: 'private' };
+  if (message.groupActivated) return { active: true, body: originalBody || 'ajuda', mode: message.groupActivationMode || 'preactivated' };
+  if (!originalBody) return { active: false, body: '', mode: '' };
+
+  if (originalBody.startsWith('.')) {
+    const body = originalBody.slice(1).trim();
+    return { active: true, body: body || 'ajuda', mode: 'dot' };
+  }
+
+  const prefixed = stripNamedPrefix(originalBody);
+  if (prefixed !== null) return { active: true, body: prefixed || 'ajuda', mode: 'name-prefix' };
+
+  if (message.mentionedMe) {
+    const body = stripOwnMentionTokens(originalBody, message.ownMentionNumbers || []);
+    return { active: true, body: body || 'ajuda', mode: 'mention' };
+  }
+
+  return { active: false, body: '', mode: '' };
+}
+
+module.exports = { GROUP_PREFIX_PATTERN, stripOwnMentionTokens, stripNamedPrefix, resolveGroupActivation };

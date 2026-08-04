@@ -1,6 +1,6 @@
-# HUB WhatsApp Bot v0.15.5
+# HUB WhatsApp Bot v0.15.7
 
-Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.5 reconhece a quebra de pré-requisito pela combinação central de “quebra” e “requisito(s)”, além de impedir a divulgação de números pessoais, telefones ou WhatsApp de professores.
+Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.7 exige ativação explícita em grupos e acrescenta um guia atualizado sobre PAAE, auxílios, valores e cronogramas recentes. No privado, o comportamento permanece inalterado.
 
 > [!IMPORTANT]
 > ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
@@ -10,15 +10,14 @@ Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e c
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA.
 
-## O que mudou na v0.15.5
+## O que mudou na v0.15.7
 
-
-- perguntas que contenham os termos centrais `quebra` e `requisito(s)` passam a acionar o card, mesmo com “pré”, hífen, plural ou palavras intermediárias;
-- exemplos como `como faz a quebra de pré requisito?`, `como faço a quebra dos requisitos?` e `onde peço a quebra de pré-requisitos?` são reconhecidos;
-- contextos de engenharia de software, como `requisitos funcionais`, são excluídos para evitar falsos positivos;
-- pedidos de número, telefone, celular, WhatsApp ou zap de professores recebem uma resposta de privacidade;
-- e-mails institucionais continuam disponíveis nos cards docentes;
-- telefones institucionais de setores, como CAENS e Coordenação, continuam funcionando normalmente.
+- mensagens casuais em grupos são descartadas antes de entrar na fila serial;
+- comandos deixam de esperar atrás do tráfego normal de um grupo movimentado;
+- o motor não varre todos os cards quando o índice não encontra candidatos;
+- metadados completos de centenas de participantes não são mais carregados por mensagem;
+- entrada e saída de participantes não provocam sincronização completa de todos os grupos;
+- a sincronização inicial ocorre em segundo plano.
 
 ## O que mudou na v0.15.2
 
@@ -82,9 +81,9 @@ npm run release:verify
 Implantação:
 
 ```bash
-scripts/hub-bot release local 0.15.5 ~/Downloads/hub-whatsapp-bot-v0.15.5.zip
-scripts/hub-bot release github 0.15.5 ~/Downloads/hub-whatsapp-bot-v0.15.5-github.zip
-scripts/hub-bot release oracle 0.15.5 ~/Downloads/hub-whatsapp-bot-v0.15.5.zip
+scripts/hub-bot release local 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7.zip
+scripts/hub-bot release github 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7-github.zip
+scripts/hub-bot release oracle 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7.zip
 ```
 
 ## Documentação

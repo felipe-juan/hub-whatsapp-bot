@@ -324,7 +324,11 @@ class AtomicRuleStore {
     union.or(phraseBits);
     const exactFull = snapshot.exactMap.get(prepared.normalized);
     if (exactFull) union.or(exactFull);
-    if (union.isEmpty()) return { indexes: BitSet.full(snapshot.messageCount).toIndexes(), preferred: [], hints, exactFull, informativeTokens, intersectionCount: 0 };
+    // Se nenhum token, frase exata, sentença indexada ou regra de fallback foi
+    // encontrado, não há motivo para varrer todos os cards. O comportamento
+    // antigo fazia uma varredura completa justamente nas mensagens casuais —
+    // o pior cenário possível em grupos movimentados.
+    if (union.isEmpty()) return { indexes: [], preferred: [], hints, exactFull, informativeTokens, intersectionCount: 0 };
     const preferred = intersection && !intersection.isEmpty() ? intersection.toIndexes() : [];
     const all = union.toIndexes();
     const preferredSet = new Set(preferred);

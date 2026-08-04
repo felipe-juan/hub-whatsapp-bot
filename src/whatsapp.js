@@ -9,6 +9,7 @@ const { ConcurrencyLimiter } = require('./concurrency-limiter');
 const { CircuitBreaker } = require('./circuit-breaker');
 const { HealthWatchdog } = require('./health-watchdog');
 const { fetchGroupRows } = require('./whatsapp/group-sync');
+const { resolveGroupActivation } = require('./group-activation');
 // groupFetchAllParticipating é encapsulado por fetchGroupRows para manter a integração Baileys isolada.
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -442,9 +443,15 @@ class WhatsAppManager {
       });
     });
 
-    for (const eventName of ['groups.upsert', 'groups.update', 'group-participants.update']) {
+    for (const eventName of ['groups.upsert', 'groups.update']) {
       this.bindSocketEvent(socket, eventName, () => this.scheduleGroupSync(2000));
     }
+    // Entrada/saída de participantes não altera nome, ID nem permissões locais
+    // do grupo. Sincronizar todos os grupos a cada evento desse tipo é muito
+    // caro em grupos com centenas de pessoas.
+    this.bindSocketEvent(socket, 'group-participants.update', () => {
+      this.engine?.performance?.increment?.('group_participant_updates_ignored_for_sync');
+    });
 
     this.armConnectionWatchdog(socket, generation);
     return socket;
@@ -512,8 +519,11 @@ class WhatsAppManager {
       });
       this.consecutiveReconnects = 0;
       console.log(`WhatsApp conectado como ${accountName || accountNumber || 'conta do bot'} (Baileys/WebSocket, WA ${this.status.waVersion}).`);
-      await this.syncGroupsWithRetry();
       this.scheduleOutboundDrain(100);
+      // A sincronização completa pode transferir metadados de grupos com
+      // centenas de participantes. Ela não deve bloquear o início do
+      // processamento nem o envio de respostas.
+      this.syncGroupsWithRetry().catch(error => this.update({ groupSyncError: error.message }));
       clearInterval(this.periodicGroupSyncTimer);
       this.periodicGroupSyncTimer = setInterval(() => {
         if (this.status.state === 'ready') this.syncGroups().catch(error => this.update({ groupSyncError: error.message }));
@@ -585,6 +595,21 @@ class WhatsAppManager {
       this.update({ lastMessageReceivedAt: new Date(this.lastMessageReceivedAt).toISOString() });
       const adapter = createMessageAdapter({ raw, socket, metadataCache: this.groupMetadataCache, sendMessage: (jid, content, options, metadata) => this.enqueueSend(socket, jid, content, options, metadata) });
       if (!adapter.body) continue;
+      if (adapter.isGroup) {
+        const activation = resolveGroupActivation(adapter);
+        if (!activation.active) {
+          this.engine?.performance?.increment?.('group_messages_without_activation_skipped');
+          continue;
+        }
+        adapter.originalBody = adapter.body;
+        adapter.body = activation.body;
+        adapter.groupActivated = true;
+        adapter.groupActivationMode = activation.mode;
+      }
+      if (adapter.isGroup && this.engine?.shouldProcessIncomingFast && !this.engine.shouldProcessIncomingFast(adapter)) {
+        this.engine?.performance?.increment?.('group_messages_fast_skipped');
+        continue;
+      }
       const remoteJid = String(raw?.key?.remoteJid || adapter.from || '');
       const messageId = String(raw?.key?.id || adapter.messageId || '');
       if (this.db.claimIncomingMessage && !this.db.claimIncomingMessage(remoteJid, messageId)) {
@@ -1155,8 +1180,10 @@ class WhatsAppManager {
     for (const item of groups) {
       const groupId = item.id;
       const name = item.name;
-      const metadata = item.metadata;
-      this.groupMetadataCache.set(groupId, metadata);
+      // Guarde somente o necessário para o processamento de mensagens. Manter
+      // a lista completa de participantes de todos os grupos aumenta o uso de
+      // memória e o custo do GC sem ajudar na resposta do bot.
+      this.groupMetadataCache.set(groupId, { id: groupId, subject: name });
       while (this.groupMetadataCache.size > 500) this.groupMetadataCache.delete(this.groupMetadataCache.keys().next().value);
       if (this.writeQueue?.upsertGroup) this.writeQueue.upsertGroup(groupId, name);
       else this.db.upsertGroup(groupId, name);

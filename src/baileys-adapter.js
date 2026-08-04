@@ -143,13 +143,14 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
   const ownIds = [socket?.user?.id, socket?.user?.lid].filter(Boolean).map(String);
   const ownNumbers = new Set(ownIds.map(cleanAccountNumber).filter(Boolean));
   const matchesOwnAccount = jid => ownIds.includes(String(jid || '')) || ownNumbers.has(cleanAccountNumber(jid));
-  const mentionedMe = mentionedJids.some(matchesOwnAccount);
+  const ownMentionNumbers = mentionedJids.filter(matchesOwnAccount).map(cleanAccountNumber).filter(Boolean);
+  const mentionedMe = ownMentionNumbers.length > 0;
   const hasQuotedMessage = Boolean(contextInfo?.quotedMessage || contextInfo?.stanzaId);
   const quotedMessageId = String(contextInfo?.stanzaId || '');
   const quotedParticipant = String(contextInfo?.participant || contextInfo?.remoteJid || '');
   const quotedFromMe = hasQuotedMessage && (matchesOwnAccount(quotedParticipant) || (!isGroup && !quotedParticipant));
 
-  const groupName = () => metadataCache.get(remoteJid)?.subject || raw?.pushName || 'Grupo sem nome';
+  const groupName = () => metadataCache.get(remoteJid)?.subject || 'Grupo';
   const options = quoted => quoted ? { quoted: raw } : undefined;
   const sourceMessageId = String(raw?.key?.id || '');
   let sendSequence = 0;
@@ -223,6 +224,7 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     fromMe: Boolean(raw?.key?.fromMe),
     messageId: sourceMessageId,
     from: remoteJid,
+    isGroup,
     author: participant,
     authorAliases,
     body,
@@ -230,6 +232,7 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     senderName: String(raw?.pushName || cleanAccountNumber(participant) || 'Pessoa'),
     mentionedJids,
     mentionedMe,
+    ownMentionNumbers,
     hasQuotedMessage,
     quotedMessageId,
     quotedFromMe,
@@ -240,13 +243,11 @@ function createMessageAdapter({ raw, socket, metadataCache, sendMessage = null }
     async sendResponse(payload, quoted = true) { return sendResponse(payload, quoted); },
     async sendPrivateResponse(payload) { return sendPrivateResponse(payload); },
     async getChat() {
-      let metadata = metadataCache.get(remoteJid);
-      if (isGroup && !metadata) {
-        try {
-          metadata = await socket.groupMetadata(remoteJid);
-          if (metadata) { metadataCache.set(remoteJid, metadata); while (metadataCache.size > 500) metadataCache.delete(metadataCache.keys().next().value); }
-        } catch {}
-      }
+      // Não busque os metadados completos do grupo no caminho crítico de cada
+      // mensagem. Em grupos grandes, groupMetadata inclui centenas de
+      // participantes e pode adicionar segundos antes mesmo da avaliação dos
+      // gatilhos. A sincronização de grupos já mantém o nome em cache.
+      const metadata = metadataCache.get(remoteJid);
       return {
         isGroup,
         id: { _serialized: remoteJid },

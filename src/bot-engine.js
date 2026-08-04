@@ -35,8 +35,9 @@ const { classifyGuidedFlow, formatFlowMenu } = require('./guided-flows');
 const { menuCandidates, formatMenu } = require('./help-menu');
 const { progressiveMenuFor } = require('./progressive-menus');
 const { semanticQuestionAssessment, implicitQuestionStructure } = require('./semantic-question');
-const { classifyBotReaction } = require('./reactions');
+const { classifyBotReaction, addressesBot } = require('./reactions');
 const { prepareMessage } = require('./message-analysis');
+const { resolveGroupActivation } = require('./group-activation');
 const { shouldBlockAttendanceQuestion } = require('./engine/attendance-guard');
 const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
 const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse, isProfessorPrivatePhoneRequest, formatProfessorPhonePrivacyResponse } = require('./engine/professor-intent-handler');
@@ -59,6 +60,13 @@ function asBool(value, fallback = false) {
   return ['1', 'true', 'yes', 'sim', 'on'].includes(String(value).toLowerCase());
 }
 function senderNumber(value) { return String(value || '').split('@')[0].replace(/\D/g, ''); }
+
+// Sinais que podem acionar as rotas estruturadas sem depender diretamente de
+// um card estático. A lista é deliberadamente acadêmica/institucional: ela não
+// responde por si só; apenas permite que a mensagem chegue ao motor completo.
+const FAST_GROUP_DOMAIN_PATTERN = /\b(?:sala|salas|bloco|predio|prédio|andar|laboratorio|laboratório|aula|aulas|horario|horário|horarios|horários|semestre|disciplina|disciplinas|materia|matéria|materias|matérias|professor|professora|docente|contato|email|e-mail|telefone|celular|numero|número|whatsapp|zap|caens|cores|capne|biblioteca|psicologia|coordenacao|coordenação|colegiado|dasi|btech|estagio|estágio|tcc|acex|barema|calendario|calendário|final|media|média|suap|ppc|fluxograma|matriz|drive|repositorio|repositório|arquivos|acervo|protocolo|quebra|requisito|requisitos|prerequisito|jubilamento|trancamento|matricula|matrícula|aproveitamento|equivalencia|equivalência|monitoria|bolsa|auxilio|auxílio)\b/u;
+const FAST_GROUP_FOLLOWUP_PATTERN = /^(?:[1-8]|e\b|mas\b|entao\b|então\b|e\s+(?:o|a|os|as)?\s*(?:horario|horário|sala|professor|professora|contato|email|e-mail|dia|dias|semestre|local)|só\s+a|so\s+a|a\s+primeira|a\s+segunda)\b/u;
+const FAST_GROUP_QUESTION_LEAD_PATTERN = /^(?:qual|quais|como|onde|quem|quando|quanto|quantos|o que|que|tem|pode|posso|preciso|me passa|manda|informe|informar)\b/u;
 
 class BotEngine {
   constructor(database, options = {}) {
@@ -96,6 +104,48 @@ class BotEngine {
   reloadRules(reason = 'manual') { return this.ruleStore.scheduleReload(reason); }
   close() { clearInterval(this.contextCleanupTimer); this.contextCleanupTimer = null; this.ruleStore.close(); }
 
+  hasFastConversationState(message) {
+    const now = Date.now();
+    for (const key of this.conversationKeys(message)) {
+      const context = this.conversationContexts.get(key);
+      if (context && Number(context.expiresAt || 0) > now) return true;
+      const pending = this.pendingChoices.get(key);
+      if (pending && Number(pending.expiresAt || 0) > now) return true;
+    }
+    return false;
+  }
+
+  shouldProcessIncomingFast(message) {
+    if (!message?.isGroup) return true;
+    const startedAt = performance.now();
+    try {
+      const body = String(message.body || '').trim();
+      if (!body) return false;
+      if (message.groupActivated || message.mentionedMe
+        || this.isAdminCommand(body) || this.isFalsePositiveFeedback(body) || isHelpCommand(body)) return true;
+      if (this.hasFastConversationState(message)) return true;
+
+      const normalized = normalizeText(body);
+      if (!normalized) return false;
+      if (FAST_GROUP_FOLLOWUP_PATTERN.test(normalized)) return true;
+      if (looksLikeCalculator(body)) return true;
+
+      const tokenCount = normalized.split(/\s+/u).filter(Boolean).length;
+      const structuredSignal = FAST_GROUP_DOMAIN_PATTERN.test(normalized);
+      const questionLike = /\?\s*$/u.test(body) || FAST_GROUP_QUESTION_LEAD_PATTERN.test(normalized);
+      if (structuredSignal && (questionLike || tokenCount <= 5)) return true;
+
+      // Para os demais cards, use o snapshot já compilado e em memória. Se a
+      // mensagem não casar com nenhuma regra, ela é descartada antes de gerar
+      // escrita de deduplicação no SQLite e antes de entrar na fila serial do
+      // grupo. A avaliação fica no LRU e será reaproveitada em caso de match.
+      const analysis = this.ruleStore.evaluate(body, { isGroup: true, ambiguityThreshold: 1 });
+      return analysis.some(item => item.matched);
+    } finally {
+      this.performance.observe('group_fast_admission_ms', performance.now() - startedAt);
+    }
+  }
+
   touchGroup(groupId, name) {
     const now = Date.now(); const lastTouch = this.groupTouches.get(groupId) || 0;
     if (now - lastTouch < this.groupTouchIntervalMs) return;
@@ -117,7 +167,7 @@ class BotEngine {
   botMentioned(message) {
     // Ajuda por menção só deve ser ativada por uma menção real do WhatsApp.
     // Palavras comuns como “bot” não são suficientes.
-    return Boolean(message?.mentionedMe);
+    return Boolean(message?.mentionedMe || message?.groupActivated);
   }
 
   unknownMentionEvaluation(settings) {
@@ -1325,6 +1375,17 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (!message || message.fromMe || message.from === 'status@broadcast') return;
     const finishHandle = this.performance.timer('message_handle_ms');
     try {
+    const groupLike = Boolean(message.isGroup || String(message.from || '').endsWith('@g.us'));
+    if (groupLike) {
+      const activation = resolveGroupActivation({ ...message, isGroup: true });
+      if (!activation.active) {
+        this.performance.increment?.('group_messages_without_activation_skipped');
+        return;
+      }
+      message.groupActivated = true;
+      message.groupActivationMode = activation.mode;
+      message.body = activation.body;
+    }
     const body = String(message.body || '').trim(); if (!body) return;
     this.metrics.lastMessageAt = new Date().toISOString(); this.metrics.totalProcessed += 1;
     const chat = await message.getChat(); const groupId = chat.isGroup ? (chat.id?._serialized || message.from) : '';
@@ -1350,7 +1411,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
 
     const baseContext = {
       isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now(),
-      hasReply: Boolean(message.quotedFromMe), mentionedMe: Boolean(message.mentionedMe)
+      hasReply: Boolean(message.quotedFromMe), mentionedMe: Boolean(message.mentionedMe), groupActivated: Boolean(message.groupActivated)
     };
     const baseSnapshot = this.buildMessageSnapshot(null, baseContext, settings);
     const prepared = prepareMessage(body, {

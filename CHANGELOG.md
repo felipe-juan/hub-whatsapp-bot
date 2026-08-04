@@ -1,4 +1,23 @@
+# v0.15.7 — 2026-08-04
+
+- exige ativação explícita em todos os grupos por prefixo (`bot`, `robô`, `Escravo do Juan`), menção real ou ponto inicial;
+- remove o prefixo antes de interpretar a consulta;
+- mantém o privado sem exigência de ativação;
+- adiciona guia completo do PAAE, modalidades, inscrição, valores públicos de 2025 e cronologia recente de 2025/2026;
+- esclarece que valores e pagamento variam por edital e processamento administrativo.
+
 # Histórico de versões
+
+## 0.15.6 — 2026-08-04
+
+- adiciona uma pré-filtragem em memória para grupos movimentados, descartando conversas sem potencial de gatilho antes da fila e do SQLite;
+- impede que mensagens casuais do mesmo grupo atrasem comandos reais na fila serial da conversa;
+- remove a varredura completa dos cards quando o índice não encontra nenhum candidato;
+- deixa de buscar metadados completos e listas de participantes no caminho crítico de cada mensagem;
+- deixa de sincronizar todos os grupos a cada entrada ou saída de participante;
+- torna a sincronização inicial de grupos assíncrona, sem bloquear respostas;
+- mantém deduplicação persistente para mensagens relevantes e preserva gatilhos estruturados, respostas contextuais, menções e comandos administrativos.
+
 
 ## 0.15.5 — 2026-08-04
 

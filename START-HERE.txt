@@ -1,4 +1,4 @@
-HUB WhatsApp Bot v0.15.3
+HUB WhatsApp Bot v0.15.7
 
 1. Leia README.md.
 2. Copie .env.example para .env e configure a senha local.
@@ -7,8 +7,8 @@ HUB WhatsApp Bot v0.15.3
 5. Inicie: npm start
 
 Atualização simplificada:
-  scripts/hub-bot release local 0.15.3 ~/Downloads/hub-whatsapp-bot-v0.15.3.zip
-  scripts/hub-bot release github 0.15.3 ~/Downloads/hub-whatsapp-bot-v0.15.3-github.zip
-  scripts/hub-bot release oracle 0.15.3 ~/Downloads/hub-whatsapp-bot-v0.15.3.zip
+  scripts/hub-bot release local 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7.zip
+  scripts/hub-bot release github 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7-github.zip
+  scripts/hub-bot release oracle 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7.zip
 
 Os ZIPs principais não contêm private-content.json.
