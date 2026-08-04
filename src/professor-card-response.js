@@ -9,7 +9,7 @@ function requestedProfessorFields(text) {
   if (!normalized) return [];
   if (/\b(?:tudo|todas?\s+as\s+informacoes|informacoes?\s+completas?|card\s+completo|dados\s+completos?|sobre)\b/u.test(normalized)) return [];
   const fields = new Set();
-  if (/\b(?:quem\s+(?:da|dara|ministra|leciona|ensina)|qual\s+(?:e\s+)?(?:o|a)?\s*professor(?:a)?|professor(?:a)?\s+de|docente\s+de)\b/u.test(normalized)) fields.add('professor');
+  if (/\b(?:quem\s+(?:da|dara|ministra|leciona|ensina)|qual\s+(?:e\s+)?(?:o|a)?\s*professor(?:a)?|qual\s+(?:e\s+)?(?:o\s+)?nome\s+(?:do|da)\s+professor(?:a)?|nome\s+(?:do|da)\s+professor(?:a)?|professor(?:a)?\s+de|docente\s+de)\b/u.test(normalized)) fields.add('professor');
   if (/\b(?:contato|ctt|e-?mail|email|telefone|whatsapp|falar\s+com)\b/u.test(normalized)) fields.add('contact');
   if (/\b(?:qual|quais|que)\s+(?:materia|materias|disciplina|disciplinas)\b|\b(?:materia|materias|disciplina|disciplinas)\s+(?:do|da|de)\b/u.test(normalized)) fields.add('discipline');
   if (/\b(?:semestre|periodo)\b/u.test(normalized)) fields.add('semester');

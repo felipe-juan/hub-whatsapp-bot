@@ -596,7 +596,12 @@ class WhatsAppManager {
       const adapter = createMessageAdapter({ raw, socket, metadataCache: this.groupMetadataCache, sendMessage: (jid, content, options, metadata) => this.enqueueSend(socket, jid, content, options, metadata) });
       if (!adapter.body) continue;
       if (adapter.isGroup) {
-        const activation = resolveGroupActivation(adapter);
+        let activation = resolveGroupActivation(adapter);
+        const numericPendingChoice = /^[1-9]$/.test(String(adapter.body || '').trim())
+          && Boolean(this.engine?.hasPendingChoice?.(adapter));
+        if (!activation.active && numericPendingChoice) {
+          activation = { active: true, body: String(adapter.body || '').trim(), mode: 'pending-choice' };
+        }
         if (!activation.active) {
           this.engine?.performance?.increment?.('group_messages_without_activation_skipped');
           continue;

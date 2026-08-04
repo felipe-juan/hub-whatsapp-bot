@@ -1,3 +1,19 @@
+# v0.15.12 — 2026-08-04
+
+- Permite consultar o docente de qualquer disciplina com formas como `professor de algoritmos` e `qual nome do professor de algoritmo`, incluindo o e-mail institucional.
+- Faz sigla, nome completo e primeiro termo único exibirem o card completo da disciplina quando enviados isoladamente.
+- Adiciona desambiguação numerada para primeiros termos compartilhados, como `inteligência`, `programação`, `banco`, `matemática` e `segurança`.
+- Preserva na escolha a intenção original de sala, professor, contato, dia, horário, semestre ou informações completas.
+- Aceita número isolado em grupo somente durante uma desambiguação ativa da mesma pessoa.
+- Mantém o cruzamento exato entre professor e disciplina e a exibição de pelo menos dois nomes em respostas de sala.
+
+# v0.15.11 — 2026-08-04
+
+- Permite usar apenas a primeira palavra de uma disciplina quando ela é única e suficientemente específica.
+- `sala comércio` passa a localizar Comércio Eletrônico da mesma forma que `sala comércio eletrônico`.
+- Mantém palavras iniciais ambíguas sem correspondência automática, evitando escolher a disciplina errada.
+- Preserva o cruzamento exato entre professor, disciplina, sala, dia e horário introduzido na v0.15.10.
+
 # v0.15.10 — 2026-08-04
 
 - Corrige consultas de sala para cruzar professor e disciplina de forma exata.

@@ -39,7 +39,7 @@ const { classifyBotReaction, addressesBot } = require('./reactions');
 const { prepareMessage } = require('./message-analysis');
 const { resolveGroupActivation } = require('./group-activation');
 const { shouldBlockAttendanceQuestion } = require('./engine/attendance-guard');
-const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
+const { findDisciplineMatches, findDisciplineCandidates, isDirectDisciplineReference, hasDisciplineInformationIntent } = require('./discipline-directory');
 const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse, isProfessorPrivatePhoneRequest, formatProfessorPhonePrivacyResponse } = require('./engine/professor-intent-handler');
 const {
   SEMESTER_SCHEDULE_CARD_TITLE,
@@ -65,7 +65,7 @@ function senderNumber(value) { return String(value || '').split('@')[0].replace(
 // um card estático. A lista é deliberadamente acadêmica/institucional: ela não
 // responde por si só; apenas permite que a mensagem chegue ao motor completo.
 const FAST_GROUP_DOMAIN_PATTERN = /\b(?:sala|salas|bloco|predio|prédio|andar|laboratorio|laboratório|aula|aulas|horario|horário|horarios|horários|semestre|disciplina|disciplinas|materia|matéria|materias|matérias|professor|professora|docente|contato|email|e-mail|telefone|celular|numero|número|whatsapp|zap|caens|cores|capne|biblioteca|psicologia|coordenacao|coordenação|colegiado|dasi|btech|estagio|estágio|tcc|acex|barema|calendario|calendário|final|media|média|suap|ppc|fluxograma|matriz|drive|repositorio|repositório|arquivos|acervo|protocolo|quebra|requisito|requisitos|prerequisito|jubilamento|trancamento|matricula|matrícula|aproveitamento|equivalencia|equivalência|monitoria|bolsa|auxilio|auxílio)\b/u;
-const FAST_GROUP_FOLLOWUP_PATTERN = /^(?:[1-8]|e\b|mas\b|entao\b|então\b|e\s+(?:o|a|os|as)?\s*(?:horario|horário|sala|professor|professora|contato|email|e-mail|dia|dias|semestre|local)|só\s+a|so\s+a|a\s+primeira|a\s+segunda)\b/u;
+const FAST_GROUP_FOLLOWUP_PATTERN = /^(?:[1-9]|e\b|mas\b|entao\b|então\b|e\s+(?:o|a|os|as)?\s*(?:horario|horário|sala|professor|professora|contato|email|e-mail|dia|dias|semestre|local)|só\s+a|so\s+a|a\s+primeira|a\s+segunda)\b/u;
 const FAST_GROUP_QUESTION_LEAD_PATTERN = /^(?:qual|quais|como|onde|quem|quando|quanto|quantos|o que|que|tem|pode|posso|preciso|me passa|manda|informe|informar)\b/u;
 
 class BotEngine {
@@ -406,10 +406,84 @@ class BotEngine {
     };
   }
 
+  disciplineRequestedFields(text) {
+    const requested = new Set(requestedProfessorFields(text));
+    // Quando a pessoa pergunta quem ministra uma disciplina, o e-mail
+    // institucional é um complemento útil e seguro da identificação.
+    if (requested.has('professor')) requested.add('contact');
+    return ['professor', 'contact', 'discipline', 'semester', 'day', 'hours', 'room']
+      .filter(field => requested.has(field));
+  }
+
+  disciplineDisplayLabel(discipline = {}) {
+    const code = String(discipline.code || '').trim();
+    const name = String(discipline.name || '').trim();
+    return [code, name].filter(Boolean).join(' — ') || 'Disciplina';
+  }
+
+  disciplineDisambiguationEvaluation(text, matches = [], context = {}, settings = {}) {
+    if (matches.length < 2) return null;
+    const timeout = Math.max(30, Math.min(600, Number(settings.disambiguation_timeout_seconds || 120)));
+    const fields = this.disciplineRequestedFields(text);
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context, settings);
+    const candidates = matches.slice(0, 9).map(discipline => {
+      const title = this.disciplineDisplayLabel(discipline);
+      return {
+        kind: 'discipline_query',
+        item: { id: `discipline:${discipline.code || normalizeText(discipline.name)}`, title },
+        discipline: { code: discipline.code || '', name: discipline.name || '', label: title },
+        fields: [...fields], academicPeriod: snapshot.academicPeriod,
+        contextSubject: { kind: 'discipline_card', id: discipline.code || normalizeText(discipline.name), title,
+          referenceText: discipline.code || discipline.name, disciplineNames: [discipline.name] }
+      };
+    });
+    const list = candidates.map((candidate, index) => `${index + 1}. *${candidate.item.title}*`).join('\n');
+    return {
+      matched: true, type: 'disambiguation',
+      text: `Você quis dizer?
+
+${list}
+
+Responda somente com o número desejado em até ${Math.ceil(timeout / 60)} min.`,
+      signature: `discipline-disambiguation:${candidates.map(item => item.discipline.code || normalizeText(item.discipline.name)).join('|')}`,
+      matchedItem: candidates.map(item => item.item.title).join(', '), topic: 'Professores e Disciplinas',
+      detectedIntent: professorIntentLabel(fields), reasons: ['termo de disciplina ambíguo', 'confirmação numérica necessária'],
+      candidates: candidates.map(candidate => ({ kind: candidate.kind, id: candidate.item.id, title: candidate.item.title })),
+      conflict: true, redactLog: false, analysis: [], attachment: null, context: { ...context }, pendingCandidates: candidates
+    };
+  }
+
+  disciplineChoiceEvaluation(selected = {}) {
+    const discipline = selected.discipline || {};
+    const academicPeriod = String(selected.academicPeriod || this.db.getSetting?.('current_academic_period', '2026.2') || '2026.2');
+    const entries = this.db.listProfessorScheduleEntries?.({
+      academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name
+    }) || [];
+    const teachers = [...new Map(entries.map(entry => [normalizeText(entry.professor_name), {
+      name: entry.professor_name, email: entry.professor_email || ''
+    }])).values()];
+    const fields = Array.isArray(selected.fields) ? selected.fields : [];
+    const text = fields.length
+      ? formatProfessorFieldResponse({ entries, teachers, fields })
+      : formatDisciplineFullCard({ entries, academicPeriod });
+    const title = selected.item?.title || this.disciplineDisplayLabel(discipline);
+    return {
+      matched: true, type: 'message', text,
+      signature: `discipline-choice:${discipline.code || normalizeText(discipline.name)}:${fields.join(',') || 'full'}`,
+      matchedItem: title, topic: 'Professores e Disciplinas', attachment: null,
+      details_text: '', source_url: '', source_title: '', verified_at: '',
+      detectedIntent: professorIntentLabel(fields), reasons: ['disciplina escolhida após desambiguação'],
+      candidates: [], conflict: false, redactLog: false,
+      contextSubject: selected.contextSubject || { kind: 'discipline_card', id: discipline.code || normalizeText(discipline.name), title,
+        referenceText: discipline.code || discipline.name, disciplineNames: [discipline.name] }
+    };
+  }
+
   professorCardIntent(text, prepared = null) {
     const normalized = normalizeText(text);
     if (!normalized) return false;
-    const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas|professor|professora|docente|onde|quando|semestre|semestres|informacao|informacoes|dados|tudo|ministra|ministro|leciona|ensina|da)\b/u.test(normalized);
+    if (prepared?.disciplineMatches?.length && isDirectDisciplineReference(text, prepared.disciplineMatches)) return true;
+    const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas|professor|professora|docente|onde|quando|semestre|semestres|informacao|informacoes|dados|tudo|ministra|ministro|leciona|ensina|da|nome)\b/u.test(normalized);
     if (!topic) return false;
     if (prepared?.disciplineMatches?.length && hasDisciplineInformationIntent(text)) return true;
     // 'Onde fica/encontro o professor' busca o local de atendimento. Já
@@ -467,17 +541,30 @@ class BotEngine {
 
   professorCardEvaluation(text, context = {}) {
     const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context);
-    const prepared = context.prepared || prepareMessage(text, {
+    const initialPrepared = context.prepared || prepareMessage(text, {
       now: context.now || Date.now(), teachers: snapshot.teachers,
       scheduleEntries: snapshot.disciplineDirectory, isGroup: context.isGroup
     });
+    let disciplineMatches = initialPrepared.disciplineMatches?.length
+      ? [...initialPrepared.disciplineMatches]
+      : findDisciplineMatches(text, snapshot.disciplineDirectory);
+    if (!disciplineMatches.length) {
+      const resolved = findDisciplineCandidates(text, snapshot.disciplineDirectory);
+      const bareReference = normalizeText(text) === normalizeText(resolved.fragment);
+      if ((hasDisciplineInformationIntent(text) || bareReference) && resolved.matches.length > 1) {
+        return this.disciplineDisambiguationEvaluation(text, resolved.matches, { ...context, snapshot, prepared: initialPrepared }, snapshot.settings || context.settings || {});
+      }
+      if ((hasDisciplineInformationIntent(text) || bareReference) && resolved.matches.length === 1) disciplineMatches = resolved.matches;
+    }
+    const prepared = disciplineMatches === initialPrepared.disciplineMatches
+      ? initialPrepared
+      : { ...initialPrepared, disciplineMatches: Object.freeze([...disciplineMatches]) };
     if (!this.professorCardIntent(text, prepared)) return null;
     let teacherMatches = [...(prepared.professorMatches || [])];
     const explicitTeacherNames = new Set(teacherMatches
       .filter(match => match?.teacher && match.fuzzy !== true)
       .map(match => normalizeText(match.teacher.name))
       .filter(Boolean));
-    const disciplineMatches = prepared.disciplineMatches?.length ? prepared.disciplineMatches : findDisciplineMatches(text, snapshot.disciplineDirectory);
     const sharedCards = [];
     if (disciplineMatches.length) {
       const names = new Set();
@@ -511,7 +598,23 @@ class BotEngine {
       .map(card => [Number(card.id) || normalizeText(card.title), card])).values()];
     if (!cards.length) return null;
 
-    const requestedFields = requestedProfessorFields(text);
+    const requestedFields = disciplineMatches.length ? this.disciplineRequestedFields(text) : requestedProfessorFields(text);
+    if (!requestedFields.length && disciplineMatches.length) {
+      const discipline = disciplineMatches[0];
+      const entries = this.db.listProfessorScheduleEntries?.({
+        academicPeriod: snapshot.academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name
+      }) || [];
+      const title = this.disciplineDisplayLabel(discipline);
+      return {
+        matched: true, type: 'message', text: formatDisciplineFullCard({ entries, academicPeriod: snapshot.academicPeriod }),
+        signature: `discipline-full:${discipline.code || normalizeText(discipline.name)}`, matchedItem: title,
+        topic: 'Professores e Disciplinas', attachment: null, details_text: '', source_url: '', source_title: '', verified_at: '',
+        conflict: false, redactLog: false, detectedIntent: 'informações completas',
+        reasons: ['disciplina reconhecida por sigla, nome completo ou primeiro termo sem ambiguidade'], candidates: [], analysis: [], context: { ...context },
+        contextSubject: { kind: 'discipline_card', id: discipline.code || normalizeText(discipline.name), title,
+          referenceText: discipline.code || discipline.name, teacherNames: teachers.map(item => item.name), disciplineNames: [discipline.name] }
+      };
+    }
     let structuredEntries = [];
     if (requestedFields.length) {
       if (disciplineMatches.length) {
@@ -1203,6 +1306,17 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       for (const [key] of ordered.slice(0, this.pendingChoices.size - 500)) this.pendingChoices.delete(key);
     }
   }
+  hasPendingChoice(message) {
+    this.cleanPendingChoices();
+    const pending = this.pendingChoices.get(this.conversationKey(message));
+    if (!pending) return false;
+    if (Number(pending.expiresAt || 0) <= Date.now()) {
+      this.pendingChoices.delete(this.conversationKey(message));
+      return false;
+    }
+    return Array.isArray(pending.candidates) && pending.candidates.length > 0;
+  }
+
   pendingEvaluation(message, body, settings) {
     this.cleanPendingChoices();
     const key = this.conversationKey(message); const pending = this.pendingChoices.get(key);
@@ -1212,6 +1326,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (!selected) return null;
     this.pendingChoices.delete(key);
     if (selected.submenuKey) return this.menuEvaluation(selected.submenuKey, {}, settings);
+    if (selected.kind === 'discipline_query') return this.disciplineChoiceEvaluation(selected);
     const chosen = {
       matched: true, type: selected.kind, text: formatContentResponse(selected),
       signature: `${selected.kind}:${selected.item.id}`, matchedItem: selected.item.title,
@@ -1418,7 +1533,11 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     try {
     const groupLike = Boolean(message.isGroup || String(message.from || '').endsWith('@g.us'));
     if (groupLike) {
-      const activation = resolveGroupActivation({ ...message, isGroup: true });
+      let activation = resolveGroupActivation({ ...message, isGroup: true });
+      const numericPendingChoice = /^[1-9]$/.test(String(message.body || '').trim()) && this.hasPendingChoice(message);
+      if (!activation.active && numericPendingChoice) {
+        activation = { active: true, body: String(message.body || '').trim(), mode: 'pending-choice' };
+      }
       if (!activation.active) {
         this.performance.increment?.('group_messages_without_activation_skipped');
         return;

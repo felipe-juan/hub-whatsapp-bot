@@ -1,6 +1,6 @@
-# HUB WhatsApp Bot v0.15.10
+# HUB WhatsApp Bot v0.15.12
 
-Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.10 amplia os atalhos exatos dos cards de semestre, incluindo números, ordinais e algarismos romanos, mantendo a ativação explícita em grupos. No privado, o comportamento permanece inalterado.
+Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.12 amplia as consultas estruturadas por disciplina, responde por sigla, nome completo ou primeiro termo seguro e oferece desambiguação numerada sem perder a intenção original da pergunta.
 
 > [!IMPORTANT]
 > ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
@@ -10,21 +10,14 @@ Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e c
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA.
 
-## O que mudou na v0.15.10
+## O que mudou na v0.15.12
 
-- Contatos do Serviço Social adicionados aos cards de PAAE.
-- Valores monetários de 2025 apresentados numericamente.
-- Auxílio para óculos incluído com requisitos e valor variável.
-
-- mensagens casuais em grupos são descartadas antes de entrar na fila serial;
-- comandos deixam de esperar atrás do tráfego normal de um grupo movimentado;
-- o motor não varre todos os cards quando o índice não encontra candidatos;
-- metadados completos de centenas de participantes não são mais carregados por mensagem;
-- entrada e saída de participantes não provocam sincronização completa de todos os grupos;
-- a sincronização inicial ocorre em segundo plano.
-
-- Os oito cards de semestre aceitam atalhos exatos como `primeiro semestre`, `semestre 1`, `1º semestre`, `semestre I` e `I semestre`.
-- Em grupos, os atalhos continuam exigindo ativação: `.primeiro semestre`, `bot semestre 1` ou menção ao bot.
+- consultas como `professor de algoritmos` e `qual nome do professor de algoritmo` retornam professor e e-mail institucional;
+- sigla, nome completo ou primeiro termo único da disciplina, quando enviados isoladamente, abrem o card completo da matéria;
+- termos ambíguos como `inteligência`, `programação`, `banco`, `matemática` e `segurança` oferecem opções numeradas;
+- a escolha preserva a intenção original: sala, professor, contato, dia, horário, semestre ou informações completas;
+- em grupos, um número isolado só é aceito quando existe uma desambiguação ativa para aquela pessoa;
+- mantém o cruzamento exato entre professor, disciplina, sala, dia e horário.
 
 ## O que mudou na v0.15.2
 
@@ -88,9 +81,9 @@ npm run release:verify
 Implantação:
 
 ```bash
-scripts/hub-bot release local 0.15.10 ~/Downloads/hub-whatsapp-bot-v0.15.10.zip
-scripts/hub-bot release github 0.15.10 ~/Downloads/hub-whatsapp-bot-v0.15.10-github.zip
-scripts/hub-bot release oracle 0.15.10 ~/Downloads/hub-whatsapp-bot-v0.15.10.zip
+scripts/hub-bot release local 0.15.12 ~/Downloads/hub-whatsapp-bot-v0.15.12.zip
+scripts/hub-bot release github 0.15.12 ~/Downloads/hub-whatsapp-bot-v0.15.12-github.zip
+scripts/hub-bot release oracle 0.15.12 ~/Downloads/hub-whatsapp-bot-v0.15.12.zip
 ```
 
 ## Documentação
