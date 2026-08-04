@@ -131,7 +131,8 @@ const RESOURCE_CARDS = Object.freeze([
         sentences: [
           'como funciona a quebra de pré requisito', 'como funciona a quebra de prerequisito',
           'como funciona a quebra de requisito', 'como é a quebra de requisito',
-          'como faz a quebra de requisito', 'como fazer a quebra de requisito',
+          'como faz a quebra de pré requisito', 'como faz a quebra de requisito',
+          'como fazer a quebra de pré requisito', 'como fazer a quebra de requisito',
           'como faço a quebra de requisito', 'como que faz a quebra de requisito',
           'como faz quebra de requisito', 'como fazer quebra de requisito',
           'como faço quebra de requisito', 'o que é a quebra de requisito',
@@ -148,9 +149,13 @@ const RESOURCE_CARDS = Object.freeze([
           'quero cursar uma matéria sem pré requisito', 'quero quebrar o pré requisito de uma disciplina',
           'como quebrar requisito de disciplina', 'como funciona a dispensa de pré requisito'
         ],
-        keywords: [],
+        keywords: ['quebra', 'requisito'],
         required_words: [],
-        excluded_words: [],
+        excluded_words: [
+          'requisitos de software', 'requisitos funcionais', 'requisitos não funcionais',
+          'requisitos nao funcionais', 'levantamento de requisitos', 'engenharia de requisitos',
+          'documento de requisitos', 'requisitos do sistema'
+        ],
         exact_phrases: [
           'quebra de pré-requisito', 'quebra de pre-requisito', 'quebra de pré requisito',
           'quebra de pre requisito', 'quebra de prerequisito', 'quebra de requisito',

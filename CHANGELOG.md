@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.15.5 — 2026-08-04
+
+- torna `quebra` e `requisito(s)` os termos centrais do card de quebra de pré-requisito;
+- reconhece variações com `pré`, hífen, plural e palavras intermediárias, como `como faz a quebra de pré requisito?`;
+- mantém frases diretas cadastradas e adiciona regressões específicas para as novas formas;
+- exclui contextos de engenharia de software, como requisitos funcionais e levantamento de requisitos, para reduzir falsos positivos.
+
 ## 0.15.4 — 2026-08-04
 
 - amplia os gatilhos naturais do card de quebra de pré-requisito, incluindo perguntas sem a palavra “pré”;
