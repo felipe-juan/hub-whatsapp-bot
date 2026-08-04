@@ -1,3 +1,10 @@
+# v0.15.9 — 2026-08-04
+
+- Adiciona atalhos exatos para os oito cards de semestre.
+- Aceita números, ordinais e algarismos romanos: `semestre 1`, `primeiro semestre`, `semestre I`, `I semestre` e equivalentes até o oitavo semestre.
+- Reaplica os gatilhos aos cards oficiais existentes por migração versionada.
+- Mantém a exigência de prefixo ou menção em grupos; no privado, o comportamento não muda.
+
 # v0.15.8 — 2026-08-04
 
 - Adiciona e-mail, WhatsApp e Instagram oficiais do Serviço Social aos cards de PAAE.

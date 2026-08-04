@@ -595,22 +595,28 @@ const SEMESTER_WEEKLY_CARDS_V0143_RAW = Object.freeze([
 const SEMESTER_ORDINALS = Object.freeze([
   'primeiro', 'segundo', 'terceiro', 'quarto', 'quinto', 'sexto', 'sétimo', 'oitavo'
 ]);
+const SEMESTER_ROMANS = Object.freeze(['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii']);
 
 function semesterTriggerVariants(number) {
   const ordinal = SEMESTER_ORDINALS[number - 1];
+  const roman = SEMESTER_ROMANS[number - 1];
   const direct = [
     `semestre ${number}`,
     `${number} semestre`,
     `${number}º semestre`,
     `${number}o semestre`,
-    `${ordinal} semestre`
+    `${ordinal} semestre`,
+    `semestre ${roman}`,
+    `${roman} semestre`
   ];
   const sentenceSubjects = [
     `${number} semestre`,
     `${number}º semestre`,
     `${number}o semestre`,
     `${ordinal} semestre`,
-    `semestre ${number}`
+    `semestre ${number}`,
+    `semestre ${roman}`,
+    `${roman} semestre`
   ];
   const prefixes = [
     'aulas', 'horários', 'horario', 'horários e salas', 'horarios e salas',

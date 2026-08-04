@@ -52,14 +52,14 @@ const SCHEDULE_INTENT_PATTERNS = Object.freeze([
   new RegExp(`(?:^|\\s)${SCHEDULE_DATE_PATTERN}\\s+(?:tem|tera|vai ter)?\\s*${SCHEDULE_SUBJECT_PATTERN}(?:$|\\s)`, 'u')
 ]);
 const SEMESTER_WORDS = Object.freeze({
-  1: ['1', '1o', '1a', 'primeiro', 'primeira'],
-  2: ['2', '2o', '2a', 'segundo', 'segunda'],
-  3: ['3', '3o', '3a', 'terceiro', 'terceira'],
-  4: ['4', '4o', '4a', 'quarto', 'quarta'],
-  5: ['5', '5o', '5a', 'quinto', 'quinta'],
-  6: ['6', '6o', '6a', 'sexto', 'sexta'],
-  7: ['7', '7o', '7a', 'setimo', 'setima'],
-  8: ['8', '8o', '8a', 'oitavo', 'oitava']
+  1: ['1', '1o', '1a', 'i', 'primeiro', 'primeira'],
+  2: ['2', '2o', '2a', 'ii', 'segundo', 'segunda'],
+  3: ['3', '3o', '3a', 'iii', 'terceiro', 'terceira'],
+  4: ['4', '4o', '4a', 'iv', 'quarto', 'quarta'],
+  5: ['5', '5o', '5a', 'v', 'quinto', 'quinta'],
+  6: ['6', '6o', '6a', 'vi', 'sexto', 'sexta'],
+  7: ['7', '7o', '7a', 'vii', 'setimo', 'setima'],
+  8: ['8', '8o', '8a', 'viii', 'oitavo', 'oitava']
 });
 const SEMESTER_PATTERNS = Object.freeze(Object.entries(SEMESTER_WORDS).flatMap(([number, aliases]) => aliases.flatMap(alias => {
   const token = escapeRegExp(alias);
@@ -111,7 +111,7 @@ function parseSemester(text) {
   const padded = ` ${normalized} `;
   for (const entry of SEMESTER_PATTERNS) if (entry.pattern.test(padded)) return entry.number;
 
-  const contextual = normalized.match(/\b(?:para|pro|pra|do|da|turma)\s+(?:o|a)?\s*(1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])\b/u)?.[1] || '';
+  const contextual = normalized.match(/\b(?:para|pro|pra|do|da|turma)\s+(?:o|a)?\s*(1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|viii|vii|vi|iv|v|iii|ii|i|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])\b/u)?.[1] || '';
   return contextual ? semesterNumberForAlias(contextual) : 0;
 }
 
@@ -376,12 +376,12 @@ function semesterFromFollowUp(text) {
   const normalized = normalizeText(text);
   if (!normalized) return 0;
   const compact = normalized.replace(/^(?:o|a)\s+/u, '').replace(/\s+(?:por favor)$/u, '').trim();
-  const direct = compact.match(/^(1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])(?:\s+(?:semestre|sem|periodo))?$/u)?.[1] || '';
+  const direct = compact.match(/^(1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|viii|vii|vi|iv|v|iii|ii|i|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])(?:\s+(?:semestre|sem|periodo))?$/u)?.[1] || '';
   if (direct) return semesterNumberForAlias(direct);
   const semester = parseSemester(text);
   if (!semester) return 0;
   const residue = normalized
-    .replace(/\b(?:1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])\b/gu, '')
+    .replace(/\b(?:1|2|3|4|5|6|7|8|1o|2o|3o|4o|5o|6o|7o|8o|viii|vii|vi|iv|v|iii|ii|i|primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|sext[oa]|setim[oa]|oitav[oa])\b/gu, '')
     .replace(/\b(?:semestre|sem|periodo|o|a|do|da)\b/gu, '').trim();
   return residue ? 0 : semester;
 }
