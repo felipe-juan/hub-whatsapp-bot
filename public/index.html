@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a1016">
   <meta name="color-scheme" content="dark">
   <title>HUB Bot — Painel local</title>
-  <link rel="stylesheet" href="/app.css?v=0.15.6">
+  <link rel="stylesheet" href="/app.css?v=0.16.0">
 </head>
 <body>
   <div id="login-screen" class="login-screen">
@@ -27,6 +27,7 @@
       <nav id="nav">
         <button data-view="dashboard" class="active">🏠 <span>Visão geral</span></button>
         <button data-view="messages">💬 <span>Mensagens</span></button>
+        <button data-view="academic">🎓 <span>Dados acadêmicos</span></button>
         <button data-view="diagnostics">🔎 <span>Diagnóstico</span></button>
         <button data-view="calculators">🧮 <span>Calculadoras</span></button>
         <button data-view="groups">👥 <span>Grupos</span></button>
@@ -57,13 +58,15 @@
   <div id="toast" class="toast" hidden></div>
   <input id="restore-file" type="file" accept="application/json" hidden>
   <input id="update-file" type="file" accept="application/zip,.zip" hidden>
-  <script src="/js/cards.js?v=0.15.6" defer></script>
-  <script src="/js/professors.js?v=0.15.6" defer></script>
-  <script src="/js/calendar.js?v=0.15.6" defer></script>
-  <script src="/js/sectors.js?v=0.15.6" defer></script>
-  <script src="/js/diagnostics.js?v=0.15.6" defer></script>
-  <script src="/js/updates.js?v=0.15.6" defer></script>
-  <script src="/js/management.js?v=0.15.6" defer></script>
-  <script src="/app.js?v=0.15.6" defer></script>
+  <script src="/js/cards.js?v=0.16.0" defer></script>
+  <script src="/js/professors.js?v=0.16.0" defer></script>
+  <script src="/js/calendar.js?v=0.16.0" defer></script>
+  <script src="/js/academic.js?v=0.16.0" defer></script>
+  <script src="/js/quality.js?v=0.16.0" defer></script>
+  <script src="/js/sectors.js?v=0.16.0" defer></script>
+  <script src="/js/diagnostics.js?v=0.16.0" defer></script>
+  <script src="/js/updates.js?v=0.16.0" defer></script>
+  <script src="/js/management.js?v=0.16.0" defer></script>
+  <script src="/app.js?v=0.16.0" defer></script>
 </body>
 </html>

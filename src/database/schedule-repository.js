@@ -7,6 +7,11 @@ const { buildProfessorScheduleResponse } = require('../professor-schedule-import
 function parseJson(value, fallback) { try { return JSON.parse(value); } catch { return fallback; } }
 function nowIso() { return new Date().toISOString(); }
 function dateOnly(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : ''; }
+function todayBahia() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bahia', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 module.exports = function createScheduleRepositoryMixin() {
   return class {
@@ -177,7 +182,12 @@ module.exports = function createScheduleRepositoryMixin() {
       return { professor: record.name, academic_period: period, entries: rows.length };
     }
 
+    deactivateExpiredAcademicCalendarEvents(referenceDate = todayBahia()) {
+      return Number(this.db.prepare(`UPDATE academic_calendar_events SET active=0,updated_at=? WHERE active=1 AND end_date<?`).run(nowIso(), String(referenceDate)).changes || 0);
+    }
+
     listAcademicCalendarEvents({ startDate = '', endDate = '', activeOnly = true, course = '' } = {}) {
+      if (activeOnly) this.deactivateExpiredAcademicCalendarEvents();
       let sql = 'SELECT * FROM academic_calendar_events'; const where = []; const params = [];
       if (activeOnly) where.push('active=1');
       if (startDate) { where.push('end_date>=?'); params.push(String(startDate)); }
@@ -238,6 +248,7 @@ module.exports = function createScheduleRepositoryMixin() {
         start_minutes: startMinutes, end_minutes: endMinutes,
         recurrence_type: recurrenceType, recurrence_weekdays: recurrenceWeekdays, recurrence_interval: recurrenceInterval,
         source_url: String(input.source_url || '').trim(), source_title: String(input.source_title || '').trim(),
+        responsible: String(input.responsible || '').trim().slice(0, 200),
         verified_at: dateOnly(input.verified_at) || '', active: input.active === undefined ? true : Boolean(input.active)
       };
     }
@@ -246,12 +257,12 @@ module.exports = function createScheduleRepositoryMixin() {
       const item = this.validateAcademicCalendarEvent(input); const timestamp = nowIso();
       const before=id?this.listAcademicCalendarEvents({activeOnly:false}).find(event=>event.id===Number(id)):null;
       if (id) {
-        const result = this.db.prepare(`UPDATE academic_calendar_events SET package_key=?,event_type=?,start_date=?,end_date=?,title=?,description=?,course=?,semester_numbers_json=?,discipline_code=?,professor_name=?,old_room=?,new_room=?,replacement_day_of_week=?,start_minutes=?,end_minutes=?,recurrence_type=?,recurrence_weekdays_json=?,recurrence_interval=?,source_url=?,source_title=?,verified_at=?,active=?,updated_at=? WHERE id=?`)
-          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.verified_at,item.active?1:0,timestamp,Number(id));
+        const result = this.db.prepare(`UPDATE academic_calendar_events SET package_key=?,event_type=?,start_date=?,end_date=?,title=?,description=?,course=?,semester_numbers_json=?,discipline_code=?,professor_name=?,old_room=?,new_room=?,replacement_day_of_week=?,start_minutes=?,end_minutes=?,recurrence_type=?,recurrence_weekdays_json=?,recurrence_interval=?,source_url=?,source_title=?,responsible=?,verified_at=?,active=?,updated_at=? WHERE id=?`)
+          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.responsible,item.verified_at,item.active?1:0,timestamp,Number(id));
         if (!result.changes) throw new Error('Exceção acadêmica não encontrada.');
       } else {
-        id = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,verified_at,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.verified_at,item.active?1:0,timestamp,timestamp).lastInsertRowid;
+        id = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,responsible,verified_at,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.responsible,item.verified_at,item.active?1:0,timestamp,timestamp).lastInsertRowid;
       }
       const after=this.listAcademicCalendarEvents({ activeOnly: false }).find(event => event.id === Number(id));
       if(!input._skip_history&&typeof this.recordChangeHistory==='function')this.recordChangeHistory({entity_type:'academic_calendar',entity_id:String(id),entity_label:after.title,action:before?'updated':'created',source:'calendário',before,after});
@@ -262,7 +273,7 @@ module.exports = function createScheduleRepositoryMixin() {
       const clean = (Array.isArray(events) ? events : []).map(event => this.validateAcademicCalendarEvent(event));
       if (!clean.length) throw new Error('Nenhuma exceção válida foi encontrada no CSV.');
       const timestamp = nowIso();
-      const insert = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,verified_at,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      const insert = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,responsible,verified_at,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
       const duplicate = this.db.prepare(`SELECT id FROM academic_calendar_events WHERE event_type=? AND start_date=? AND end_date=?
         AND lower(title)=lower(?) AND course=? AND semester_numbers_json=? AND discipline_code=? AND professor_name=?
         AND old_room=? AND new_room=? AND COALESCE(replacement_day_of_week,-1)=COALESCE(?,-1)
@@ -274,7 +285,7 @@ module.exports = function createScheduleRepositoryMixin() {
         for (const item of clean) {
           const semestersJson=JSON.stringify(item.semester_numbers); const weekdaysJson=JSON.stringify(item.recurrence_weekdays);
           if (duplicate.get(item.event_type,item.start_date,item.end_date,item.title,item.course,semestersJson,item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,weekdaysJson,item.recurrence_interval)) { skipped += 1; continue; }
-          insert.run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,semestersJson,item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,weekdaysJson,item.recurrence_interval,item.source_url,item.source_title,item.verified_at,item.active?1:0,timestamp,timestamp);
+          insert.run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,semestersJson,item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,weekdaysJson,item.recurrence_interval,item.source_url,item.source_title,item.responsible,item.verified_at,item.active?1:0,timestamp,timestamp);
           imported += 1;
         }
         this.db.exec('COMMIT');

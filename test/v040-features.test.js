@@ -61,7 +61,7 @@ test('desambiguação pergunta e aceita escolha numérica temporária', async ()
   const engine = new BotEngine(db); const replies = [];
   const chat = { isGroup: true, name: 'Grupo', id: { _serialized: 'grupo@g.us' }, sendMessage: async value => replies.push(value) };
   const message = body => ({ fromMe: false, from: 'grupo@g.us', author: '5577999999999@c.us', body, getChat: async () => chat, reply: async value => replies.push(value) });
-  await engine.handle(message('onde encontro a matriz?'));
+  await engine.handle(message('.onde encontro a matriz?'));
   assert.match(replies[0], /Responda somente com o número/);
   await engine.handle(message('2'));
   assert.match(replies[1], /Resposta da matriz|Resposta do fluxograma/);
@@ -75,11 +75,11 @@ test('comandos administrativos ignoram não administradores e permitem pausar', 
   const engine = new BotEngine(db); const replies = [];
   const chat = { isGroup: true, name: 'Grupo', id: { _serialized: 'grupo@g.us' } };
   const message = (author, body) => ({ fromMe: false, from: 'grupo@g.us', author, body, getChat: async () => chat, reply: async value => replies.push(value) });
-  await engine.handle(message('5577888888888@c.us', '!bot pausar'));
+  await engine.handle(message('5577888888888@c.us', 'bot !pausar'));
   assert.equal(db.getSetting('bot_paused'), 'false');
-  await engine.handle(message('5577999999999@c.us', '!bot pausar'));
+  await engine.handle(message('5577999999999@c.us', 'bot !pausar'));
   assert.equal(db.getSetting('bot_paused'), 'true'); assert.match(replies[0], /pausada/i);
-  await engine.handle(message('5577999999999@c.us', '!bot continuar'));
+  await engine.handle(message('5577999999999@c.us', 'bot !continuar'));
   assert.equal(db.getSetting('bot_paused'), 'false');
   db.close(); fs.rmSync(dir, { recursive: true, force: true });
 });

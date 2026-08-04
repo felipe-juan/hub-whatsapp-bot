@@ -33,7 +33,7 @@ test('pedido de semestre aceita 5 semestre como a próxima mensagem da mesma usu
   const h=holder();
   try {
     const engine=new BotEngine(h.db);
-    const first=fakeMessage('qual matéria tem hoje?',{author:'5511999999999@s.whatsapp.net',authorAliases:['123456789@lid','5511999999999@s.whatsapp.net']});
+    const first=fakeMessage('.qual matéria tem hoje?',{author:'5511999999999@s.whatsapp.net',authorAliases:['123456789@lid','5511999999999@s.whatsapp.net']});
     await engine.handle(first.message);
     assert.match(first.replies[0],/Qual semestre/u);
     const second=fakeMessage('5 semestre',{author:'123456789@lid',authorAliases:['123456789@lid','5511999999999@s.whatsapp.net'],sendId:'bot-schedule-1'});
@@ -49,7 +49,7 @@ test('reply ao pedido recupera contexto pelo ID mesmo se o identificador da auto
   const h=holder();
   try {
     const engine=new BotEngine(h.db);
-    const first=fakeMessage('qual matéria tem amanhã?',{author:'5511999999999@s.whatsapp.net',authorAliases:['5511999999999@s.whatsapp.net'],sendId:'prompt-id-77'});
+    const first=fakeMessage('.qual matéria tem amanhã?',{author:'5511999999999@s.whatsapp.net',authorAliases:['5511999999999@s.whatsapp.net'],sendId:'prompt-id-77'});
     await engine.handle(first.message);
     const second=fakeMessage('5º semestre',{author:'987654321@lid',authorAliases:['987654321@lid'],quotedFromMe:false,quotedMessageId:'prompt-id-77'});
     await engine.handle(second.message);

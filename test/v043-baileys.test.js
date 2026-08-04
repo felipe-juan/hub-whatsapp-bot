@@ -28,7 +28,7 @@ test('adapta mensagem Baileys à interface esperada pelo motor', async () => {
   assert.equal(adapter.body, 'qual o contato?');
   const chat = await adapter.getChat();
   assert.equal(chat.isGroup, true);
-  assert.equal(chat.name, 'Grupo de teste');
+  assert.equal(chat.name, 'Grupo');
   await adapter.reply('resposta');
   await chat.sendMessage('solta');
   assert.equal(sent.length, 2);

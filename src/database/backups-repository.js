@@ -12,6 +12,8 @@ module.exports = function createMixin(deps) {
         academic_calendar_events: this.listAcademicCalendarEvents({ activeOnly: false }),
         unrecognized_suggestions: this.listUnrecognizedSuggestions({ state: 'all', limit: 1000 }),
         regression_cases: this.listRegressionCases(),
+        conversation_recovery_events: this.db.prepare('SELECT * FROM conversation_recovery_events ORDER BY id').all(),
+        private_user_profiles: this.db.prepare('SELECT * FROM private_user_profiles ORDER BY context_key').all(),
         automatic_messages: this.listAutomaticMessages(),
         automatic_message_history: this.db.prepare('SELECT id,message_id,action,snapshot_json,created_at FROM automatic_message_history ORDER BY message_id,id').all()
           .map(row => ({ id: row.id, message_id: row.message_id, action: row.action, snapshot: parseJson(row.snapshot_json, {}), created_at: row.created_at })),
@@ -87,6 +89,17 @@ module.exports = function createMixin(deps) {
         const regressionStmt = this.db.prepare('INSERT INTO regression_cases(phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
         for (const item of payload.regression_cases) regressionStmt.run(String(item.phrase || '').slice(0,500),normalizeText(item.phrase || ''),['respond','ignore'].includes(item.expectation)?item.expectation:'respond',String(item.expected_title || '').slice(0,240),boolToDb(item.active !== false),String(item.created_at || nowIso()),String(item.updated_at || item.created_at || nowIso()));
       }
+      if (Array.isArray(payload.conversation_recovery_events)) {
+        this.db.prepare('DELETE FROM conversation_recovery_events').run();
+        const statement = this.db.prepare(`INSERT INTO conversation_recovery_events(context_key,chat_type,original_message,stage,outcome,intent,entity_type,entity_id,option_count,selected_option,messages_to_resolution,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
+        for (const item of payload.conversation_recovery_events) statement.run(String(item.context_key || ''),String(item.chat_type || 'private'),String(item.original_message || '').slice(0,500),Number(item.stage || 0),String(item.outcome || ''),String(item.intent || ''),String(item.entity_type || ''),String(item.entity_id || ''),Number(item.option_count || 0),String(item.selected_option || ''),Math.max(1,Number(item.messages_to_resolution || 1)),String(item.created_at || nowIso()));
+      }
+      if (Array.isArray(payload.private_user_profiles)) {
+        this.db.prepare('DELETE FROM private_user_profiles').run();
+        const statement = this.db.prepare(`INSERT INTO private_user_profiles(context_key,last_seen_at,welcome_sent_at,created_at,updated_at) VALUES (?,?,?,?,?)`);
+        for (const item of payload.private_user_profiles) statement.run(String(item.context_key || ''),String(item.last_seen_at || ''),String(item.welcome_sent_at || ''),String(item.created_at || nowIso()),String(item.updated_at || nowIso()));
+      }
+
       if (Array.isArray(payload.automatic_message_history)) {
         this.db.prepare('DELETE FROM automatic_message_history').run();
         const historyStmt = this.db.prepare('INSERT INTO automatic_message_history(message_id,action,snapshot_json,created_at) VALUES (?,?,?,?)');

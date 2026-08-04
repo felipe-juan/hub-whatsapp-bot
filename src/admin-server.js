@@ -188,7 +188,7 @@ class AdminServer {
     const analytics = this.cachedStatusPart('analytics30', 60_000, () => this.db.getUsageStats(30));
     const databaseHealth = this.cachedStatusPart('database-health', 60_000, () => this.db.healthCheck());
     return {
-      version: this.updates?.status?.().currentVersion || '0.15.6', whatsapp: this.whatsapp.getStatus(),
+      version: this.updates?.status?.().currentVersion || '0.16.0', whatsapp: this.whatsapp.getStatus(),
       stats,
       analytics,
       health: {
@@ -389,6 +389,7 @@ class AdminServer {
     if (route === '/api/quality/runtime' && req.method === 'GET') return json(res, 200, runtimeCompatibility());
     if (route === '/api/quality/migrations' && req.method === 'GET') return json(res, 200, this.db.listSchemaMigrations?.() || []);
     if (route === '/api/quality/academic' && req.method === 'GET') return json(res, 200, this.db.academicDataStatus?.() || {});
+    if (route === '/api/quality/recovery' && req.method === 'GET') return json(res, 200, this.db.recoveryMetrics?.({ days: url.searchParams.get('days') || 30 }) || {});
     if (route === '/api/quality/observations' && req.method === 'GET') return json(res, 200, this.db.listTriggerObservations?.({ state: url.searchParams.get('state') || 'pending', limit: url.searchParams.get('limit') || 100 }) || []);
     if (route === '/api/quality/false-positives' && req.method === 'GET') return json(res, 200, this.db.listFalsePositiveReports?.({ state: url.searchParams.get('state') || 'pending', limit: url.searchParams.get('limit') || 100 }) || []);
     if (route === '/api/quality/corpus' && req.method === 'GET') return json(res, 200, this.db.listCorpusCases?.({ activeOnly: url.searchParams.get('active') !== '0' }) || []);
