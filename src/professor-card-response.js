@@ -77,12 +77,24 @@ function disciplineTitle(entry) {
   return code ? `${code} — ${name}` : name;
 }
 
+function professorDisplayName(value, minimumWords = 2) {
+  const words = String(value || '').trim().split(/\s+/u).filter(Boolean);
+  if (words.length <= minimumWords) return words.join(' ');
+  return words.slice(0, minimumWords).join(' ');
+}
+
 function usefulFields(fields = []) {
   const requested = new Set(fields);
   const display = new Set(fields);
   // Uma sala sem o dia e a disciplina costuma ser pouco útil. O título já
   // identifica a disciplina; o dia é incluído como contexto mínimo.
-  if (requested.has('room')) { display.add('day'); display.add('hours'); }
+  if (requested.has('room')) {
+    display.add('day');
+    display.add('hours');
+    // A sala precisa ser associada ao docente correto, sobretudo nas
+    // disciplinas compartilhadas, como Cálculo.
+    display.add('professor');
+  }
   // Dia e horário formam uma única informação acadêmica útil.
   if (requested.has('day')) display.add('hours');
   if (requested.has('hours')) display.add('day');
@@ -135,7 +147,10 @@ function formatProfessorFieldResponse({ entries = [], teachers = [], fields = []
   const blocks = [];
   for (const group of groups) {
     const lines = [`*${group.title}*`];
-    if (displayFields.has('professor')) lines.push(`• *Professor:* ${group.professor}`);
+    if (displayFields.has('professor')) {
+      const professorName = requested.has('room') ? professorDisplayName(group.professor, 2) : group.professor;
+      lines.push(`• *Professor:* ${professorName || 'não cadastrado'}`);
+    }
     if (displayFields.has('contact')) lines.push(`• *Contato:* ${group.email || 'não cadastrado'}`);
     if (requested.has('discipline') && !requested.has('professor') && groups.length === 1) lines.push(`• *Disciplina:* ${group.title}`);
 
@@ -170,4 +185,4 @@ function formatProfessorFieldResponse({ entries = [], teachers = [], fields = []
   return blocks.join('\n\n').trim();
 }
 
-module.exports = { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse, isProfessorPrivatePhoneRequest, formatProfessorPhonePrivacyResponse };
+module.exports = { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse, professorDisplayName, isProfessorPrivatePhoneRequest, formatProfessorPhonePrivacyResponse };

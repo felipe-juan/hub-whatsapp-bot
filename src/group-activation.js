@@ -27,7 +27,11 @@ function resolveGroupActivation(message = {}) {
 
   if (originalBody.startsWith('.')) {
     const body = originalBody.slice(1).trim();
-    return { active: true, body: body || 'ajuda', mode: 'dot' };
+    // Um ponto isolado não é uma consulta. O prefixo só ativa o bot quando
+    // existe algum conteúdo depois dele; `.palavra` e `. palavra` continuam
+    // equivalentes.
+    if (!body) return { active: false, body: '', mode: '' };
+    return { active: true, body, mode: 'dot' };
   }
 
   const prefixed = stripNamedPrefix(originalBody);

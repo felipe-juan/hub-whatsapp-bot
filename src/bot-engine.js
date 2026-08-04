@@ -473,18 +473,34 @@ class BotEngine {
     });
     if (!this.professorCardIntent(text, prepared)) return null;
     let teacherMatches = [...(prepared.professorMatches || [])];
+    const explicitTeacherNames = new Set(teacherMatches
+      .filter(match => match?.teacher && match.fuzzy !== true)
+      .map(match => normalizeText(match.teacher.name))
+      .filter(Boolean));
     const disciplineMatches = prepared.disciplineMatches?.length ? prepared.disciplineMatches : findDisciplineMatches(text, snapshot.disciplineDirectory);
     const sharedCards = [];
     if (disciplineMatches.length) {
       const names = new Set();
       for (const discipline of disciplineMatches) {
         const shared = snapshot.messages.find(item => normalizeText(item.title) === normalizeText(`Disciplina Compartilhada — ${discipline.name}`));
-        if (shared?.response_text) sharedCards.push(shared);
+        // O card compartilhado é útil quando a consulta é apenas pela
+        // disciplina. Quando há professor explícito, a resposta deve usar a
+        // interseção professor + disciplina, sem puxar os demais docentes.
+        if (shared?.response_text && !explicitTeacherNames.size) sharedCards.push(shared);
         const entries = this.db.listProfessorScheduleEntries?.({ academicPeriod: snapshot.academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name }) || [];
-        for (const entry of entries) names.add(normalizeText(entry.professor_name));
-        for (const name of discipline.professorNames || []) names.add(normalizeText(name));
+        for (const entry of entries) {
+          const normalizedProfessor = normalizeText(entry.professor_name);
+          if (!explicitTeacherNames.size || explicitTeacherNames.has(normalizedProfessor)) names.add(normalizedProfessor);
+        }
+        if (!explicitTeacherNames.size) {
+          for (const name of discipline.professorNames || []) names.add(normalizeText(name));
+        }
       }
-      for (const teacher of snapshot.teachers) if (names.has(normalizeText(teacher.name))) teacherMatches.push({ teacher, fuzzy: false, score: 100 });
+      if (explicitTeacherNames.size) {
+        teacherMatches = teacherMatches.filter(match => match?.teacher && explicitTeacherNames.has(normalizeText(match.teacher.name)));
+      } else {
+        for (const teacher of snapshot.teachers) if (names.has(normalizeText(teacher.name))) teacherMatches.push({ teacher, fuzzy: false, score: 100 });
+      }
     }
     const teachers = [...new Map(teacherMatches.map(match => [Number(match.teacher?.id || 0) || normalizeText(match.teacher?.name), match.teacher])).values()].filter(Boolean);
     if (!teachers.length && !sharedCards.length) return null;
@@ -502,11 +518,36 @@ class BotEngine {
         for (const discipline of disciplineMatches) structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
           academicPeriod: snapshot.academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name
         }) || []));
+        if (explicitTeacherNames.size) {
+          structuredEntries = structuredEntries.filter(entry => explicitTeacherNames.has(normalizeText(entry.professor_name)));
+        }
       } else {
         for (const teacher of teachers) structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
           academicPeriod: snapshot.academicPeriod, activeOnly: true, professor: teacher.name
         }) || []).filter(entry => normalizeText(entry.professor_name) === normalizeText(teacher.name)));
       }
+    }
+
+    if (requestedFields.length && disciplineMatches.length && explicitTeacherNames.size && !structuredEntries.length) {
+      const professorNames = teachers.map(item => String(item.name || '').trim()).filter(Boolean);
+      const disciplineNames = disciplineMatches.map(item => String(item.code || item.name || '').trim()).filter(Boolean);
+      const professorLabel = professorNames.map(name => name.split(/\s+/u).slice(0, 2).join(' ')).join(' e ') || 'Esse professor';
+      const disciplineLabel = disciplineNames.join(' e ') || 'essa disciplina';
+      const first = cards[0];
+      return {
+        matched: true, type: 'message',
+        text: `Não encontrei *${professorLabel}* como docente de *${disciplineLabel}* no quadro acadêmico atual.`,
+        responseItems: null, privateDelivery: false,
+        signature: `professor-discipline-mismatch:${[...explicitTeacherNames].join(',')}:${disciplineNames.map(normalizeText).join(',')}`,
+        matchedItem: 'Professor e disciplina — combinação não encontrada',
+        topic: 'Professores e Disciplinas', attachment: null, details_text: '', source_url: '', source_title: '', verified_at: '',
+        conflict: false, redactLog: false, detectedIntent: professorIntentLabel(requestedFields),
+        reasons: ['professor e disciplina reconhecidos', 'nenhuma oferta corresponde simultaneamente aos dois'],
+        candidates: [], analysis: [], context: { ...context },
+        contextSubject: { kind: 'professor_card', id: Number(first?.id || 0), title: first?.title || '', topic: 'Professores e Disciplinas',
+          referenceText: disciplineMatches[0]?.code || disciplineMatches[0]?.name || '', teacherNames: professorNames,
+          disciplineNames: disciplineMatches.map(item => item.name), details_text: '', source_url: '', source_title: '', verified_at: '' }
+      };
     }
 
     const targeted = this.professorScheduleEntriesForTarget(structuredEntries, prepared, context);

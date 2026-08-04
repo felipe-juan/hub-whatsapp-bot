@@ -1,3 +1,11 @@
+# v0.15.10 — 2026-08-04
+
+- Corrige consultas de sala para cruzar professor e disciplina de forma exata.
+- Disciplinas com mais de um docente, como Cálculo, agora identificam o professor de cada sala.
+- Respostas de sala exibem pelo menos os dois primeiros nomes do professor.
+- Evita incluir Economia, Inteligência Artificial, Comércio Eletrônico ou outras disciplinas não solicitadas.
+- Um ponto isolado (`.`) em grupo deixa de ativar o bot.
+
 # v0.15.9 — 2026-08-04
 
 - Adiciona atalhos exatos para os oito cards de semestre.

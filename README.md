@@ -1,6 +1,6 @@
-# HUB WhatsApp Bot v0.15.9
+# HUB WhatsApp Bot v0.15.10
 
-Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.9 amplia os atalhos exatos dos cards de semestre, incluindo números, ordinais e algarismos romanos, mantendo a ativação explícita em grupos. No privado, o comportamento permanece inalterado.
+Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.10 amplia os atalhos exatos dos cards de semestre, incluindo números, ordinais e algarismos romanos, mantendo a ativação explícita em grupos. No privado, o comportamento permanece inalterado.
 
 > [!IMPORTANT]
 > ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
@@ -10,7 +10,7 @@ Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e c
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA.
 
-## O que mudou na v0.15.9
+## O que mudou na v0.15.10
 
 - Contatos do Serviço Social adicionados aos cards de PAAE.
 - Valores monetários de 2025 apresentados numericamente.
@@ -88,9 +88,9 @@ npm run release:verify
 Implantação:
 
 ```bash
-scripts/hub-bot release local 0.15.9 ~/Downloads/hub-whatsapp-bot-v0.15.9.zip
-scripts/hub-bot release github 0.15.9 ~/Downloads/hub-whatsapp-bot-v0.15.9-github.zip
-scripts/hub-bot release oracle 0.15.9 ~/Downloads/hub-whatsapp-bot-v0.15.9.zip
+scripts/hub-bot release local 0.15.10 ~/Downloads/hub-whatsapp-bot-v0.15.10.zip
+scripts/hub-bot release github 0.15.10 ~/Downloads/hub-whatsapp-bot-v0.15.10-github.zip
+scripts/hub-bot release oracle 0.15.10 ~/Downloads/hub-whatsapp-bot-v0.15.10.zip
 ```
 
 ## Documentação
