@@ -97,12 +97,12 @@ test('database and content are split into focused modules', () => {
   for (const file of ['connection.js','migrations.js','cards-repository.js','sectors-repository.js','professors-repository.js','deliveries-repository.js','backups-repository.js']) {
     assert.equal(fs.existsSync(path.join(root, 'src', 'database', file)), true, file);
   }
-  for (const file of ['campus.js','sectors.js','bsi-course.js','tcc.js','internship.js','student-assistance.js']) assert.equal(fs.existsSync(path.join(root, 'src', 'content', file)), true, file);
+  for (const file of ['campus.js','sectors.js','bsi-course.js','tcc.js','internship.js','student-assistance.js','resources.js']) assert.equal(fs.existsSync(path.join(root, 'src', 'content', file)), true, file);
   for (const file of ['cards.js','sectors.js','professors.js','diagnostics.js','updates.js']) assert.equal(fs.existsSync(path.join(root, 'public', 'js', file)), true, file);
   assert.ok(fs.statSync(path.join(root, 'src', 'database.js')).size < 70000);
   assert.ok(fs.statSync(path.join(root, 'src', 'institutional-cards.js')).size < 10000);
   assert.ok(fs.statSync(path.join(root, 'public', 'app.js')).size < 40000);
-  assert.equal(INSTITUTIONAL_CARDS_V098.length, 112);
+  assert.equal(INSTITUTIONAL_CARDS_V098.length, 115);
 });
 
 test('historical immutable assets are limited to the immediately previous release', () => {

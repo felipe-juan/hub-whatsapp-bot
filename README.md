@@ -1,6 +1,6 @@
-# HUB WhatsApp Bot v0.15.0
+# HUB WhatsApp Bot v0.15.2
 
-Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.0 consolida dados estruturados, gatilhos explicáveis, contexto persistente, migrações versionadas e operação reproduzível.
+Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.2 corrige e fortalece o atualizador introduzido na série 0.15, preservando os conteúdos acadêmicos e a arquitetura estruturada.
 
 > [!IMPORTANT]
 > ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
@@ -9,6 +9,25 @@ Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e c
 
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA.
+
+## O que mudou na v0.15.2
+
+- corrige a validação dos ZIPs para permitir somente a pasta `data/` vazia, mantendo proibido qualquer banco, arquivo, link ou conteúdo de runtime;
+- remove a pasta `data/` vazia dos novos ZIPs, evitando a falha observada na v0.15.1;
+- detecta explicitamente um Node.js 22.13+ da família 22.x antes da instalação;
+- permite indicar o Node correto com `HUB_NODE_BIN=/caminho/para/node-22`;
+- caso `npm ci` não consiga acessar o registro, reutiliza `node_modules` da instalação anterior somente após validar as versões diretas;
+- mantém rollback completo caso a nova versão não consiga ser validada ou iniciada.
+
+## O que mudou na v0.15.1
+
+- cria um card canônico de repositórios, arquivos e materiais de BSI;
+- inclui Notion BSI 2.0, HUB Arquivos IFBA, Google Drives e Manual de Sobrevivência;
+- aceita atalhos exatos como `repositório`, `arquivos`, `drive`, `links do drive`, `acervo` e perguntas contextuais equivalentes;
+- adiciona um card direto sobre quebra de pré-requisito, protocolo, justificativa e decisão do Colegiado;
+- adiciona um card que explica como a letra e os números das salas indicam bloco e andar, com destaque para o Bloco H e os laboratórios `H40x`;
+- reconcilia migrações antigas para manter gatilhos curtos como frases exatas, sem conflitos com Biblioteca ou com o card de Felipe;
+- preserva cards personalizados e aposenta apenas o card genérico antigo de Drive quando ele não foi alterado pelo administrador.
 
 ## O que mudou na v0.15.0
 
@@ -53,9 +72,9 @@ npm run release:verify
 Implantação:
 
 ```bash
-scripts/hub-bot release local 0.15.0 ~/Downloads/hub-whatsapp-bot-v0.15.0.zip
-scripts/hub-bot release github 0.15.0 ~/Downloads/hub-whatsapp-bot-v0.15.0-github.zip
-scripts/hub-bot release oracle 0.15.0 ~/Downloads/hub-whatsapp-bot-v0.15.0.zip
+scripts/hub-bot release local 0.15.2 ~/Downloads/hub-whatsapp-bot-v0.15.2.zip
+scripts/hub-bot release github 0.15.2 ~/Downloads/hub-whatsapp-bot-v0.15.2-github.zip
+scripts/hub-bot release oracle 0.15.2 ~/Downloads/hub-whatsapp-bot-v0.15.2.zip
 ```
 
 ## Documentação

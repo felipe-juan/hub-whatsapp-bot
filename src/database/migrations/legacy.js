@@ -2,6 +2,7 @@
 
 const { ACADEMIC_CALENDAR_EVENTS_2026 } = require('../../content/academic-calendar-2026');
 const { SI_SCHEDULE_SOURCE_2026_2 } = require('../../si-professors-2026-2');
+const { RESOURCE_CARDS } = require('../../content/resources');
 
 module.exports = function createMixin(deps) {
   const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto } = deps;
@@ -316,6 +317,9 @@ module.exports = function createMixin(deps) {
     this.migrateConversationQueueV0813();
     this.migrateRiskDefaultsV070();
     this.migrateDeliveryV088();
+    // Executado por último para restaurar a política exata dos novos cards,
+    // depois das conversões de compatibilidade de versões antigas.
+    if (seedBundledContent) this.migrateContentV0151();
   }
 
   migrateLegacyContentToMessages() {
@@ -1455,7 +1459,10 @@ module.exports = function createMixin(deps) {
     };
     const addRepositoryTrigger = triggerInput => {
       const trigger = normalizeTriggerRules(triggerInput || {});
-      trigger.sentences = [...new Set([...(trigger.sentences || []), 'repositório', 'repositorio'])];
+      // “repositório” é um atalho exato: funciona quando ocupa a mensagem
+      // inteira, sem colidir com perguntas sobre o repositório institucional.
+      const direct = new Set(['repositorio']);
+      trigger.sentences = (trigger.sentences || []).filter(value => !direct.has(normalizeText(value)));
       trigger.exact_phrases = [...new Set([...(trigger.exact_phrases || []), 'repositório', 'repositorio'])];
       return trigger;
     };
@@ -1887,6 +1894,63 @@ module.exports = function createMixin(deps) {
       throw error;
     }
     this.invalidate('settings', 'activeMessages');
+  }
+
+
+  migrateContentV0151() {
+    if (asBool(this.getSetting('content_v0151_resources_prerequisite_rooms', 'false'), false)) return;
+    const timestamp = nowIso();
+    const select = this.db.prepare('SELECT id,source_type,customized FROM automatic_messages WHERE package_key=? OR lower(title)=lower(?) ORDER BY package_key=? DESC LIMIT 1');
+    const restoreTrigger = this.db.prepare('UPDATE automatic_messages SET trigger_json=?,customized=0,updated_at=? WHERE id=?');
+    const normalizedSet = values => [...new Set((values || []).map(normalizeText).filter(Boolean))].sort();
+    const sameSet = (first, second) => JSON.stringify(normalizedSet(first)) === JSON.stringify(normalizedSet(second));
+    const legacyExactConversion = (currentInput, officialInput) => {
+      const current = normalizeTriggerRules(currentInput || {});
+      const official = normalizeTriggerRules(officialInput || {});
+      const directRepository = new Set(['repositorio']);
+      const expectedSentences = [...official.sentences, ...official.exact_phrases]
+        .filter(value => !directRepository.has(normalizeText(value)));
+      const currentExact = normalizedSet(current.exact_phrases);
+      const allowedExact = normalizedSet(official.exact_phrases.filter(value => directRepository.has(normalizeText(value))));
+      return sameSet(current.sentences, expectedSentences)
+        && JSON.stringify(currentExact) === JSON.stringify(allowedExact)
+        && sameSet(current.keywords, official.keywords)
+        && sameSet(current.required_words, official.required_words)
+        && sameSet(current.excluded_words, official.excluded_words)
+        && sameSet(current.negative_examples, official.negative_examples)
+        && sameSet(current.synonym_group_ids, official.synonym_group_ids)
+        && current.match_mode === official.match_mode
+        && current.require_question_mark === official.require_question_mark
+        && current.regex_pattern === official.regex_pattern
+        && current.regex_flags === official.regex_flags
+        && Number(current.typo_tolerance || 0) === Number(official.typo_tolerance || 0);
+    };
+    for (const definition of RESOURCE_CARDS) {
+      this.stagePackageAutomaticMessage(definition.key, definition.message);
+      const row = select.get(definition.key, toPortugueseTitleCase(definition.message.title), definition.key);
+      if (!row || row.source_type !== 'hub_package') continue;
+      const official = this.validateAutomaticMessage(definition.message);
+      const current = this.getAutomaticMessage(Number(row.id));
+      // Em instalações novas, migrações legadas podem converter frases exatas
+      // em sentenças e marcar artificialmente o card como personalizado.
+      // Só restaura quando o gatilho corresponde exatamente a essa conversão.
+      if (!Number(row.customized || 0) || legacyExactConversion(current?.trigger, official.trigger)) {
+        restoreTrigger.run(JSON.stringify(official.trigger), timestamp, Number(row.id));
+      }
+    }
+    const insert = this.db.prepare(`INSERT OR IGNORE INTO regression_cases
+      (phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at)
+      VALUES (?,?,?,?,1,?,?)`);
+    for (const [phrase, expectation, title] of [
+      ['repositório', 'respond', 'BSI — Repositórios, Arquivos e Materiais'],
+      ['arquivos', 'respond', 'BSI — Repositórios, Arquivos e Materiais'],
+      ['drive', 'respond', 'BSI — Repositórios, Arquivos e Materiais'],
+      ['como funciona a quebra de pré-requisito?', 'respond', 'BSI — Quebra de Pré-requisito'],
+      ['qual prédio será ministrada a aula?', 'respond', 'Campus — Como Identificar Prédio, Andar e Sala'],
+      ['repositório institucional do IFBA', 'ignore', '']
+    ]) insert.run(phrase, normalizeText(phrase), expectation, title, timestamp, timestamp);
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0151_resources_prerequisite_rooms','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages', 'messageSummaries', 'conflictReport');
   }
 
   migrateConversationQueueV0813() {

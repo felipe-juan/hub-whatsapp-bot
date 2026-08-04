@@ -9,6 +9,7 @@ const { STUDENT_ASSISTANCE_CARDS } = require('./content/student-assistance');
 const { SCHEDULE_BOARD_V0812, SEMESTER_DAY_SCHEDULE_CARD_V0106 } = require('./content/schedule-board');
 const { ACADEMIC_LIFE_CARDS } = require('./content/academic-life');
 const { COMMUNITY_CARDS } = require('./content/community');
+const { RESOURCE_CARDS } = require('./content/resources');
 const { formatDisciplineNamesInText } = require('./si-professors-2026-2');
 const { toPortugueseTitleCase } = require('./title-case');
 
@@ -43,6 +44,7 @@ const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...INTERNSHIP_CARDS,
   ...STUDENT_ASSISTANCE_CARDS,
   ...ACADEMIC_LIFE_CARDS,
+  ...RESOURCE_CARDS,
   SEMESTER_DAY_SCHEDULE_CARD_V0106,
   ...COMMUNITY_CARDS
 ].map(definition => ({

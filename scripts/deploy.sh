@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 MODE="${1:-}"
-VERSION="${2:-$(cat "$(dirname "$0")/../VERSION")}"
+VERSION="${2:-$(cat "$(dirname "$0")/../VERSION")}" 
 ZIP="${3:-$HOME/Downloads/hub-whatsapp-bot-v${VERSION}.zip}"
 NAME="hub-whatsapp-bot-v${VERSION}"
 TMP="$(mktemp -d)"
@@ -16,6 +16,75 @@ SRC="$TMP/release/$NAME"
 [[ -d "$SRC" ]] || { echo "Pasta $NAME ausente no ZIP." >&2; exit 1; }
 HUB_VERIFY_ARCHIVE=1 node "$SRC/scripts/verify-release.js"
 
+resolve_node22() {
+  local candidate resolved
+  local candidates=(
+    "${HUB_NODE_BIN:-}"
+    node-22
+    node22
+    nodejs22
+    /usr/bin/node-22
+    /usr/bin/node22
+    /usr/local/bin/node-22
+    node
+  )
+  for candidate in "${candidates[@]}"; do
+    [[ -n "$candidate" ]] || continue
+    if [[ "$candidate" == */* ]]; then
+      [[ -x "$candidate" ]] || continue
+      resolved="$candidate"
+    else
+      resolved="$(command -v "$candidate" 2>/dev/null || true)"
+      [[ -n "$resolved" ]] || continue
+    fi
+    if "$resolved" -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a===22 && b>=13 ? 0 : 1)' >/dev/null 2>&1; then
+      printf '%s\n' "$resolved"
+      return 0
+    fi
+  done
+  return 1
+}
+
+run_npm_ci() {
+  local project="$1" node_bin="$2" npm_path npm_real
+  npm_path="$(command -v npm 2>/dev/null || true)"
+  [[ -n "$npm_path" ]] || { echo 'npm não encontrado.' >&2; return 1; }
+  npm_real="$(readlink -f "$npm_path" 2>/dev/null || printf '%s' "$npm_path")"
+  if "$node_bin" "$npm_real" --version >/dev/null 2>&1; then
+    (cd "$project" && "$node_bin" "$npm_real" ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps)
+  else
+    (cd "$project" && npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps)
+  fi
+}
+
+prepare_dependencies() {
+  local candidate="$1" current="$2" node_bin="$3"
+  if run_npm_ci "$candidate" "$node_bin"; then
+    return 0
+  fi
+  echo 'npm ci não pôde concluir; tentando reutilizar as dependências compatíveis da instalação atual.' >&2
+  rm -rf "$candidate/node_modules"
+  if [[ -d "$current/node_modules" ]]; then
+    cp -a "$current/node_modules" "$candidate/node_modules"
+    HUB_PROJECT_ROOT="$candidate" "$node_bin" "$candidate/scripts/check-installed-dependencies.js"
+    return 0
+  fi
+  echo 'Não há node_modules anterior compatível para recuperação.' >&2
+  return 1
+}
+
+require_node22() {
+  local current
+  current="$(node -p 'process.versions.node' 2>/dev/null || echo ausente)"
+  cat >&2 <<MSG
+Node.js 22.13 ou superior da família 22.x não foi encontrado.
+Node padrão atual: $current
+Instale/ative o Node.js 22 ou informe o executável, por exemplo:
+  HUB_NODE_BIN=/caminho/para/node-22 $0 $MODE "$VERSION" "$ZIP"
+MSG
+  exit 1
+}
+
 copy_preserved_runtime() {
   local from="$1" to="$2"
   mkdir -p "$to/data"
@@ -28,6 +97,7 @@ copy_preserved_runtime() {
 
 case "$MODE" in
   local)
+    NODE_BIN="$(resolve_node22)" || require_node22
     DEST="$HOME/.local/share/hub-whatsapp-bot"
     BASE="$HOME/.local/share"
     CANDIDATE="$BASE/.hub-whatsapp-bot-next-$$"
@@ -36,7 +106,8 @@ case "$MODE" in
     mkdir -p "$CANDIDATE" "$BACKUP_ROOT"
     rsync -a --delete --exclude='.git/' --exclude='.env' --exclude='data/' --exclude='node_modules/' --exclude='private-content.json' "$SRC/" "$CANDIDATE/"
     [[ -d "$DEST" ]] && copy_preserved_runtime "$DEST" "$CANDIDATE" || { mkdir -p "$CANDIDATE/data"; cp "$CANDIDATE/.env.example" "$CANDIDATE/.env"; }
-    (cd "$CANDIDATE" && npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps && node scripts/check.js)
+    prepare_dependencies "$CANDIDATE" "$DEST" "$NODE_BIN"
+    (cd "$CANDIDATE" && "$NODE_BIN" scripts/check.js)
 
     was_active=false
     systemctl --user is-active --quiet hub-whatsapp-bot.service 2>/dev/null && was_active=true
@@ -55,8 +126,12 @@ case "$MODE" in
       fi
     fi
     find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'code-pre-v*' -printf '%T@ %p\n' 2>/dev/null | sort -nr | tail -n +4 | cut -d' ' -f2- | xargs -r rm -rf
-    echo "Versão: $(node -p "require('$DEST/package.json').version")"
-    echo "Serviço local: $($was_active && systemctl --user is-active hub-whatsapp-bot.service || echo preservado-inativo)"
+    echo "Versão: $("$NODE_BIN" -p "require('$DEST/package.json').version")"
+    if $was_active; then
+      echo "Serviço local: $(systemctl --user is-active hub-whatsapp-bot.service)"
+    else
+      echo 'Serviço local: preservado-inativo'
+    fi
     ;;
 
   github)
@@ -93,6 +168,41 @@ BACKUP="$BACKUP_ROOT/code-pre-v${VERSION}-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$CANDIDATE" "$BACKUP_ROOT"
 cleanup(){ rm -rf "$STAGE" "$CANDIDATE"; }
 trap cleanup EXIT
+
+resolve_node22(){
+  local candidate resolved
+  local candidates=("${HUB_NODE_BIN:-}" node-22 node22 nodejs22 /usr/bin/node-22 /usr/bin/node22 /usr/local/bin/node-22 node)
+  for candidate in "${candidates[@]}"; do
+    [[ -n "$candidate" ]] || continue
+    if [[ "$candidate" == */* ]]; then [[ -x "$candidate" ]] || continue; resolved="$candidate";
+    else resolved="$(command -v "$candidate" 2>/dev/null || true)"; [[ -n "$resolved" ]] || continue; fi
+    if "$resolved" -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a===22 && b>=13 ? 0 : 1)' >/dev/null 2>&1; then printf '%s\n' "$resolved"; return 0; fi
+  done
+  return 1
+}
+run_npm_ci(){
+  local project="$1" node_bin="$2" npm_path npm_real
+  npm_path="$(command -v npm 2>/dev/null || true)"; [[ -n "$npm_path" ]] || return 1
+  npm_real="$(readlink -f "$npm_path" 2>/dev/null || printf '%s' "$npm_path")"
+  if "$node_bin" "$npm_real" --version >/dev/null 2>&1; then
+    (cd "$project" && "$node_bin" "$npm_real" ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps)
+  else
+    (cd "$project" && npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps)
+  fi
+}
+prepare_dependencies(){
+  local candidate="$1" current="$2" node_bin="$3"
+  if run_npm_ci "$candidate" "$node_bin"; then return 0; fi
+  echo 'npm ci não pôde concluir; tentando reutilizar as dependências compatíveis da instalação atual.' >&2
+  rm -rf "$candidate/node_modules"
+  if [[ -d "$current/node_modules" ]]; then
+    cp -a "$current/node_modules" "$candidate/node_modules"
+    HUB_PROJECT_ROOT="$candidate" "$node_bin" "$candidate/scripts/check-installed-dependencies.js"
+    return 0
+  fi
+  echo 'Não há node_modules anterior compatível para recuperação.' >&2
+  return 1
+}
 copy_runtime(){
   local from="$1" to="$2"
   mkdir -p "$to/data"
@@ -102,9 +212,11 @@ copy_runtime(){
   [[ -f "$to/.env" ]] || cp "$to/.env.example" "$to/.env"
   [[ ! -f "$to/private-content.json" ]] || chmod 600 "$to/private-content.json"
 }
+NODE_BIN="$(resolve_node22)" || { echo 'Node.js 22.13+ da família 22.x não encontrado na Oracle.' >&2; exit 1; }
 rsync -a --delete --exclude='.env' --exclude='data/' --exclude='node_modules/' --exclude='private-content.json' "$STAGE/" "$CANDIDATE/"
 [[ -d "$DEST" ]] && copy_runtime "$DEST" "$CANDIDATE" || { mkdir -p "$CANDIDATE/data"; cp "$CANDIDATE/.env.example" "$CANDIDATE/.env"; }
-(cd "$CANDIDATE" && npm ci --ignore-scripts --no-audit --no-fund --legacy-peer-deps && node scripts/check.js)
+prepare_dependencies "$CANDIDATE" "$DEST" "$NODE_BIN"
+(cd "$CANDIDATE" && "$NODE_BIN" scripts/check.js)
 
 sudo systemctl stop hub-whatsapp-bot.service
 [[ -d "$DEST" ]] && copy_runtime "$DEST" "$CANDIDATE"
@@ -125,7 +237,7 @@ fi
 trap - EXIT
 rm -rf "$STAGE" "$CANDIDATE"
 find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'code-pre-v*' -printf '%T@ %p\n' 2>/dev/null | sort -nr | tail -n +4 | cut -d' ' -f2- | xargs -r rm -rf
-echo "Versão: $(node -p "require('$DEST/package.json').version")"
+echo "Versão: $("$NODE_BIN" -p "require('$DEST/package.json').version")"
 echo "Serviço: $(sudo systemctl is-active hub-whatsapp-bot.service)"
 REMOTE
     ;;

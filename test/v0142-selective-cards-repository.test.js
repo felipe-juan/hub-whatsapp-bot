@@ -71,7 +71,7 @@ test('cards documentais relacionados incluem o HUB Arquivos IFBA', () => {
   } finally { holder.close(); }
 });
 
-test('migração adiciona repositório ao card existente de links do Drive', () => {
+test('migração preserva compatibilidade do card antigo enquanto o novo repositório canônico tem prioridade', () => {
   const holder = temporaryDatabase();
   try {
     const card = holder.db.saveAutomaticMessage({
@@ -86,7 +86,7 @@ test('migração adiciona repositório ao card existente de links do Drive', () 
     assert.ok(updated.trigger.exact_phrases.includes('repositório'));
     const engine = new BotEngine(holder.db);
     const result = engine.simulate('repositório', { isGroup: false, ignorePermissions: true });
-    assert.equal(result.matchedItem, 'Links do Drive');
+    assert.equal(result.matchedItem, 'BSI — Repositórios, Arquivos e Materiais');
     engine.close();
   } finally { holder.close(); }
 });

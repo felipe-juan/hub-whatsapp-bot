@@ -28,10 +28,33 @@ function collect(directory, output = []) {
   return output;
 }
 
+function directoryContainsPayload(directory) {
+  if (!fs.existsSync(directory)) return false;
+  const stat = fs.lstatSync(directory);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) return true;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    if (entry.isSymbolicLink() || entry.isFile()) return true;
+    if (entry.isDirectory() && directoryContainsPayload(absolute)) return true;
+  }
+  return false;
+}
+
 if (strictArchive) {
-  const forbidden = ['.env', 'private-content.json', 'data', 'node_modules', 'test/.cache'];
-  for (const relative of forbidden) {
-    if (fs.existsSync(path.join(root, relative))) throw new Error(`Conteúdo de runtime/privado presente no release: ${relative}`);
+  for (const relative of ['.env', 'private-content.json']) {
+    if (fs.existsSync(path.join(root, relative))) {
+      throw new Error(`Conteúdo de runtime/privado presente no release: ${relative}`);
+    }
+  }
+  for (const relative of ['.git', 'node_modules', 'test/.cache']) {
+    if (fs.existsSync(path.join(root, relative))) {
+      throw new Error(`Conteúdo de desenvolvimento/runtime presente no release: ${relative}`);
+    }
+  }
+  // A pasta data vazia pode existir apenas como estrutura inicial. Qualquer
+  // arquivo, link ou conteúdo real dentro dela continua proibido no release.
+  if (directoryContainsPayload(path.join(root, 'data'))) {
+    throw new Error('Conteúdo de runtime/privado presente no release: data');
   }
 }
 

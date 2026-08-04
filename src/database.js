@@ -108,6 +108,7 @@ const DEFAULT_SETTINGS = {
   content_v0142_selective_cards_and_repository: 'false',
   content_v0143_semester_cards_context_intents: 'false',
   content_v0144_direct_short_triggers: 'false',
+  content_v0151_resources_prerequisite_rooms: 'false',
   private_context_without_reply: 'true',
   external_backups_enabled: 'false',
   external_backup_interval_hours: '24',

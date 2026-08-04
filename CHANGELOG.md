@@ -1,5 +1,25 @@
 # Histórico de versões
 
+## 0.15.2 — 2026-08-04
+
+- corrige o verificador de release, que recusava a pasta `data/` mesmo quando ela estava vazia;
+- mantém bloqueado qualquer conteúdo real, banco, link simbólico ou arquivo privado dentro de `data/`;
+- remove a pasta vazia dos ZIPs gerados;
+- seleciona explicitamente Node.js 22.13+ da família 22.x no atualizador local e na Oracle;
+- adiciona suporte a `HUB_NODE_BIN` para instalações com mais de uma versão do Node;
+- reutiliza dependências da instalação anterior, após validação, quando `npm ci` não puder acessar o registro;
+- melhora as mensagens de erro e preserva o rollback da instalação anterior.
+
+## 0.15.1 — 2026-08-04
+
+- cria o card **BSI — Repositórios, Arquivos e Materiais** com Notion BSI 2.0, HUB Arquivos IFBA, Google Drives e Manual de Sobrevivência do DASI;
+- adiciona gatilhos curtos exatos como `repositório`, `arquivos`, `drive`, `links do drive`, `acervo`, `materiais` e formas contextuais em perguntas;
+- cria o card **BSI — Quebra de Pré-requisito** com orientação direta sobre protocolo, justificativas e votação no Colegiado;
+- cria o card **Campus — Como Identificar Prédio, Andar e Sala**, explicando letra do bloco, primeiro número do andar, Bloco H e laboratórios `H40x`;
+- evita falsos conflitos entre atalhos exatos e cards da Biblioteca ou do criador do HUB;
+- migra o card genérico antigo de Drive sem apagar respostas personalizadas;
+- adiciona testes de regressão para os três novos cards, links, gatilhos e migração.
+
 ## 0.15.0 — 2026-08-04
 
 - transforma o quadro estruturado na fonte de verdade para respostas acadêmicas;
