@@ -140,6 +140,12 @@ module.exports = function createScheduleRepositoryMixin() {
         );
         this.db.exec('COMMIT');
       } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+      if (typeof this.recordAcademicImport === 'function') this.recordAcademicImport({
+        academic_period: period, source_title: String(source.title || source.source_title || rows[0]?.source_title || 'Quadro estruturado'),
+        source_version: String(source.version || source.source_version || rows[0]?.source_version || ''),
+        source_date: String(source.date || source.source_date || rows[0]?.source_date || ''), entry_count: rows.length,
+        checksum: require('node:crypto').createHash('sha256').update(JSON.stringify(rows)).digest('hex')
+      });
       return { academic_period: period, records: clean.length, entries: rows.length };
     }
 

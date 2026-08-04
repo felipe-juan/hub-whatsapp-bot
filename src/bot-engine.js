@@ -1,3 +1,5 @@
+const { formatProfessorFullCard, formatSemesterOverviewCard, formatDisciplineFullCard } = require('./structured-card-renderer');
+const { isSemesterOverviewRequest } = require('./semester-overview');
 const { Cooldown } = require('./cooldown');
 const {
   findAutomaticMessageMatchesDetailed,
@@ -28,15 +30,16 @@ const {
   formatClassroomResponse,
   formatProfessorDisambiguation
 } = require('./professor-location');
-const { classifySectorRequest, classifySectorFollowUp, formatSectorResponse } = require('./sector-directory');
+const { classifySectorRequest, classifySectorFollowUp, formatSectorResponse } = require('./engine/sector-intent-handler');
 const { classifyGuidedFlow, formatFlowMenu } = require('./guided-flows');
 const { menuCandidates, formatMenu } = require('./help-menu');
 const { progressiveMenuFor } = require('./progressive-menus');
 const { semanticQuestionAssessment, implicitQuestionStructure } = require('./semantic-question');
 const { classifyBotReaction } = require('./reactions');
-const { prepareMessage, isProfessorAttendanceConfirmation } = require('./message-analysis');
+const { prepareMessage } = require('./message-analysis');
+const { shouldBlockAttendanceQuestion } = require('./engine/attendance-guard');
 const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
-const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse } = require('./professor-card-response');
+const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse } = require('./engine/professor-intent-handler');
 const {
   SEMESTER_SCHEDULE_CARD_TITLE,
   classifySemesterScheduleRequest,
@@ -49,7 +52,7 @@ const {
   scheduleDetailIntent,
   isScheduleStatusConfirmation,
   DEFAULT_TIME_ZONE
-} = require('./semester-schedule');
+} = require('./engine/semester-intent-handler');
 
 function asBool(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -278,7 +281,7 @@ class BotEngine {
     if (!normalized) return false;
     const teachers = context.snapshot?.teachers || this.db.listTeachers({ activeOnly: true });
     const exactTeacherMatches = (prepared?.professorMatches || findProfessorDirectoryMatches(normalized, teachers)).filter(match => !match.fuzzy);
-    return isProfessorAttendanceConfirmation({ normalized, professorMatches: exactTeacherMatches });
+    return shouldBlockAttendanceQuestion({ normalized, professorMatches: exactTeacherMatches });
   }
 
   scheduleStatusConfirmationIgnoredEvaluation(text, context = {}) {
@@ -467,11 +470,23 @@ class BotEngine {
       }).filter(item => item.text);
       compact = responseItems.length > 0;
     }
-    if (!compact) responseItems = cards.map(card => ({
-      text: card.response_text, attachment: card.attachment || null,
-      source_url: card.source_url || '', source_title: card.source_title || '', verified_at: card.verified_at || '',
-      matchedItem: card.title, topic: card.topic || card.title
-    }));
+    if (!compact) responseItems = cards.map(card => {
+      let generated = '';
+      const professorName = String(card.title || '').replace(/^Professor\s*[—-]\s*/iu, '').trim();
+      if (/^Professor\s*[—-]/iu.test(String(card.title || ''))) {
+        const teacher = teachers.find(item => normalizeText(item.name) === normalizeText(professorName)) || { name: professorName };
+        const entries = this.db.listProfessorScheduleEntries?.({ academicPeriod: snapshot.academicPeriod, activeOnly: true, professor: professorName })
+          ?.filter(entry => normalizeText(entry.professor_name) === normalizeText(professorName)) || [];
+        generated = formatProfessorFullCard({ teacher, entries, academicPeriod: snapshot.academicPeriod });
+      } else if (/^Disciplina Compartilhada/iu.test(String(card.title || '')) && disciplineMatches.length) {
+        const discipline = disciplineMatches[0];
+        const entries = this.db.listProfessorScheduleEntries?.({ academicPeriod: snapshot.academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name }) || [];
+        generated = formatDisciplineFullCard({ entries, academicPeriod: snapshot.academicPeriod });
+      }
+      return { text: generated || card.response_text, attachment: card.attachment || null,
+        source_url: generated ? '' : (card.source_url || ''), source_title: generated ? '' : (card.source_title || ''), verified_at: generated ? '' : (card.verified_at || ''),
+        matchedItem: card.title, topic: card.topic || card.title };
+    });
 
     const first = cards[0];
     const firstText = responseItems[0]?.text || first.response_text;
@@ -494,6 +509,19 @@ class BotEngine {
         referenceText, teacherNames: teachers.map(item => item.name), disciplineNames: disciplineMatches.map(item => item.name),
         details_text: first.details_text || '', source_url: first.source_url || '', source_title: first.source_title || '', verified_at: first.verified_at || '' }
     };
+  }
+
+  semesterOverviewEvaluation(text, context = {}) {
+    const semester = isSemesterOverviewRequest(text);
+    if (!semester) return null;
+    const settings = context.settings || context.snapshot?.settings || this.db.getSettings();
+    const academicPeriod = String(settings.current_academic_period || '2026.2');
+    const entries = this.db.listProfessorScheduleEntries?.({ academicPeriod, semester, activeOnly: true }) || [];
+    return { matched: true, type: 'semester_overview', text: formatSemesterOverviewCard({ semester, entries, academicPeriod }),
+      signature: `semester-overview:${academicPeriod}:${semester}`, matchedItem: `BSI — Aulas e horários do ${semester}º semestre`,
+      topic: 'Horários de BSI', detectedIntent: 'horário', reasons: ['grade do semestre gerada a partir do quadro estruturado'],
+      candidates: [], conflict: false, redactLog: false, analysis: [], attachment: null, context: { ...context },
+      contextSubject: { kind: 'semester_overview', semester, academicPeriod } };
   }
 
   semesterScheduleEnabled({ includeDrafts = false, messages = null } = {}) {
@@ -680,6 +708,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       if (professorCard) return { ...result, ...professorCard };
     }
 
+    const semesterOverview = this.semesterOverviewEvaluation(text, context);
+    if (semesterOverview) return { ...result, ...semesterOverview };
+
     const semesterSchedule = this.semesterScheduleEvaluation(text, context);
     if (semesterSchedule) return { ...result, ...semesterSchedule };
 
@@ -708,7 +739,12 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     finishTriggerEvaluation();
     const candidateStats = analysis.candidateStats || { candidates: analysis.length, total: analysis.length, skipped: 0 };
     this.performance.observe('trigger_candidates', candidateStats.candidates);
-    const candidates = analysis.filter(item => item.matched)
+    const observed = analysis.filter(item => item.matched && item.item?.observation_mode);
+    for (const item of observed) {
+      try { this.db.addTriggerObservation?.({ message_id: item.item.id, message_excerpt: text,
+        chat_type: context.isGroup ? 'group' : 'private', reasons: item.reasons || [] }); } catch {}
+    }
+    const candidates = analysis.filter(item => item.matched && !item.item?.observation_mode)
       .sort((a, b) => b.score - a.score || Number(a.item.sort_order || 0) - Number(b.item.sort_order || 0) || Number(b.item.priority || 0) - Number(a.item.priority || 0) || a.item.title.localeCompare(b.item.title))
       .slice(0, 5);
     result.analysis = analysis.map(item => ({
@@ -802,10 +838,12 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     }
   }
   forgetConversationContext(message, stored = null) {
-    for (const key of this.conversationKeys(message)) {
+    const keys = this.conversationKeys(message);
+    for (const key of keys) {
       if (!stored || this.conversationContexts.get(key) === stored) this.conversationContexts.delete(key);
     }
     if (stored) for (const [key, value] of this.replyContexts) if (value === stored) this.replyContexts.delete(key);
+    try { this.db.deleteConversationContexts?.(keys); } catch {}
   }
   rememberConversationContext(message, evaluation, settings = this.db.getSettings(), sendResult = null) {
     if (!evaluation?.matched || evaluation.type === 'disambiguation') return;
@@ -817,12 +855,20 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       ...subject,
       awaitingNextSenderMessage: subject.kind === 'semester_schedule_prompt',
       createdAt: Date.now(),
-      expiresAt: Date.now() + ttlSeconds * 1000
+      expiresAt: Date.now() + ttlSeconds * 1000,
+      originalMessage: String(message?.body || '').slice(0, 1000),
+      responseExcerpt: String(evaluation?.text || '').slice(0, 1000)
     };
     for (const key of this.conversationKeys(message)) this.conversationContexts.set(key, entry);
     const outboundId = this.outboundMessageId(sendResult);
     const replyKey = this.replyContextKey(message, outboundId);
     if (replyKey) this.replyContexts.set(replyKey, entry);
+    if (asBool(settings.persistent_context_enabled, true) && this.db.saveConversationContext) {
+      for (const key of this.conversationKeys(message)) {
+        try { this.db.saveConversationContext({ context_key: key, reply_key: replyKey, subject_type: entry.kind || 'subject',
+          subject_id: String(entry.id || entry.title || ''), payload: entry, expires_at: entry.expiresAt }); } catch {}
+      }
+    }
   }
   contextualFollowUpEvaluation(message, body, settings) {
     this.cleanConversationContexts();
@@ -832,6 +878,14 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       for (const key of this.conversationKeys(message)) {
         stored = this.conversationContexts.get(key);
         if (stored) break;
+      }
+    }
+    if (!stored && asBool(settings.persistent_context_enabled, true) && this.db.getConversationContext) {
+      const persisted = quotedKey ? this.db.getConversationContext('', quotedKey) : null;
+      if (persisted?.payload) stored = persisted.payload;
+      if (!stored) for (const key of this.conversationKeys(message)) {
+        const row = this.db.getConversationContext(key);
+        if (row?.payload) { stored = row.payload; this.conversationContexts.set(key, stored); break; }
       }
     }
     if (!stored) return null;
@@ -1104,6 +1158,23 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     return this.db.setSettings(values);
   }
 
+  isFalsePositiveFeedback(body) {
+    return /^(?:nao era isso|não era isso|resposta errada|nao perguntei isso|não perguntei isso|isso nao foi o que perguntei|isso não foi o que perguntei)[.!?]*$/iu.test(String(body || '').trim());
+  }
+
+  async handleFalsePositiveFeedback(message, body, chat, settings) {
+    if (!asBool(settings.false_positive_feedback_enabled, true) || !this.isFalsePositiveFeedback(body) || !this.db.addFalsePositiveReport) return false;
+    let stored = null;
+    for (const key of this.conversationKeys(message)) { stored = this.conversationContexts.get(key); if (stored) break; }
+    if (!stored) for (const key of this.conversationKeys(message)) { const row = this.db.getConversationContext?.(key); if (row?.payload) { stored = row.payload; break; } }
+    this.db.addFalsePositiveReport({ original_message: stored?.originalMessage || '', matched_message_id: stored?.id || null,
+      matched_title: stored?.title || stored?.topic || '', response_excerpt: stored?.responseExcerpt || '', feedback_text: body,
+      chat_type: chat?.isGroup ? 'group' : 'private' });
+    const reply = 'Obrigado. Registrei essa resposta como possivelmente incorreta para revisão no painel.';
+    if (message.sendResponse) await message.sendResponse({ text: reply, attachment: null }, true); else if (message.reply) await message.reply(reply);
+    return true;
+  }
+
   async handleContextualReaction(message, body, chat, settings) {
     const reaction = classifyBotReaction(message, body, { isPrivate: !chat.isGroup });
     if (!reaction || typeof message.react !== 'function') return false;
@@ -1236,6 +1307,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       this.diagnostic({ type: 'ignored', outcome: 'ignored', summary: 'Bot pausado nas configurações.', ...diagnosticBase }, settings);
       return;
     }
+    if (await this.handleFalsePositiveFeedback(message, body, chat, settings)) return;
     if (await this.handleContextualReaction(message, body, chat, settings)) return;
 
     const baseContext = {

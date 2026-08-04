@@ -8,6 +8,8 @@ const { ConversationQueue } = require('./conversation-queue');
 const { ConcurrencyLimiter } = require('./concurrency-limiter');
 const { CircuitBreaker } = require('./circuit-breaker');
 const { HealthWatchdog } = require('./health-watchdog');
+const { fetchGroupRows } = require('./whatsapp/group-sync');
+// groupFetchAllParticipating é encapsulado por fetchGroupRows para manter a integração Baileys isolada.
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const backgroundDelay = ms => new Promise(resolve => { const timer = setTimeout(resolve, ms); timer.unref?.(); });
@@ -1148,12 +1150,12 @@ class WhatsAppManager {
 
   async syncGroups() {
     if (!this.socket || this.status.state !== 'ready') throw new Error('WhatsApp ainda não está conectado.');
-    const groups = await this.socket.groupFetchAllParticipating();
+    const groups = await fetchGroupRows(this.socket);
     let count = 0;
-    for (const [jid, metadata] of Object.entries(groups || {})) {
-      const groupId = String(metadata?.id || jid || '');
-      if (!groupId) continue;
-      const name = String(metadata?.subject || 'Grupo sem nome');
+    for (const item of groups) {
+      const groupId = item.id;
+      const name = item.name;
+      const metadata = item.metadata;
       this.groupMetadataCache.set(groupId, metadata);
       while (this.groupMetadataCache.size > 500) this.groupMetadataCache.delete(this.groupMetadataCache.keys().next().value);
       if (this.writeQueue?.upsertGroup) this.writeQueue.upsertGroup(groupId, name);

@@ -1,3 +1,17 @@
+# Histórico de versões
+
+## 0.15.0 — 2026-08-04
+
+- transforma o quadro estruturado na fonte de verdade para respostas acadêmicas;
+- adiciona renderizadores estruturados para professor, disciplina e semestre;
+- cria migrações versionadas, transacionais e verificadas por checksum;
+- centraliza políticas de gatilho e adiciona modo de observação;
+- persiste contextos curtos no SQLite e registra possíveis falsos positivos;
+- adiciona validade acadêmica, corpus permanente e grupos de testes;
+- divide responsabilidades em módulos de motor e WhatsApp;
+- inclui lockfile, proveniência, Node 22.x fixado e implantação simplificada;
+- reorganiza a documentação e remove dados privados dos releases principais.
+
 # Changelog
 
 ## 0.14.4 — 2026-08-03

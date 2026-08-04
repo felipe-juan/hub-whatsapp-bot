@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+case "${1:-}" in
+  release) shift; exec "$ROOT/scripts/deploy.sh" "$@" ;;
+  check) exec node "$ROOT/scripts/check.js" ;;
+  test) shift; exec node "$ROOT/scripts/run-test-group.js" "${1:-all}" ;;
+  *) echo "Uso: scripts/hub-bot release local|github|oracle [versão] [zip] | check | test [grupo]" >&2; exit 2 ;;
+esac

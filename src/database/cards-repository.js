@@ -61,7 +61,9 @@ module.exports = function createMixin(deps) {
     return {
       ...rest, active: Boolean(row.active), archived: Boolean(row.archived), sort_order: Number(row.sort_order || 0), published: Boolean(row.published), is_example: Boolean(row.is_example),
       source_type: ['hub_package', 'administrator', 'teacher_import'].includes(row.source_type) ? row.source_type : 'administrator',
-      package_key: String(row.package_key || ''), customized: Boolean(row.customized),
+      package_key: String(row.package_key || ''), customized: Boolean(row.customized), observation_mode: Boolean(row.observation_mode),
+      structured_kind: String(row.structured_kind || ''), structured_key: String(row.structured_key || ''),
+      trigger_policy: parseJson(row.trigger_policy_json || '{}', {}) || {},
       package_snapshot: parseJson(package_snapshot_json || '', null), pending_package_update: parseJson(pending_package_json || '', null),
       scope: ['both', 'group', 'private'].includes(row.scope) ? row.scope : 'both',
       tags: [], attachment: (() => { const value = parseJson(attachment_json || '{}', null); return value?.stored_name ? value : null; })(),
@@ -88,27 +90,28 @@ module.exports = function createMixin(deps) {
     const triggerTokens = [...new Set([
       ...trigger.sentences, ...trigger.keywords, ...trigger.required_words, ...trigger.exact_phrases
     ].flatMap(value => normalizeText(value).split(' ').filter(Boolean)))];
-    const searchable = [effective.title || '', response.slice(0, 800), ...triggerTokens].join(' ');
+    const searchable = [effective.title || '', response.slice(0, 240), ...triggerTokens.slice(0, 40)].join(' ');
     return {
       id: Number(item.id), title: effective.title || '', priority: Number(effective.priority || 0),
       sort_order: Number(effective.sort_order || 0), active: effective.active !== false,
       archived: Boolean(effective.archived), published: item.published !== false,
       is_example: Boolean(item.is_example), has_draft: Boolean(item.has_draft),
       source_type: item.source_type || 'administrator', package_key: item.package_key || '',
-      customized: Boolean(item.customized), has_package_update: Boolean(item.pending_package_update),
+      customized: Boolean(item.customized), observation_mode: Boolean(item.observation_mode), structured_kind: item.structured_kind || '',
+      trigger_policy: item.trigger_policy || {}, has_package_update: Boolean(item.pending_package_update),
       scope: ['both','group','private'].includes(effective.scope) ? effective.scope : 'both',
       attachment: (() => { const value = effective.attachment || item.attachment || null; return value ? { file_name: value.file_name || '', mime_type: value.mime_type || '', size_bytes: Number(value.size_bytes || 0), kind: value.kind || 'document' } : null; })(),
-      response_text: response.slice(0, 360), response_truncated: response.length > 360,
+      response_text: response.slice(0, 240), response_truncated: response.length > 240,
       source_url: String(effective.source_url || ''), source_title: String(effective.source_title || ''), verified_at: String(effective.verified_at || ''),
       trigger: {
-        sentences: trigger.sentences.slice(0, 4), keywords: trigger.keywords.slice(0, 4),
+        sentences: trigger.sentences.slice(0, 2), keywords: trigger.keywords.slice(0, 2),
         regex_pattern: trigger.regex_pattern || ''
       },
       trigger_counts: {
         sentences: trigger.sentences.length, keywords: trigger.keywords.length,
         required_words: trigger.required_words.length, exact_phrases: trigger.exact_phrases.length
       },
-      search_text: normalizeText(searchable).slice(0, 2400), updated_at: item.updated_at || ''
+      search_text: normalizeText(searchable).slice(0, 700), updated_at: item.updated_at || ''
     };
   }
   listAutomaticMessageSummaries({ search = '' } = {}) {
@@ -513,6 +516,23 @@ module.exports = function createMixin(deps) {
       return urls.slice(0, 3).map(url => ({ id: item.id, title: item.title, url }));
     });
   }
+  setAutomaticMessageObservationMode(id, enabled = true) {
+    const result = this.db.prepare('UPDATE automatic_messages SET observation_mode=?,updated_at=? WHERE id=?')
+      .run(enabled ? 1 : 0, nowIso(), Number(id));
+    if (!result.changes) throw new Error('Mensagem automática não encontrada.');
+    this.touchWrite(); this.invalidate('activeMessages', 'messageSummaries');
+    return this.getAutomaticMessage(id);
+  }
+
+  setAutomaticMessageTriggerPolicy(id, policy = {}) {
+    const value = policy && typeof policy === 'object' ? policy : {};
+    const result = this.db.prepare('UPDATE automatic_messages SET trigger_policy_json=?,updated_at=? WHERE id=?')
+      .run(JSON.stringify(value), nowIso(), Number(id));
+    if (!result.changes) throw new Error('Mensagem automática não encontrada.');
+    this.touchWrite(); this.invalidate('activeMessages', 'messageSummaries');
+    return this.getAutomaticMessage(id);
+  }
+
   updateLinkHealth(id, status) {
     const result = this.db.prepare('UPDATE automatic_messages SET link_status=?,link_checked_at=?,link_http_status=?,link_error=? WHERE id=?')
       .run(String(status.status || 'error'), status.checkedAt || nowIso(), Number(status.httpStatus || 0), String(status.error || '').slice(0, 500), Number(id));

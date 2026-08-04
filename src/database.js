@@ -22,6 +22,7 @@ const createScheduleRepositoryMixin = require('./database/schedule-repository');
 const createIncomingRepositoryMixin = require('./database/incoming-repository');
 const createLearningRepositoryMixin = require('./database/learning-repository');
 const createChangeHistoryRepositoryMixin = require('./database/change-history-repository');
+const createQualityRepositoryMixin = require('./database/quality-repository');
 
 const DEFAULT_SETTINGS = {
   bot_name: 'HUB Bot',
@@ -238,6 +239,11 @@ class Database {
     this.lastWriteAt = Date.now();
     this.lastCheckpointAt = 0;
     this.prepared = {};
+    const template = String(process.env.HUB_TEST_DB_TEMPLATE || '').trim();
+    if (template && !require('node:fs').existsSync(dbPath) && require('node:fs').existsSync(template)) {
+      require('node:fs').mkdirSync(require('node:path').dirname(dbPath), { recursive: true });
+      require('node:fs').copyFileSync(template, dbPath);
+    }
     this.db = new DatabaseSync(dbPath);
     this.db.exec(`
       PRAGMA journal_mode = WAL;
@@ -249,6 +255,7 @@ class Database {
       PRAGMA auto_vacuum = INCREMENTAL;
     `);
     this.migrate();
+    this.runVersionedMigrations();
     this.seed();
     this.prepareFrequentlyUsedStatements();
     this.startUsageFlushTimer();
@@ -798,7 +805,7 @@ class Database {
 
 }
 const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto };
-for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin, createIncomingRepositoryMixin, createLearningRepositoryMixin, createChangeHistoryRepositoryMixin]) {
+for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin, createIncomingRepositoryMixin, createLearningRepositoryMixin, createChangeHistoryRepositoryMixin, createQualityRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;
   Object.defineProperties(Database.prototype, descriptors);

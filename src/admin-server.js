@@ -11,6 +11,8 @@ const { importTeachersCsv, importLinksCsv, importAutomaticMessagesCsv } = requir
 const { parseProfessorScheduleFile } = require('./professor-schedule-import');
 const { parseAcademicCalendarCsv } = require('./academic-calendar-import');
 const { normalizeText } = require('./text');
+const { runtimeCompatibility } = require('./runtime-compatibility');
+const { TRIGGER_POLICY_TYPES } = require('./trigger-policy');
 
 const MAX_STREAM_BUFFER_BYTES = 512 * 1024;
 function safeStreamWrite(res, payload) {
@@ -186,7 +188,7 @@ class AdminServer {
     const analytics = this.cachedStatusPart('analytics30', 60_000, () => this.db.getUsageStats(30));
     const databaseHealth = this.cachedStatusPart('database-health', 60_000, () => this.db.healthCheck());
     return {
-      version: this.updates?.status?.().currentVersion || '0.14.4', whatsapp: this.whatsapp.getStatus(),
+      version: this.updates?.status?.().currentVersion || '0.15.0', whatsapp: this.whatsapp.getStatus(),
       stats,
       analytics,
       health: {
@@ -384,6 +386,22 @@ class AdminServer {
       req.on('close', () => { clearInterval(heartbeat); unsubscribe(); });
       return;
     }
+    if (route === '/api/quality/runtime' && req.method === 'GET') return json(res, 200, runtimeCompatibility());
+    if (route === '/api/quality/migrations' && req.method === 'GET') return json(res, 200, this.db.listSchemaMigrations?.() || []);
+    if (route === '/api/quality/academic' && req.method === 'GET') return json(res, 200, this.db.academicDataStatus?.() || {});
+    if (route === '/api/quality/observations' && req.method === 'GET') return json(res, 200, this.db.listTriggerObservations?.({ state: url.searchParams.get('state') || 'pending', limit: url.searchParams.get('limit') || 100 }) || []);
+    if (route === '/api/quality/false-positives' && req.method === 'GET') return json(res, 200, this.db.listFalsePositiveReports?.({ state: url.searchParams.get('state') || 'pending', limit: url.searchParams.get('limit') || 100 }) || []);
+    if (route === '/api/quality/corpus' && req.method === 'GET') return json(res, 200, this.db.listCorpusCases?.({ activeOnly: url.searchParams.get('active') !== '0' }) || []);
+    if (route === '/api/quality/trigger-policies' && req.method === 'GET') return json(res, 200, TRIGGER_POLICY_TYPES);
+    const reviewObservation = route.match(/^\/api\/quality\/observations\/(\d+)$/);
+    if (reviewObservation && req.method === 'PATCH') { const body=await readBody(req); return json(res,200,{ok:this.db.reviewTriggerObservation(reviewObservation[1],body.state||'reviewed')}); }
+    const reviewFalsePositive = route.match(/^\/api\/quality\/false-positives\/(\d+)$/);
+    if (reviewFalsePositive && req.method === 'PATCH') { const body=await readBody(req); return json(res,200,{ok:this.db.reviewFalsePositiveReport(reviewFalsePositive[1],body.state||'reviewed')}); }
+    const observationMessage = route.match(/^\/api\/messages\/(\d+)\/observation$/);
+    if (observationMessage && req.method === 'PUT') { const body=await readBody(req); return json(res,200,await this.mutateDatabase('setAutomaticMessageObservationMode',[observationMessage[1],body.enabled!==false],{reason:'message-observation-mode'})); }
+    const policyMessage = route.match(/^\/api\/messages\/(\d+)\/trigger-policy$/);
+    if (policyMessage && req.method === 'PUT') { const body=await readBody(req); return json(res,200,await this.mutateDatabase('setAutomaticMessageTriggerPolicy',[policyMessage[1],body],{reason:'message-trigger-policy'})); }
+
     if (route === '/api/settings' && req.method === 'GET') return json(res, 200, this.db.getSettings());
     if (route === '/api/settings' && req.method === 'PUT') {
       const result = await this.mutateDatabase('setSettings', [await readBody(req)], { reason: 'settings', reloadRules: false }); this.backups?.reload?.().catch?.(error => console.warn('Falha ao recarregar backups:', error.message)); this.externalBackups?.reload?.(); this.adminScheduler?.reload?.(); this.publish('settings-changed', {}); return json(res, 200, result);

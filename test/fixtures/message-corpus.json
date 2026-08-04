@@ -1,0 +1,12 @@
+[
+  {"message":"qual sala de lpi?","expected_intent":"room","expected_entity":"LPI","must_respond":true,"source":"produção"},
+  {"message":"e o horário?","expected_intent":"schedule_followup","expected_entity":"LPI","must_respond":true,"requires_previous":"qual sala de lpi?","source":"produção"},
+  {"message":"crescêncio dá aula hoje?","expected_intent":"attendance_confirmation","expected_entity":"Crescêncio","must_respond":false,"source":"produção"},
+  {"message":"em quais dias Amanda dá aula?","expected_intent":"days","expected_entity":"Amanda","must_respond":true,"source":"produção"},
+  {"message":"caens","expected_intent":"institutional_full","expected_entity":"CAENS","must_respond":true,"source":"produção"},
+  {"message":"o protocolo TCP controla a conexão","expected_intent":"none","expected_entity":"","must_respond":false,"source":"regressão"},
+  {"message":"semestre 1","expected_intent":"semester_overview","expected_entity":"1","must_respond":true,"source":"produção"},
+  {"message":"horários e salas do 2º semestre","expected_intent":"semester_overview","expected_entity":"2","must_respond":true,"source":"produção"},
+  {"message":"felipe","expected_intent":"professor_full","expected_entity":"Felipe Juan","must_respond":true,"source":"produção"},
+  {"message":"falei com Crijina ontem","expected_intent":"none","expected_entity":"","must_respond":false,"source":"regressão"}
+]

@@ -7,8 +7,8 @@ const crypto = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
 const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
-const excludedDirectories = new Set(['.git', 'data', 'node_modules']);
-const excludedFiles = new Set(['.env', 'UPDATE_MANIFEST.json']);
+const excludedDirectories = new Set(['.git', '.cache', 'data', 'node_modules']);
+const excludedFiles = new Set(['.env', 'private-content.json', 'UPDATE_MANIFEST.json']);
 
 function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');

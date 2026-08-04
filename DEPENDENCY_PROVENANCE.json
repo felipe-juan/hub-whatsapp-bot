@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-08-04",
+  "node_range": ">=22.13 <23",
+  "critical_dependencies": {
+    "@whiskeysockets/baileys": {
+      "version": "7.0.0-rc13",
+      "upstream_tag": "v7.0.0-rc13",
+      "upstream_commit": "8053b08",
+      "registry_tarball": "https://registry.npmjs.org/@whiskeysockets/baileys/-/baileys-7.0.0-rc13.tgz",
+      "reason": "biblioteca de conexão com o WhatsApp; versão já validada pelo projeto"
+    }
+  },
+  "notes": [
+    "As dependências diretas estão fixadas sem intervalos.",
+    "O instalador preserva dependências existentes antes de substituir a instalação.",
+    "O script verify-package-lock.js impede divergência entre package.json, package-lock.json e VERSION."
+  ]
+}
