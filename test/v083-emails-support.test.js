@@ -73,7 +73,7 @@ test('structured sectors and retained HUB cards answer natural requests', () => 
       ['qual o contato do CAPNE?', 'CAPNE — contact'],
       ['whatsapp da CORES', 'CORES — whatsapp'],
       ['como falar com a CAENS?', 'CAENS — contact'],
-      ['qual o e-mail da coordenação de bsi?', 'BSI — Contato da Coordenação'],
+      ['qual o e-mail da coordenação de bsi?', 'CSI — email'],
       ['onde encontro a matriz curricular atual de bsi', 'HUB — Fluxograma e Matriz de Sistemas de Informação'],
       ['qual a tabela da final?', 'HUB — Média Final e Tabela da Final'],
       ['calendário acadêmico', 'HUB — Calendário Acadêmico']

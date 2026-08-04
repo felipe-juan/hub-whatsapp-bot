@@ -55,10 +55,14 @@ test('disciplina por sigla ou nome completo abre o card docente e aceita múltip
     const byName = engine.evaluate('horários de Linguagem de Programação II', { isGroup: false, ignorePermissions: true });
     assert.equal(byName.matchedItem, 'Professor — Alexandro dos Santos Silva');
     const many = engine.evaluate('horários de LPII e BDI', { isGroup: false, ignorePermissions: true });
-    assert.equal(many.type, 'multi_message');
-    assert.equal(many.responseItems.length, 2);
+    assert.equal(many.type, 'message');
+    assert.match(many.text, /LPII — Linguagem de Programação II/u);
+    assert.match(many.text, /BDI — Banco de Dados I/u);
+    assert.doesNotMatch(many.text, /@ifba\.edu\.br/u);
     const group = engine.evaluate('horários de LPII e BDI', { isGroup: true, ignorePermissions: true });
-    assert.equal(group.privateDelivery, true);
+    assert.equal(group.privateDelivery, false);
+    assert.match(group.text, /LPII — Linguagem de Programação II/u);
+    assert.match(group.text, /BDI — Banco de Dados I/u);
   } finally { engine.close(); db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -135,10 +139,14 @@ test('consulta múltipla em grupo envia cada card somente no privado do particip
       async reply(value) { groupResponses.push(value); return { key: { id: `g${groupResponses.length}` } }; }
     };
     await engine.handle(message);
-    assert.equal(privateResponses.length, 2);
-    assert.equal(groupResponses.length, 0);
-    assert.ok(privateResponses.every(item => /18h30/u.test(item.text)));
-    assert.ok(privateResponses.every(item => !/@ifba\.edu\.br/u.test(item.text)));
+    assert.equal(privateResponses.length, 0);
+    assert.equal(groupResponses.length, 1);
+    const response = groupResponses[0];
+    const text = typeof response === 'string' ? response : response.text;
+    assert.match(text, /LPII — Linguagem de Programação II/u);
+    assert.match(text, /BDI — Banco de Dados I/u);
+    assert.match(text, /18h30/u);
+    assert.doesNotMatch(text, /@ifba\.edu\.br/u);
   } finally { engine.close(); db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

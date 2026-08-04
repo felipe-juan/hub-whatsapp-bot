@@ -41,10 +41,10 @@ test('contato privado de Felipe Juan só é aplicado quando o arquivo privado ex
     assert.ok(card);
     const phone = felipeJuanPhone();
     if (phone) {
-      assert.match(card.response_text, /📱 \*Contato\*/u);
+      assert.match(card.response_text, /\*Contato\*/u);
       assert.ok(card.response_text.includes(formatBrazilianMobile(phone)));
     } else {
-      assert.doesNotMatch(card.response_text, /📱 \*Contato\*/u);
+      assert.doesNotMatch(card.response_text, /\*Contato\*/u);
     }
   } finally { holder.close(); }
 });

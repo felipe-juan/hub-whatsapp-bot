@@ -9,6 +9,7 @@ const { buildProfessorScheduleResponse } = require('./professor-schedule-import'
 const { SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload } = require('./si-support-messages-v083');
 const { INSTITUTIONAL_CARDS_V098 } = require('./institutional-cards');
 const { FUN_CARDS_V0101 } = require('./content/fun');
+const { SEMESTER_WEEKLY_CARDS_V0143 } = require('./content/semester-weekly-cards');
 const { CAMPUS_CARDS } = require('./content/campus');
 const { captionAnalysis } = require('./caption-policy');
 const { felipeJuanPhone, injectFelipeJuanPhone } = require('./private-content');
@@ -104,6 +105,7 @@ const DEFAULT_SETTINGS = {
   content_v0130_management_and_triggers: 'false',
   content_v0140_precision_performance: 'false',
   content_v0142_selective_cards_and_repository: 'false',
+  content_v0143_semester_cards_context_intents: 'false',
   private_context_without_reply: 'true',
   external_backups_enabled: 'false',
   external_backup_interval_hours: '24',
@@ -779,7 +781,7 @@ class Database {
   }
 
 }
-const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto };
+const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto };
 for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin, createIncomingRepositoryMixin, createLearningRepositoryMixin, createChangeHistoryRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;

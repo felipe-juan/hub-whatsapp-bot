@@ -105,20 +105,20 @@ function classifySectorFollowUp(text) {
   const allowedDirect = new Set(['contato', 'ctt', 'email', 'e mail', 'whatsapp', 'whats', 'zap', 'telefone', 'fone', 'numero', 'ramal', 'onde fica', 'localizacao', 'servicos', 'o que resolve', 'o que faz', 'fonte', 'mais detalhes']);
   return hasQuestionStructure || allowedDirect.has(clean) ? intent : '';
 }
-function line(label, value) { return value ? `${label} ${value}` : ''; }
+function line(label, value) { return value ? `*${label}:* ${value}` : ''; }
 function formatSectorResponse(sector, intent = 'contact', { includeSource = false } = {}) {
-  const title = `🏢 *${sector.acronym ? `${sector.acronym} — ` : ''}${sector.name}*`;
+  const title = `*${sector.acronym ? `${sector.acronym} — ` : ''}${sector.name}*`;
   const services = Array.isArray(sector.services) ? sector.services.filter(Boolean) : [];
-  const contacts = [line('📧', sector.email), line('📱', sector.whatsapp), line('☎️', sector.phone)].filter(Boolean);
+  const contacts = [line('E-mail', sector.email), line('WhatsApp', sector.whatsapp), line('Telefone', sector.phone)].filter(Boolean);
   let body = [];
-  if (intent === 'email') body = sector.email ? [line('📧', sector.email)] : ['Não há e-mail confirmado na base.'];
-  else if (intent === 'whatsapp') body = sector.whatsapp ? [line('📱', sector.whatsapp)] : ['Não há WhatsApp confirmado na base.'];
-  else if (intent === 'phone') body = sector.phone ? [line('☎️', sector.phone)] : ['Não há telefone confirmado na base.'];
-  else if (intent === 'location') body = sector.location ? [line('📍', sector.location)] : ['Não há localização confirmada na base.', ...(sector.email ? [`📧 Confirme diretamente: ${sector.email}`] : [])];
+  if (intent === 'email') body = sector.email ? [line('E-mail', sector.email)] : ['Não há e-mail confirmado na base.'];
+  else if (intent === 'whatsapp') body = sector.whatsapp ? [line('WhatsApp', sector.whatsapp)] : ['Não há WhatsApp confirmado na base.'];
+  else if (intent === 'phone') body = sector.phone ? [line('Telefone', sector.phone)] : ['Não há telefone confirmado na base.'];
+  else if (intent === 'location') body = sector.location ? [line('Localização', sector.location)] : ['Não há localização confirmada na base.', ...(sector.email ? [`Confirme diretamente: ${sector.email}`] : [])];
   else if (intent === 'services') body = services.length ? ['*O que o setor atende:*', ...services.map(value => `• ${value}`)] : ['Os serviços do setor ainda não foram detalhados na base.'];
   else if (intent === 'source') body = [sector.source_title || 'Fonte oficial', sector.source_url || 'Link não cadastrado.', sector.verified_at ? `Verificado em: ${sector.verified_at.split('-').reverse().join('/')}` : 'Data de verificação não cadastrada.'];
-  else body = [...contacts, ...(sector.location ? [line('📍', sector.location)] : []), ...(services.length ? ['', `Atende principalmente: ${services.slice(0, 3).join('; ')}.`] : [])];
-  if (includeSource && intent !== 'source' && sector.source_url) body.push('', `🔎 ${sector.source_url}`);
+  else body = [...contacts, ...(sector.location ? [line('Localização', sector.location)] : []), ...(services.length ? ['', `Atende principalmente: ${services.slice(0, 3).join('; ')}.`] : [])];
+  if (includeSource && intent !== 'source' && sector.source_url) body.push('', sector.source_url);
   return [title, '', ...body].filter((value, index, all) => value !== '' || (index > 0 && all[index - 1] !== '')).join('\n').trim();
 }
 

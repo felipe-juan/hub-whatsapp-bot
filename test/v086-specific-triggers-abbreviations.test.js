@@ -27,7 +27,7 @@ test('structured coordination understands coordenador and coordenadora without m
   try {
     for (const body of ['qual o contato do coordenador de bsi?', 'email da coordenadora de sistemas de informação', 'ctt do coordenador do curso de bsi']) {
       const result = engine.evaluate(body, { isGroup: false, ignorePermissions: true });
-      assert.equal(result.matched, true, body); assert.equal(result.matchedItem, 'BSI — Contato da Coordenação'); assert.match(result.text, /csi\.vdc@ifba\.edu\.br/u);
+      assert.equal(result.matched, true, body); assert.match(result.matchedItem, /^CSI — (?:contact|email)$/u); assert.match(result.text, /csi\.vdc@ifba\.edu\.br/u);
     }
     assert.equal(engine.evaluate('o coordenador participou da reunião', { isGroup: false, ignorePermissions: true }).matched, false);
   } finally { engine.close(); db.close(); fs.rmSync(dir, { recursive: true, force: true }); }

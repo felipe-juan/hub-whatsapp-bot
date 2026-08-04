@@ -4,7 +4,7 @@ const { ACADEMIC_CALENDAR_EVENTS_2026 } = require('../content/academic-calendar-
 const { SI_SCHEDULE_SOURCE_2026_2 } = require('../si-professors-2026-2');
 
 module.exports = function createMixin(deps) {
-  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto } = deps;
+  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto } = deps;
 
   const professorContactValue = response => {
     const lines = String(response || '').split('\n');
@@ -308,6 +308,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0130();
     if (seedBundledContent) this.migrateContentV0140();
     if (seedBundledContent) this.migrateContentV0142();
+    if (seedBundledContent) this.migrateContentV0143();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -1532,6 +1533,44 @@ module.exports = function createMixin(deps) {
       this.db.exec('COMMIT');
     } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
     this.invalidate('settings', 'activeMessages', 'activeLinks', 'conflictReport');
+  }
+
+  migrateContentV0143() {
+    if (asBool(this.getSetting('content_v0143_semester_cards_context_intents', 'false'), false)) return;
+    const timestamp = nowIso();
+    for (const definition of SEMESTER_WEEKLY_CARDS_V0143) {
+      this.stagePackageAutomaticMessage(definition.key, definition.message);
+    }
+
+    // Reduz apenas emojis decorativos dos cards oficiais ainda não
+    // personalizados. Avisos funcionais, como ⚠️, são preservados.
+    const decorative = /^\s*(?:(?:📚|📅|🗓️|👤|📧|📱|☎️|📍|🏢|🌐|🔎|✅|☑️|➡️|🔗|💡|📌|📄|🎓|🧑‍🏫)\s*)+/u;
+    const reduceEmojis = value => String(value || '').split('\n').map(line => line.replace(decorative, '')).join('\n');
+    const patchSnapshot = value => {
+      if (!value) return value || '';
+      const object = parseJson(value, null);
+      if (!object || typeof object !== 'object') return value;
+      if (typeof object.response_text === 'string') object.response_text = reduceEmojis(object.response_text);
+      if (typeof object.details_text === 'string') object.details_text = reduceEmojis(object.details_text);
+      return JSON.stringify(object);
+    };
+    const rows = this.db.prepare("SELECT id,response_text,details_text,package_snapshot_json,pending_package_json FROM automatic_messages WHERE source_type='hub_package' AND customized=0").all();
+    const update = this.db.prepare('UPDATE automatic_messages SET response_text=?,details_text=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?');
+    for (const row of rows) {
+      const response = reduceEmojis(row.response_text);
+      const details = reduceEmojis(row.details_text);
+      const snapshot = patchSnapshot(row.package_snapshot_json);
+      const pending = patchSnapshot(row.pending_package_json);
+      if (response === row.response_text && details === row.details_text && snapshot === (row.package_snapshot_json || '') && pending === (row.pending_package_json || '')) continue;
+      update.run(response, details, snapshot, pending, timestamp, Number(row.id));
+    }
+
+    const seedRegression = this.db.prepare(`INSERT OR IGNORE INTO regression_cases(phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`);
+    seedRegression.run('em quais dias Amanda dá aula?', normalizeText('em quais dias Amanda dá aula?'), 'match', 'Professor — Amanda Ferraz de Oliveira Passos', timestamp, timestamp);
+    seedRegression.run('quais aulas do 3º semestre?', normalizeText('quais aulas do 3º semestre?'), 'match', 'BSI — Aulas e horários do 3º semestre', timestamp, timestamp);
+    seedRegression.run('qual é o e-mail da CAENS?', normalizeText('qual é o e-mail da CAENS?'), 'match', 'CAENS', timestamp, timestamp);
+    this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0143_semester_cards_context_intents','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+    this.invalidate('settings', 'activeMessages', 'messageSummaries', 'conflictReport');
   }
 
   seedStructuredSectorsV098() {

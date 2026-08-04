@@ -51,8 +51,8 @@ test('canonical support cards stay concise and structured sectors expose useful 
     }
     const capne = db.listSectors().find(item => item.acronym === 'CAPNE');
     assert.ok(capne); assert.match(capne.email, /capne\.vdc@ifba\.edu\.br/);
-    assert.match(card(db, 'Serviço — Protocolo').response_text, /🔗/);
-    assert.match(card(db, 'HUB — Calendário Acadêmico').response_text, /📅/);
+    assert.match(card(db, 'Serviço — Protocolo').response_text, /https:\/\/docs\.google\.com\/forms/u);
+    assert.match(card(db, 'HUB — Calendário Acadêmico').response_text, /calendário|calendario/iu);
   } finally { db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -78,7 +78,9 @@ test('the most specific discipline wins and shared disciplines use one combined 
     assert.equal(web.matchedItem, 'Professor — Alexandro dos Santos Silva');
 
     const calculo = engine.evaluate('qual o contato do professor de Cálculo Diferencial Aplicado à Computação?', { isGroup: true, ignorePermissions: true });
-    assert.equal(calculo.matchedItem, 'Disciplina Compartilhada — Cálculo Diferencial Aplicado à Computação');
+    assert.match(calculo.matchedItem, /^Disciplina Compartilhada — Cálculo Diferencial Aplicado à Computação/u);
+    assert.match(calculo.matchedItem, /Professor — Paulo Espinheira Menezes de Melo/u);
+    assert.match(calculo.matchedItem, /Professor — Thiago Leonardo Bastos da Silva/u);
     assert.equal(calculo.type, 'message');
     engine.close();
   } finally {

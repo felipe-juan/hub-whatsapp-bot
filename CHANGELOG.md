@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.14.3 — 2026-08-03
+
+- adiciona oito cards completos de aulas e horários, um para cada semestre de BSI, com dados da planilha oficial de 28/07/2026;
+- mantém contexto útil nas respostas seletivas: sala inclui disciplina, dia e horário, sem retornar contato ou outras disciplinas desnecessárias;
+- reconhece `em quais dias Amanda dá aula?` como consulta objetiva e limita o bloqueio a confirmações pontuais de presença ou realização real da aula;
+- permite continuações privadas como `e o horário?` sem repetir professor ou disciplina;
+- faz consultas por professor e disciplina terem prioridade sobre a pergunta genérica de semestre;
+- identifica e destaca a aula em andamento ou a próxima aula em pedidos como `onde Allan dá aula hoje?`;
+- torna seletivas também as respostas dos setores institucionais e preserva a fonte para consulta contextual posterior;
+- informa explicitamente quando sala, horário ou semestre não estão cadastrados;
+- exibe a intenção classificada no diagnóstico simples e técnico;
+- reduz emojis decorativos nas respostas e nos metadados de fonte;
+- adiciona regressões para os oito cards, contexto conversacional, intenção, dados ausentes e prioridade temporal.
+
 ## 0.14.2 — 2026-08-03
 
 - passa a responder consultas docentes e por disciplina somente com os campos pedidos: sala, horário, dia, professor, contato, semestre ou combinações desses dados;

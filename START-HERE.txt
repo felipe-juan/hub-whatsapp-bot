@@ -1,15 +1,17 @@
-HUB WhatsApp Bot v0.14.2 — Fedora GNOME
+HUB WhatsApp Bot v0.14.3 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.14.2
+ATUALIZAÇÃO v0.14.3
 
 NOVIDADES PRINCIPAIS
-- “Qual sala de LPI?” responde somente a sala, sem contato, outras disciplinas ou o card completo.
-- Consultas podem pedir sala, horário, dia, professor, contato, semestre ou mais de um desses campos.
-- “Repositório” aciona o card existente de links do Google Drive.
-- Cards documentais relacionados incluem o endereço público do HUB Arquivos IFBA quando cabível.
-- “Crescêncio dá aula hoje?” e “Crescêncio tem aula hoje?” não acionam o card docente.
-- A migração preserva cards personalizados e aplica as novas regras em bancos existentes.
+- Oito novos cards mostram a grade semanal completa de cada semestre de BSI em 2026.2.
+- Perguntas de sala incluem disciplina, dia e horário, mas evitam contato e outras informações desnecessárias.
+- “Em quais dias Amanda dá aula?” mostra os dias e horários; confirmações pontuais de presença continuam bloqueadas.
+- No privado, “e o horário?” pode continuar uma consulta anterior sem repetir professor ou disciplina.
+- “Onde Allan dá aula hoje?” prioriza a aula atual ou a próxima do dia.
+- E-mail, localização e outros campos de setores são respondidos seletivamente.
+- O diagnóstico mostra a intenção classificada e respostas usam menos emojis decorativos.
+- Dados acadêmicos ausentes são indicados de forma explícita.
 
 INSTALAÇÃO
 1. Extraia o ZIP.

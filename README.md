@@ -1,4 +1,4 @@
-# HUB WhatsApp Bot v0.14.2
+# HUB WhatsApp Bot v0.14.3
 
 Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB Arquivos IFBA. Cada automação reúne **gatilhos editáveis** e a **resposta completa** que será enviada.
 
@@ -9,6 +9,19 @@ Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB A
 
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA. Respostas simultâneas são organizadas por conversa, mas nenhuma integração não oficial garante que a conta nunca será restringida.
+
+
+## Grades por semestre, contexto útil e diagnóstico de intenção — v0.14.3
+
+- adiciona oito cards semanais, um para cada semestre de BSI em 2026.2, com dia da semana, disciplina, docente, sala e horário conforme a planilha oficial de 28/07/2026;
+- respostas seletivas permanecem enxutas, mas incluem contexto acadêmico útil: ao perguntar a sala, a resposta também identifica a disciplina, o dia e o horário;
+- `em quais dias Amanda dá aula?` volta a ser uma consulta válida e apresenta os dias e horários, enquanto confirmações pontuais de presença, como `Amanda dá aula hoje?`, continuam sem resposta;
+- continuações privadas como `e o horário?` recuperam a disciplina ou o professor da pergunta anterior sem exigir repetição;
+- consultas como `onde Allan dá aula hoje?` priorizam a aula em andamento ou a próxima aula do dia, em vez de pedir o semestre;
+- setores institucionais respondem apenas ao campo solicitado, como e-mail ou localização, mantendo a fonte disponível para a continuação `qual a fonte?`;
+- dados ausentes são informados explicitamente, sem substituir a ausência pelo card completo;
+- o painel de diagnóstico passa a mostrar a intenção classificada, como sala, horário, contato, localização ou presença não verificável;
+- reduz emojis decorativos nas respostas, fontes e menus, preservando avisos funcionais.
 
 
 ## Respostas seletivas, repositório e referências do HUB — v0.14.2

@@ -31,20 +31,19 @@ test('card response automatically includes structured source and verification da
   try {
     await engine.handle(mockMessage('Quanto tempo dura o curso de BSI?', replies));
     assert.equal(replies.length, 1);
-    assert.match(replies[0], /🔎 \*Fonte:\* Página oficial do IFBA/);
+    assert.match(replies[0], /\*Fonte:\* Página oficial do IFBA/);
     assert.match(replies[0], /sistemas-de-informacao/);
-    assert.match(replies[0], /🗓️ \*Verificada em:\* 01\/08\/2026/);
+    assert.match(replies[0], /\*Verificada em:\* 01\/08\/2026/);
   } finally { closeAll(engine, db, dir); }
 });
 
-test('structured sector response also includes source in the same message', async () => {
+test('structured sector response keeps source available without polluting the selective answer', async () => {
   const { db, dir } = temporaryDatabase(); const engine = new BotEngine(db); const replies = [];
   try {
     await engine.handle(mockMessage('contato caens', replies));
     assert.equal(replies.length, 1);
     assert.match(replies[0], /caens\.vdc@ifba\.edu\.br/i);
-    assert.match(replies[0], /🔎 \*Fonte:\* Página oficial do IFBA/);
-    assert.match(replies[0], /coordenacao-de-apoio-ao-ensino-caens/);
+    assert.doesNotMatch(replies[0], /Fonte:|coordenacao-de-apoio-ao-ensino-caens/);
   } finally { closeAll(engine, db, dir); }
 });
 

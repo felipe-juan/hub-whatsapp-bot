@@ -49,14 +49,15 @@ test('card de contato da Coordenação de BSI reúne os dados oficiais do HUB', 
   } finally { holder.close(); }
 });
 
-test('perguntas de contato usam o card completo da Coordenação de BSI', async () => {
+test('perguntas de contato usam a resposta seletiva da Coordenação de BSI', async () => {
   const holder = temporaryDatabase();
   try {
     const engine = new BotEngine(holder.db);
     const result = await engine.simulate('qual o contato da coordenação de bsi', { isGroup: true });
-    assert.equal(result.type, 'message');
-    assert.equal(result.matchedItem, 'BSI — Contato da Coordenação');
-    assert.match(result.text, /Pablo Freire Matos/u);
+    assert.equal(result.type, 'sector');
+    assert.match(result.matchedItem, /CSI — contact/u);
+    assert.match(result.text, /csi\.vdc@ifba\.edu\.br/u);
+    assert.doesNotMatch(result.text, /Pablo Freire Matos/u);
     engine.close();
   } finally { holder.close(); }
 });

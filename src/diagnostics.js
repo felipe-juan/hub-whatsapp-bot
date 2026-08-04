@@ -19,6 +19,7 @@ function sanitizeEvent(input = {}) {
     chatName: String(input.chatName || '').slice(0, 160),
     message: String(input.message || '').slice(0, 2000),
     matchedItem: String(input.matchedItem || '').slice(0, 160),
+    intent: String(input.intent || '').slice(0, 80),
     reply: String(input.reply || '').slice(0, 1000),
     summary: String(input.summary || '').slice(0, 500),
     rateLimited: Boolean(input.rateLimited),

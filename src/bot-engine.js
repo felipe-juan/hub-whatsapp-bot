@@ -36,7 +36,7 @@ const { semanticQuestionAssessment, implicitQuestionStructure } = require('./sem
 const { classifyBotReaction } = require('./reactions');
 const { prepareMessage, isProfessorAttendanceConfirmation } = require('./message-analysis');
 const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
-const { requestedProfessorFields, formatProfessorFieldResponse } = require('./professor-card-response');
+const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse } = require('./professor-card-response');
 const {
   SEMESTER_SCHEDULE_CARD_TITLE,
   classifySemesterScheduleRequest,
@@ -47,7 +47,8 @@ const {
   parseTargetDate,
   formatSemesterScheduleDetail,
   scheduleDetailIntent,
-  isScheduleStatusConfirmation
+  isScheduleStatusConfirmation,
+  DEFAULT_TIME_ZONE
 } = require('./semester-schedule');
 
 function asBool(value, fallback = false) {
@@ -294,6 +295,7 @@ class BotEngine {
       conflict: false,
       blockedBy: 'schedule-status-unverifiable',
       topic: 'Horários de BSI',
+      detectedIntent: 'funcionamento não verificável',
       context: { ...context },
       analysis: [],
       suppressPrivateFallback: true
@@ -314,6 +316,7 @@ class BotEngine {
       conflict: false,
       blockedBy: 'teacher-attendance-unverifiable',
       topic: 'Horários de BSI',
+      detectedIntent: 'presença não verificável',
       context: { ...context },
       analysis: [],
       suppressPrivateFallback: true
@@ -338,9 +341,53 @@ class BotEngine {
     return /\b(?:da|dar|dá|ministra|ensina|leciona) aula\b[\s\S]{0,80}\b(?:quais|qual|quando|onde|dias|materias|disciplinas|sala)\b/u.test(String(text || '').toLowerCase());
   }
 
+  professorScheduleEntriesForTarget(entries = [], prepared = null, context = {}) {
+    const target = prepared?.targetDate;
+    if (!target?.matched) return { entries, targetApplied: false, noClasses: false };
+    const requested = new Set(requestedProfessorFields(prepared.raw || ''));
+    if (![...requested].some(field => ['day', 'hours', 'room'].includes(field))) return { entries, targetApplied: false, noClasses: false };
+    const matching = entries.filter(entry => Number(entry.day_of_week) === Number(target.dayIndex));
+    if (!matching.length) return { entries: [], targetApplied: true, noClasses: true };
+
+    const now = new Date(Number(context.now || prepared.now || Date.now()));
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: prepared.timeZone || DEFAULT_TIME_ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    });
+    const parts = Object.fromEntries(formatter.formatToParts(now).map(part => [part.type, part.value]));
+    const nowMinutes = Number(parts.hour || 0) * 60 + Number(parts.minute || 0);
+    const today = target.expression === 'hoje';
+    const ranked = matching.map(entry => {
+      const start = Number.isFinite(Number(entry.start_minutes)) ? Number(entry.start_minutes) : Number.POSITIVE_INFINITY;
+      const end = Number.isFinite(Number(entry.end_minutes)) ? Number(entry.end_minutes) : start;
+      const current = today && start <= nowMinutes && nowMinutes < end;
+      const future = today && start > nowMinutes;
+      return { entry: { ...entry }, rank: current ? 0 : future ? 1 : today ? 2 : 1, start };
+    }).sort((a, b) => a.rank - b.rank || a.start - b.start || String(a.entry.discipline_name).localeCompare(String(b.entry.discipline_name)));
+    if (today) {
+      const currentIndex = ranked.findIndex(item => item.rank === 0);
+      const nextIndex = ranked.findIndex(item => item.rank === 1);
+      if (currentIndex >= 0) ranked[currentIndex].entry._schedule_status_label = 'Aula em andamento';
+      else if (nextIndex >= 0) ranked[nextIndex].entry._schedule_status_label = 'Próxima aula';
+    }
+    return { entries: ranked.map(item => item.entry), targetApplied: true, noClasses: false };
+  }
+
+  professorNoClassResponse(prepared, teachers = [], disciplines = []) {
+    const target = prepared?.targetDate;
+    const when = target?.expression || 'nesse dia';
+    const discipline = disciplines[0]?.name || disciplines[0]?.code || '';
+    const teacher = teachers[0]?.name || '';
+    if (discipline) return `Não há aula cadastrada de *${discipline}* ${when}.`;
+    if (teacher) return `Não há aula cadastrada de *${teacher}* ${when}.`;
+    return `Não há aula cadastrada ${when}.`;
+  }
+
   professorCardEvaluation(text, context = {}) {
     const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context);
-    const prepared = context.prepared || prepareMessage(text, { now: context.now || Date.now(), teachers: snapshot.teachers, isGroup: context.isGroup });
+    const prepared = context.prepared || prepareMessage(text, {
+      now: context.now || Date.now(), teachers: snapshot.teachers,
+      scheduleEntries: snapshot.disciplineDirectory, isGroup: context.isGroup
+    });
     if (!this.professorCardIntent(text, prepared)) return null;
     let teacherMatches = [...(prepared.professorMatches || [])];
     const disciplineMatches = prepared.disciplineMatches?.length ? prepared.disciplineMatches : findDisciplineMatches(text, snapshot.disciplineDirectory);
@@ -349,10 +396,7 @@ class BotEngine {
       const names = new Set();
       for (const discipline of disciplineMatches) {
         const shared = snapshot.messages.find(item => normalizeText(item.title) === normalizeText(`Disciplina Compartilhada — ${discipline.name}`));
-        if (shared?.response_text) {
-          sharedCards.push(shared);
-          continue;
-        }
+        if (shared?.response_text) sharedCards.push(shared);
         const entries = this.db.listProfessorScheduleEntries?.({ academicPeriod: snapshot.academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name }) || [];
         for (const entry of entries) names.add(normalizeText(entry.professor_name));
         for (const name of discipline.professorNames || []) names.add(normalizeText(name));
@@ -367,62 +411,87 @@ class BotEngine {
       .filter(card => !(context.isGroup && (card.scope || 'both') === 'private') && !(!context.isGroup && (card.scope || 'both') === 'group'))
       .map(card => [Number(card.id) || normalizeText(card.title), card])).values()];
     if (!cards.length) return null;
+
     const requestedFields = requestedProfessorFields(text);
     let structuredEntries = [];
     if (requestedFields.length) {
       if (disciplineMatches.length) {
-        for (const discipline of disciplineMatches) {
-          structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
-            academicPeriod: snapshot.academicPeriod, activeOnly: true,
-            discipline: discipline.code || discipline.name
-          }) || []));
-        }
+        for (const discipline of disciplineMatches) structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
+          academicPeriod: snapshot.academicPeriod, activeOnly: true, discipline: discipline.code || discipline.name
+        }) || []));
       } else {
-        for (const teacher of teachers) {
-          structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
-            academicPeriod: snapshot.academicPeriod, activeOnly: true, professor: teacher.name
-          }) || []).filter(entry => normalizeText(entry.professor_name) === normalizeText(teacher.name)));
-        }
+        for (const teacher of teachers) structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
+          academicPeriod: snapshot.academicPeriod, activeOnly: true, professor: teacher.name
+        }) || []).filter(entry => normalizeText(entry.professor_name) === normalizeText(teacher.name)));
       }
     }
-    const compactResponseItems = requestedFields.length ? cards.map(card => {
-      const professorName = String(card.title || '').replace(/^Professor\s*[—-]\s*/iu, '').trim();
-      const sharedDiscipline = String(card.title || '').replace(/^Disciplina Compartilhada\s*[—-]\s*/iu, '').trim();
-      let entries = structuredEntries;
-      let cardTeachers = teachers;
-      if (/^Professor\s*[—-]/iu.test(String(card.title || ''))) {
-        entries = structuredEntries.filter(entry => normalizeText(entry.professor_name) === normalizeText(professorName));
-        cardTeachers = teachers.filter(teacher => normalizeText(teacher.name) === normalizeText(professorName));
-      } else if (/^Disciplina Compartilhada\s*[—-]/iu.test(String(card.title || ''))) {
-        entries = structuredEntries.filter(entry => normalizeText(entry.discipline_name) === normalizeText(sharedDiscipline));
-      }
-      const compactText = formatProfessorFieldResponse({ entries, teachers: cardTeachers, fields: requestedFields });
+
+    const targeted = this.professorScheduleEntriesForTarget(structuredEntries, prepared, context);
+    structuredEntries = targeted.entries;
+    if (requestedFields.length && targeted.noClasses) {
+      const textResponse = this.professorNoClassResponse(prepared, teachers, disciplineMatches);
+      const first = cards[0];
+      const referenceText = disciplineMatches[0]?.code || disciplineMatches[0]?.name || teachers[0]?.name || '';
       return {
-        text: compactText || card.response_text, attachment: compactText ? null : (card.attachment || null),
-        source_url: compactText ? '' : (card.source_url || ''), source_title: compactText ? '' : (card.source_title || ''), verified_at: compactText ? '' : (card.verified_at || ''),
-        matchedItem: card.title, topic: card.topic || card.title
+        matched: true, type: 'message', text: textResponse, responseItems: null, privateDelivery: false,
+        signature: cards.map(card => `message:${card.id}`).join('|'), matchedItem: cards.map(card => card.title).join(', '),
+        topic: 'Professores e Disciplinas', attachment: null, details_text: '', source_url: '', source_title: '', verified_at: '',
+        conflict: false, redactLog: false, detectedIntent: professorIntentLabel(requestedFields),
+        reasons: ['professor ou disciplina reconhecido', 'consulta limitada ao dia solicitado', 'nenhuma aula cadastrada nesse dia'],
+        candidates: cards.map(card => ({ kind: 'message', id: card.id, title: card.title })), analysis: [], context: { ...context },
+        contextSubject: { kind: 'professor_card', id: Number(first.id || 0), title: first.title, topic: first.topic || first.title,
+          referenceText, teacherNames: teachers.map(item => item.name), disciplineNames: disciplineMatches.map(item => item.name),
+          details_text: first.details_text || '', source_url: first.source_url || '', source_title: first.source_title || '', verified_at: first.verified_at || '' }
       };
-    }) : [];
-    const compact = Boolean(compactResponseItems.length && compactResponseItems.some(item => item.text));
-    const responseItems = compact ? compactResponseItems : cards.map(card => ({
+    }
+
+    let responseItems = [];
+    let compact = false;
+    if (requestedFields.length && disciplineMatches.length) {
+      const compactText = formatProfessorFieldResponse({ entries: structuredEntries, teachers, fields: requestedFields });
+      if (compactText) {
+        compact = true;
+        responseItems = [{ text: compactText, attachment: null, source_url: '', source_title: '', verified_at: '',
+          matchedItem: cards.map(card => card.title).join(', '), topic: 'Professores e Disciplinas' }];
+      }
+    } else if (requestedFields.length) {
+      responseItems = cards.map(card => {
+        const professorName = String(card.title || '').replace(/^Professor\s*[—-]\s*/iu, '').trim();
+        const entries = structuredEntries.filter(entry => normalizeText(entry.professor_name) === normalizeText(professorName));
+        const cardTeachers = teachers.filter(teacher => normalizeText(teacher.name) === normalizeText(professorName));
+        const compactText = formatProfessorFieldResponse({ entries, teachers: cardTeachers, fields: requestedFields });
+        return {
+          text: compactText || formatProfessorFieldResponse({ entries: [], teachers: cardTeachers, fields: requestedFields }),
+          attachment: null, source_url: '', source_title: '', verified_at: '', matchedItem: card.title, topic: card.topic || card.title
+        };
+      }).filter(item => item.text);
+      compact = responseItems.length > 0;
+    }
+    if (!compact) responseItems = cards.map(card => ({
       text: card.response_text, attachment: card.attachment || null,
       source_url: card.source_url || '', source_title: card.source_title || '', verified_at: card.verified_at || '',
       matchedItem: card.title, topic: card.topic || card.title
     }));
+
     const first = cards[0];
-    const firstText = compact ? responseItems[0].text : first.response_text;
+    const firstText = responseItems[0]?.text || first.response_text;
+    const referenceText = disciplineMatches[0]?.code || disciplineMatches[0]?.name || teachers[0]?.name || '';
+    const itemCount = responseItems.length;
     return {
-      matched: true, type: cards.length > 1 ? 'multi_message' : 'message', text: firstText,
-      responseItems: cards.length > 1 ? responseItems : null,
-      privateDelivery: Boolean(context.isGroup && cards.length > 1),
+      matched: true, type: itemCount > 1 ? 'multi_message' : 'message', text: firstText,
+      responseItems: itemCount > 1 ? responseItems : null,
+      privateDelivery: Boolean(context.isGroup && itemCount > 1),
       signature: cards.map(card => `message:${card.id}`).join('|'), matchedItem: cards.map(card => card.title).join(', '),
       topic: cards.length > 1 ? 'Professores e Disciplinas' : (first.topic || first.title),
-      attachment: compact ? null : (cards.length === 1 ? first.attachment || null : null),
-      details_text: compact ? '' : (first.details_text || ''), source_url: compact ? '' : (first.source_url || ''), source_title: compact ? '' : (first.source_title || ''), verified_at: compact ? '' : (first.verified_at || ''),
-      conflict: false, redactLog: false,
-      reasons: [disciplineMatches.length ? 'disciplina reconhecida por sigla ou nome completo' : 'nome do professor reconhecido', ...(compact ? ['resposta limitada aos campos solicitados'] : [])],
+      attachment: compact ? null : (itemCount === 1 ? first.attachment || null : null),
+      details_text: compact ? '' : (first.details_text || ''), source_url: compact ? '' : (first.source_url || ''),
+      source_title: compact ? '' : (first.source_title || ''), verified_at: compact ? '' : (first.verified_at || ''),
+      conflict: false, redactLog: false, detectedIntent: professorIntentLabel(requestedFields),
+      reasons: [disciplineMatches.length ? 'disciplina reconhecida por sigla ou nome completo' : 'nome do professor reconhecido',
+        ...(compact ? ['resposta focada no pedido com contexto acadêmico útil'] : [])],
       candidates: cards.map(card => ({ kind: 'message', id: card.id, title: card.title })), analysis: [], context: { ...context },
-      contextSubject: { kind: 'message', id: Number(first.id || 0), title: first.title, topic: first.topic || first.title,
+      contextSubject: { kind: 'professor_card', id: Number(first.id || 0), title: first.title, topic: first.topic || first.title,
+        referenceText, teacherNames: teachers.map(item => item.name), disciplineNames: disciplineMatches.map(item => item.name),
         details_text: first.details_text || '', source_url: first.source_url || '', source_title: first.source_title || '', verified_at: first.verified_at || '' }
     };
   }
@@ -441,7 +510,7 @@ class BotEngine {
       now: context.now || Date.now(), scheduleEntries: snapshot.scheduleEntries, calendarEvents: snapshot.calendarEvents, academicPeriod: snapshot.academicPeriod
     });
     if (!request) return null;
-    const base = { matched: true, candidates: [], conflict: false, redactLog: false, topic: 'Horários de BSI', analysis: [], reasons: ['consulta de aulas por semestre e dia'], context: { ...context }, attachment: null };
+    const base = { matched: true, candidates: [], conflict: false, redactLog: false, topic: 'Horários de BSI', detectedIntent: 'horário', analysis: [], reasons: ['consulta de aulas por semestre e dia'], context: { ...context }, attachment: null };
     if (request.kind === 'ask-semester') return {
       ...base, type: 'semester_schedule_prompt', text: formatSemesterSchedulePrompt(request.dayIndex, request.date),
       signature: `semester-schedule-prompt:${request.iso}`, matchedItem: SEMESTER_SCHEDULE_CARD_TITLE,
@@ -461,30 +530,8 @@ class BotEngine {
     const classified = classifySectorRequest(text, sectors);
     if (!classified.matched || !classified.sector) return null;
     const sector = classified.sector; const intent = classified.intent || 'contact';
-    // A Coordenação de BSI possui um card de contato completo com o nome do
-    // coordenador. Para essa intenção específica, o card tem precedência sobre
-    // a resposta resumida do diretório estruturado.
-    if (normalizeText(sector.acronym || '') === 'csi' && ['contact', 'email', 'phone', 'whatsapp'].includes(intent)) {
-      const normalizedRequest = normalizeText(text);
-      const asksCoordinationContact = /\b(?:coordenacao|coordenador(?:a)?|csi)\b/u.test(normalizedRequest);
-      const coordinationCard = snapshot.messages
-        .find(item => normalizeText(item.title) === normalizeText('BSI — Contato da Coordenação'));
-      if (asksCoordinationContact && coordinationCard) {
-        return {
-          matched: true, type: 'message', text: coordinationCard.response_text,
-          signature: `message:${coordinationCard.id}`, matchedItem: coordinationCard.title,
-          topic: coordinationCard.topic || coordinationCard.title, attachment: coordinationCard.attachment || null,
-          details_text: coordinationCard.details_text || '', source_url: coordinationCard.source_url || '',
-          source_title: coordinationCard.source_title || '', verified_at: coordinationCard.verified_at || '',
-          reasons: ['contato completo da Coordenação de BSI'], candidates: [], conflict: false, redactLog: false,
-          context: { ...context }, analysis: [], contextSubject: {
-            kind: 'message', id: Number(coordinationCard.id || 0), title: coordinationCard.title,
-            topic: coordinationCard.topic || coordinationCard.title, details_text: coordinationCard.details_text || '',
-            source_url: coordinationCard.source_url || '', source_title: coordinationCard.source_title || '', verified_at: coordinationCard.verified_at || ''
-          }
-        };
-      }
-    }
+    // Todos os setores usam o diretório estruturado para que a resposta
+    // contenha somente o campo solicitado, sem abrir o card institucional inteiro.
     if (/\?\s*$/.test(String(text || '')) || implicitQuestionStructure(text)) {
       const intentLabel = intent === 'location' ? 'onde fica' : intent === 'services' ? 'o que resolve' : intent === 'source' ? 'qual a fonte' : 'contato';
       const semantic = semanticQuestionAssessment(text, [`${intentLabel} ${sector.acronym || sector.name}`, sector.name, sector.acronym || '']);
@@ -494,7 +541,8 @@ class BotEngine {
       matched: true, type: 'sector', text: formatSectorResponse(sector, intent), signature: `sector:${sector.id}:${intent}`,
       matchedItem: `${sector.acronym || sector.name} — ${intent}`, topic: 'Setores do IFBA', attachment: null,
       source_url: sector.source_url || '', source_title: sector.source_title || '', verified_at: sector.verified_at || '',
-      sourceAlreadyShown: intent === 'source',
+      sourceAlreadyShown: true,
+      detectedIntent: ({ email: 'e-mail', whatsapp: 'WhatsApp', phone: 'telefone', location: 'localização', services: 'serviços', source: 'fonte', contact: 'contato' })[intent] || 'contato',
       reasons: ['consulta estruturada ao cadastro de setores'], candidates: [], conflict: false, redactLog: false,
       context: { ...context }, analysis: [], contextSubject: { kind: 'sector', id: Number(sector.id), title: sector.name,
         source_url: sector.source_url || '', source_title: sector.source_title || '', verified_at: sector.verified_at || '' }
@@ -605,6 +653,16 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (!asBool(settings.automatic_messages_enabled, true)) return { ...result, blockedBy: 'messages-disabled', reasons: ['mensagens automáticas desativadas'] };
     if (!this.featureAllowed(context, 'messages', settings)) return { ...result, blockedBy: 'group-messages-disabled', reasons: ['mensagens automáticas desativadas neste grupo'] };
 
+    // Uma correspondência docente exata ou uma disciplina reconhecida tem
+    // prioridade sobre a pergunta genérica por semestre. Correspondências
+    // apenas aproximadas ficam depois, evitando confundir “amanhã” com Amanda.
+    const strongProfessorReference = Boolean(prepared.disciplineMatches?.length)
+      || Boolean(prepared.professorMatches?.some(match => !match.fuzzy));
+    if (strongProfessorReference) {
+      const professorCard = this.professorCardEvaluation(text, context);
+      if (professorCard) return { ...result, ...professorCard };
+    }
+
     const semesterSchedule = this.semesterScheduleEvaluation(text, context);
     if (semesterSchedule) return { ...result, ...semesterSchedule };
 
@@ -614,11 +672,10 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const guidedFlow = this.guidedFlowEvaluation(text, context, settings);
     if (guidedFlow) return { ...result, ...guidedFlow };
 
-    // Consultas por sala/dia/horário de professor ou disciplina devem abrir
-    // primeiro o card docente. A orientação genérica de localização só entra
-    // quando não existe professor/disciplina identificável.
-    const professorCard = this.professorCardEvaluation(text, context);
-    if (professorCard) return { ...result, ...professorCard };
+    if (!strongProfessorReference) {
+      const professorCard = this.professorCardEvaluation(text, context);
+      if (professorCard) return { ...result, ...professorCard };
+    }
 
     const professorLocation = this.professorLocationEvaluation(text, context, settings);
     if (professorLocation) return { ...result, ...professorLocation };
@@ -668,6 +725,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       ...result, matched: true, type: 'message', text: selected.responsePlan?.text ?? selected.item.response_text,
       signature: `message:${selected.item.id}`, matchedItem: selected.item.title,
       topic: selected.item.topic || selected.item.title, attachment: selected.item.attachment || null,
+      detectedIntent: /^BSI — Aulas e horários do/iu.test(String(selected.item.title || '')) ? 'horário' : 'informações completas',
       details_text: selected.item.details_text || '', source_url: selected.item.source_url || '', source_title: selected.item.source_title || '', verified_at: selected.item.verified_at || '',
       contextSubject: { kind: 'message', id: Number(selected.item.id || 0), title: selected.item.title, topic: selected.item.topic || selected.item.title,
         details_text: selected.item.details_text || '', source_url: selected.item.source_url || '', source_title: selected.item.source_title || '', verified_at: selected.item.verified_at || '' },
@@ -765,6 +823,23 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const normalized = normalizeText(raw.replace(/[?]+\s*$/, '')).replace(/^(?:e|mas|entao|então)\s+/, '').trim();
     const hasQuestion = /\?\s*$/.test(raw);
     const isGroup = String(message?.from || '').endsWith('@g.us') || Boolean(message?.isGroup);
+    if (stored.kind === 'professor_card') {
+      const contextualLead = /^(?:e|mas|entao|então)\b/u.test(normalizeText(raw));
+      const privateNoReplyAllowed = !isGroup && asBool(settings.private_context_without_reply, true) && contextualLead;
+      if (!message.quotedFromMe && !privateNoReplyAllowed) return null;
+      const fields = requestedProfessorFields(raw);
+      if (!fields.length || !stored.referenceText) return null;
+      const contextualQuery = `${raw.replace(/[?]+\s*$/, '').trim()} ${stored.referenceText}?`.trim();
+      const evaluation = this.professorCardEvaluation(contextualQuery, {
+        isGroup, now: message.timestampMs || Date.now(), settings
+      });
+      if (!evaluation?.matched) return null;
+      return {
+        ...evaluation,
+        detectedIntent: professorIntentLabel(fields),
+        reasons: [...(evaluation.reasons || []), 'continuação contextual sem repetir professor ou disciplina']
+      };
+    }
     if (stored.kind === 'semester_schedule_prompt') {
       // Este é um passo explícito de diálogo: a próxima mensagem da mesma
       // pessoa deve ser interpretada antes de qualquer outro gatilho, mesmo em
@@ -846,7 +921,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         if (!sector) return null;
         const schedule = this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false }).find(item => normalizeText(item.title) === normalizeText('HUB — Quadro de horários 2026.2'));
         const candidates = [
-          { kind: 'static', label: `Horário de atendimento da ${sector.acronym || sector.name}`, item: { id: `sector-hours:${sector.id}`, title: `Horário de atendimento — ${sector.acronym || sector.name}`, topic: 'Setores do IFBA', response_text: `🏢 *Horário de atendimento — ${sector.acronym || sector.name}*\n\nNão há um horário de atendimento confirmado no cadastro. Confirme diretamente pelo canal oficial do setor.${sector.email ? `\n\n📧 ${sector.email}` : ''}` }, score: 100, reasons: ['horário de atendimento do setor'] },
+          { kind: 'static', label: `Horário de atendimento da ${sector.acronym || sector.name}`, item: { id: `sector-hours:${sector.id}`, title: `Horário de atendimento — ${sector.acronym || sector.name}`, topic: 'Setores do IFBA', response_text: `*Horário de atendimento — ${sector.acronym || sector.name}*\n\nNão há um horário de atendimento confirmado no cadastro. Confirme diretamente pelo canal oficial do setor.${sector.email ? `\n\n${sector.email}` : ''}` }, score: 100, reasons: ['horário de atendimento do setor'] },
           ...(schedule ? [{ kind: 'message', label: 'Horário de uma disciplina ou turma de BSI', item: { ...schedule, topic: schedule.topic || schedule.title }, score: 100, reasons: ['horário acadêmico'] }] : [])
         ];
         return { matched: true, type: 'disambiguation', text: `Você quer saber:\n\n1. Horário de atendimento da ${sector.acronym || sector.name}\n${schedule ? '2. Horário de uma disciplina ou turma de BSI\n' : ''}\nResponda apenas com o número.`, signature: `context-hours:${sector.id}`, matchedItem: `${sector.acronym || sector.name} — horário ambíguo`, topic: 'Contexto', reasons: ['continuação contextual ambígua; confirmação de tema necessária'], candidates: candidates.map(candidate => ({ kind: candidate.kind, id: candidate.item.id, title: candidate.item.title })), conflict: true, redactLog: false, pendingCandidates: candidates };
@@ -860,7 +935,8 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         matchedItem: `${sector.acronym || sector.name} — ${intent}`, topic: 'Setores do IFBA', reasons: ['continuação contextual curta'],
         candidates: [], conflict: false, redactLog: false, attachment: null,
         source_url: sector.source_url || '', source_title: sector.source_title || '', verified_at: sector.verified_at || '',
-        sourceAlreadyShown: intent === 'source',
+        sourceAlreadyShown: true,
+        detectedIntent: ({ email: 'e-mail', whatsapp: 'WhatsApp', phone: 'telefone', location: 'localização', services: 'serviços', source: 'fonte', contact: 'contato' })[intent] || 'contato',
         contextSubject: { kind: 'sector', id: Number(sector.id), title: sector.name,
           source_url: sector.source_url || '', source_title: sector.source_title || '', verified_at: sector.verified_at || '' }
       };
@@ -875,7 +951,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         redactLog: false, attachment: null, source_url: stored.source_url || '', source_title: stored.source_title || '', verified_at: stored.verified_at || '', contextSubject: stored };
     }
     if (sourcePhrases.has(normalized)) {
-      const lines = ['🔎 *Fonte da informação*'];
+      const lines = ['*Fonte da informação*'];
       if (stored.source_title) lines.push('', stored.source_title);
       if (stored.source_url) lines.push(stored.source_url);
       if (stored.verified_at) lines.push(`Verificada em: ${stored.verified_at.split('-').reverse().join('/')}`);
@@ -1131,7 +1207,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (chosen) {
       this.rememberPendingChoice(message, chosen, settings);
       const sent = await this.reply(message, chosen, chat, body);
-      this.diagnostic({ type: sent ? 'response' : 'cooldown', outcome: sent ? 'responded' : 'ignored', matchedItem: chosen.matchedItem, reply: sent ? chosen.text : '', summary: sent ? 'Escolha de desambiguação respondida.' : `Resposta bloqueada: ${chosen.replyBlockedReason || 'antirrepetição'}.`, ...diagnosticBase }, settings);
+      this.diagnostic({ type: sent ? 'response' : 'cooldown', outcome: sent ? 'responded' : 'ignored', matchedItem: chosen.matchedItem, intent: chosen.detectedIntent || '', reply: sent ? chosen.text : '', summary: sent ? 'Escolha de desambiguação respondida.' : `Resposta bloqueada: ${chosen.replyBlockedReason || 'antirrepetição'}.`, ...diagnosticBase }, settings);
       return;
     }
 
@@ -1149,7 +1225,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     }
     if (!evaluation.matched && !chat.isGroup && !evaluation.suppressPrivateFallback) evaluation = this.privateUnknownEvaluation(settings);
     if (!evaluation.matched) {
-      this.diagnostic({ type: 'ignored', outcome: 'ignored', matchedItem: '', summary: evaluation.blockedBy || evaluation.reasons.join('; ') || 'Nenhuma regra correspondeu.', details: this.analysisDetails(evaluation), ...diagnosticBase }, settings);
+      this.diagnostic({ type: 'ignored', outcome: 'ignored', matchedItem: '', intent: evaluation.detectedIntent || prepared.intent || '', summary: evaluation.blockedBy || evaluation.reasons.join('; ') || 'Nenhuma regra correspondeu.', details: this.analysisDetails(evaluation), ...diagnosticBase }, settings);
       return;
     }
     evaluation = this.renderEvaluation(evaluation, message, chat);
@@ -1157,12 +1233,12 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     try {
       const sent = await this.reply(message, evaluation, chat, body);
       this.diagnostic({
-        type: sent ? 'response' : 'cooldown', outcome: sent ? 'responded' : 'ignored', matchedItem: evaluation.matchedItem,
+        type: sent ? 'response' : 'cooldown', outcome: sent ? 'responded' : 'ignored', matchedItem: evaluation.matchedItem, intent: evaluation.detectedIntent || prepared.intent || '',
         reply: sent ? evaluation.text : '', summary: sent ? `Resposta enviada por “${evaluation.matchedItem}”.${evaluation.attachmentMissing ? ' O arquivo do anexo não foi encontrado; somente o texto foi enviado.' : evaluation.attachmentSendError ? ` O texto foi enviado, mas o anexo falhou: ${evaluation.attachmentSendError}` : ''}` : `Resposta bloqueada: ${evaluation.replyBlockedReason || 'antirrepetição'}.`,
         details: this.analysisDetails(evaluation), rateLimited: Boolean(!sent && evaluation.replyBlockedReason && evaluation.replyBlockedReason !== 'antirrepetição'), ...diagnosticBase
       }, settings);
     } catch (error) {
-      this.diagnostic({ type: 'error', outcome: 'error', matchedItem: evaluation.matchedItem, summary: `Falha ao enviar: ${error.message}`, details: this.analysisDetails(evaluation), ...diagnosticBase }, settings);
+      this.diagnostic({ type: 'error', outcome: 'error', matchedItem: evaluation.matchedItem, intent: evaluation.detectedIntent || prepared.intent || '', summary: `Falha ao enviar: ${error.message}`, details: this.analysisDetails(evaluation), ...diagnosticBase }, settings);
       throw error;
     }
     } finally { finishHandle(); }
