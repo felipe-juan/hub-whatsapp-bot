@@ -38,8 +38,6 @@ const { semanticQuestionAssessment, implicitQuestionStructure } = require('./sem
 const { classifyBotReaction, addressesBot } = require('./reactions');
 const { prepareMessage } = require('./message-analysis');
 const { resolveGroupActivation } = require('./group-activation');
-const { recoveryEvaluation, broadHelpText, categoryCandidates } = require('./recovery/recovery-engine');
-const { classifyCommonMessage, choiceNumber, isCancel, isNone, canonicalSpeechText } = require('./recovery/language');
 const { shouldBlockAttendanceQuestion } = require('./engine/attendance-guard');
 const { findDisciplineMatches, findDisciplineCandidates, isDirectDisciplineReference, hasDisciplineInformationIntent } = require('./discipline-directory');
 const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse, isProfessorPrivatePhoneRequest, formatProfessorPhonePrivacyResponse } = require('./engine/professor-intent-handler');
@@ -79,7 +77,6 @@ class BotEngine {
     this.pendingChoices = new Map();
     this.conversationContexts = new Map();
     this.replyContexts = new Map();
-    this.recoveryStates = new Map();
     this.outboundGuard = options.outboundGuard || new OutboundGuard();
     this.services = {};
     this.performance = options.performance || new PerformanceMetrics({ maxSamples: 2000 });
@@ -103,7 +100,7 @@ class BotEngine {
   }
 
   setServices(services = {}) { this.services = { ...this.services, ...services }; }
-  getMetrics() { return { ...this.metrics, pendingDisambiguations: this.pendingChoices.size, conversationContexts: this.conversationContexts.size, replyContexts: this.replyContexts.size, recoveryStates: this.recoveryStates.size, outboundGuard: this.outboundGuard.stats(), rules: this.ruleStore.stats(), performance: this.performance.snapshot() }; }
+  getMetrics() { return { ...this.metrics, pendingDisambiguations: this.pendingChoices.size, conversationContexts: this.conversationContexts.size, replyContexts: this.replyContexts.size, outboundGuard: this.outboundGuard.stats(), rules: this.ruleStore.stats(), performance: this.performance.snapshot() }; }
   reloadRules(reason = 'manual') { return this.ruleStore.scheduleReload(reason); }
   close() { clearInterval(this.contextCleanupTimer); this.contextCleanupTimer = null; this.ruleStore.close(); }
 
@@ -116,35 +113,6 @@ class BotEngine {
       if (pending && Number(pending.expiresAt || 0) > now) return true;
     }
     return false;
-  }
-
-  activePromptContext(message) {
-    const now = Date.now();
-    const allowedKinds = new Set(['recovery_prompt', 'semester_schedule_prompt', 'semester_overview_prompt']);
-    const quotedKey = this.replyContextKey(message, message?.quotedMessageId);
-    let stored = quotedKey ? this.replyContexts.get(quotedKey) : null;
-    if (!stored) {
-      for (const key of this.conversationKeys(message)) {
-        const candidate = this.conversationContexts.get(key);
-        if (candidate && Number(candidate.expiresAt || 0) > now) { stored = candidate; break; }
-      }
-    }
-    if (!stored && this.db.getConversationContext) {
-      try {
-        const persisted = quotedKey ? this.db.getConversationContext('', quotedKey) : null;
-        if (persisted?.payload) stored = persisted.payload;
-        if (!stored) for (const key of this.conversationKeys(message)) {
-          const row = this.db.getConversationContext(key);
-          if (row?.payload) { stored = row.payload; break; }
-        }
-      } catch {}
-    }
-    if (!stored || Number(stored.expiresAt || 0) <= now || !allowedKinds.has(String(stored.kind || ''))) return null;
-    return stored;
-  }
-
-  canResolvePromptContext(message, body) {
-    return Boolean(String(body || '').trim() && this.activePromptContext(message));
   }
 
   shouldProcessIncomingFast(message) {
@@ -226,129 +194,6 @@ class BotEngine {
     };
   }
 
-  recoveryState(message, settings = null) {
-    const key = this.conversationKey(message);
-    const now = Date.now();
-    let state = this.recoveryStates.get(key);
-    if (state && Number(state.expiresAt || 0) <= now) { this.recoveryStates.delete(key); state = null; }
-    if (!state && this.db.getRecoveryState) {
-      try {
-        const row = this.db.getRecoveryState(key);
-        if (row) {
-          state = { failures: Number(row.failures || 0), originalMessage: row.original_message || '', lastMessage: row.last_message || '',
-            lastIntent: row.last_intent || '', payload: row.payload || {}, expiresAt: Number(row.expires_at) };
-          this.recoveryStates.set(key, state);
-        }
-      } catch {}
-    }
-    return state || { failures: 0, originalMessage: '', lastMessage: '', lastIntent: '', payload: {}, expiresAt: now + 600000 };
-  }
-
-  saveRecoveryState(message, patch = {}, settings = this.db.getSettings()) {
-    const current = this.recoveryState(message, settings);
-    const ttl = Math.max(120, Math.min(1800, Number(settings.recovery_context_seconds || 300) * 2));
-    const next = { ...current, ...patch, expiresAt: Date.now() + ttl * 1000 };
-    const key = this.conversationKey(message);
-    this.recoveryStates.set(key, next);
-    try { this.db.saveRecoveryState?.(key, { failures: next.failures, original_message: next.originalMessage,
-      last_message: next.lastMessage, last_intent: next.lastIntent, payload: next.payload || {}, expires_at: next.expiresAt }); } catch {}
-    return next;
-  }
-
-  clearRecoveryState(message) {
-    const key = this.conversationKey(message);
-    this.recoveryStates.delete(key);
-    try { this.db.clearRecoveryState?.(key); } catch {}
-  }
-
-  recordRecovery(message, input = {}) {
-    try { this.db.recordRecoveryEvent?.({ context_key: this.conversationKey(message), chat_type: message?.isGroup ? 'group' : 'private', ...input }); } catch {}
-  }
-
-  commonMessageEvaluation(message, body, settings, chat) {
-    const kind = classifyCommonMessage(body);
-    if (!kind) return null;
-    if (kind === 'thanks') {
-      this.clearRecoveryState(message);
-      this.forgetConversationContext(message);
-      return { matched: true, type: 'courtesy', text: 'Por nada!', signature: 'courtesy:thanks', matchedItem: 'Cortesia', topic: 'Conversa',
-        reasons: ['agradecimento reconhecido'], candidates: [], conflict: false, redactLog: false, analysis: [], attachment: null };
-    }
-    if (kind === 'ack') {
-      this.clearRecoveryState(message);
-      this.forgetConversationContext(message);
-      return { matched: false, type: 'none', text: '', signature: '', matchedItem: '', topic: 'Conversa',
-        reasons: ['confirmação curta reconhecida; nenhuma ajuda adicional necessária'], candidates: [], conflict: false, redactLog: false,
-        analysis: [], suppressPrivateFallback: true, blockedBy: 'common-conversation' };
-    }
-    if (kind === 'conversation') {
-      return { matched: false, type: 'none', text: '', signature: '', matchedItem: '', topic: 'Conversa',
-        reasons: ['mensagem narrativa ou assunto incompatível reconhecido como conversa comum'], candidates: [], conflict: false,
-        redactLog: false, analysis: [], suppressPrivateFallback: true, blockedBy: 'common-conversation' };
-    }
-    if (kind === 'greeting' && !chat?.isGroup) {
-      const key = this.conversationKey(message);
-      const days = Math.max(1, Number(settings.recovery_private_welcome_days || 60));
-      let shouldWelcome = true;
-      try { shouldWelcome = this.db.shouldWelcomePrivateUser?.(key, days) !== false; } catch {}
-      try { this.db.touchPrivateUserProfile?.(key, { welcome: shouldWelcome }); } catch {}
-      if (!shouldWelcome) return { matched: true, type: 'courtesy', text: 'Olá! Como posso ajudar?', signature: 'courtesy:greeting', matchedItem: 'Saudação', topic: 'Conversa', reasons: ['saudação reconhecida'], candidates: [], conflict: false, redactLog: false, analysis: [] };
-      return {
-        matched: true, type: 'private_welcome',
-        text: [
-          'Olá! Eu posso ajudar com:', '',
-          '• salas e horários;',
-          '• professores e contatos;',
-          '• disciplinas e semestres;',
-          '• setores e serviços do IFBA;',
-          '• documentos, estágio e TCC;',
-          '• cálculo da nota final.', '',
-          'Você pode escrever normalmente, por exemplo:', '',
-          '“qual sala de Cálculo?”',
-          '“quem ensina Algoritmos?”',
-          '“contato da CAENS”', '',
-          'Digite `menu` para ver todas as áreas.'
-        ].join('\n'),
-        signature: 'private-welcome', matchedItem: 'Apresentação inicial', topic: 'Ajuda', reasons: ['saudação no privado'], candidates: [], conflict: false, redactLog: false, analysis: []
-      };
-    }
-    return null;
-  }
-
-  recoveryEvaluationFor(message, body, context, settings) {
-    if (!asBool(settings.recovery_enabled, true)) return null;
-    const state = this.recoveryState(message, settings);
-    const evaluation = recoveryEvaluation(body, {
-      prepared: context.prepared, snapshot: context.snapshot, context,
-      failures: Number(state.failures || 0), maxSuggestions: Number(settings.recovery_max_suggestions || 3)
-    });
-    if (!evaluation) return null;
-    const nextFailures = Number(state.failures || 0) + 1;
-    this.saveRecoveryState(message, { failures: nextFailures, originalMessage: state.originalMessage || body,
-      lastMessage: body, lastIntent: evaluation.detectedIntent || context.prepared?.intent || '', payload: { stage: evaluation.recoveryMetadata?.stage || 1 } }, settings);
-    if (evaluation.recoveryMetadata) evaluation.recoveryMetadata.originalMessage = state.originalMessage || body;
-    this.recordRecovery(message, { original_message: state.originalMessage || body, stage: evaluation.recoveryMetadata?.stage || nextFailures,
-      outcome: evaluation.recoveryMetadata?.outcome || evaluation.type, intent: evaluation.detectedIntent || '', option_count: evaluation.recoveryMetadata?.optionCount || 0,
-      messages_to_resolution: nextFailures });
-    return evaluation;
-  }
-
-  learnFromRecoveryResolution(message, evaluation) {
-    const state = this.recoveryState(message);
-    if (!state?.originalMessage || !evaluation?.matched || ['recovery_clarification','recovery_menu','disambiguation','private_unknown','unknown_mention'].includes(evaluation.type)) return;
-    const selectedId = Number(evaluation.contextSubject?.id || evaluation.candidates?.[0]?.id || 0);
-    if (selectedId > 0 && this.db.addUnrecognizedSuggestion) {
-      try { this.db.addUnrecognizedSuggestion({ message_excerpt: state.originalMessage, normalized_message: normalizeText(state.originalMessage),
-        chat_type: message?.isGroup ? 'group' : 'private', chat_name: '', suggested_message_id: selectedId,
-        suggested_title: evaluation.matchedItem || evaluation.contextSubject?.title || '', confidence: 0.96,
-        reasons: ['usuário reformulou a pergunta e chegou a esta resposta'] }); } catch {}
-    }
-    this.recordRecovery(message, { original_message: state.originalMessage, stage: Math.max(1, Number(state.failures || 1)),
-      outcome: 'reformulation_resolved', intent: evaluation.detectedIntent || '', entity_type: evaluation.contextSubject?.kind || '',
-      entity_id: String(evaluation.contextSubject?.id || ''), messages_to_resolution: Number(state.failures || 1) + 1 });
-    this.clearRecoveryState(message);
-  }
-
   unrecognizedSuggestion(body, evaluation = {}) {
     const normalized = normalizeText(body);
     if (!normalized || normalized.length < 3 || normalized.startsWith('!')) return null;
@@ -390,10 +235,7 @@ class BotEngine {
   cleanupExpiredContexts(now = Date.now()) {
     for (const [key, context] of this.conversationContexts) if (Number(context.expiresAt || 0) <= now) this.conversationContexts.delete(key);
     for (const [key, context] of this.replyContexts) if (Number(context.expiresAt || 0) <= now) this.replyContexts.delete(key);
-    for (const [key, pending] of this.pendingChoices) if (Number(pending.graceUntil || pending.expiresAt || 0) <= now) this.pendingChoices.delete(key);
-    for (const [key, state] of this.recoveryStates) if (Number(state.expiresAt || 0) <= now) this.recoveryStates.delete(key);
-    try { this.db.prunePendingChoices?.(now); } catch {}
-    try { this.db.pruneRecoveryStates?.(now); } catch {}
+    for (const [key, pending] of this.pendingChoices) if (Number(pending.expiresAt || 0) <= now) this.pendingChoices.delete(key);
   }
 
   buildMessageSnapshot(prepared, context = {}, settings = null) {
@@ -466,10 +308,8 @@ class BotEngine {
         },
         score: 100, reasons: ['nome de professor ambíguo']
       }));
-      pendingCandidates.push({ kind: 'none', label: 'Nenhuma dessas', item: { id: 'none', title: 'Nenhuma dessas', topic: 'Recuperação', response_text: '' }, score: 0, reasons: ['saída da lista'] });
-      const professorOptionsText = formatProfessorDisambiguation(matches, timeout).replace(/\n\nResponda/u, `\n${pendingCandidates.length}. *Nenhuma dessas*\n\nResponda`);
       return {
-        ...base, type: 'disambiguation', text: professorOptionsText,
+        ...base, type: 'disambiguation', text: formatProfessorDisambiguation(matches, timeout),
         signature: pendingCandidates.map(candidate => `professor_location:${candidate.item.id}`).join('|'),
         matchedItem: matches.slice(0, 3).map(item => item.teacher.name).join(', '),
         conflict: true, candidates: pendingCandidates.map(candidate => ({ kind: candidate.kind, id: candidate.item.id, title: candidate.item.title })),
@@ -597,7 +437,6 @@ class BotEngine {
           referenceText: discipline.code || discipline.name, disciplineNames: [discipline.name] }
       };
     });
-    candidates.push({ kind: 'none', label: 'Nenhuma dessas', item: { id: 'none', title: 'Nenhuma dessas', topic: 'Recuperação' }, score: 0, reasons: ['saída da lista'] });
     const list = candidates.map((candidate, index) => `${index + 1}. *${candidate.item.title}*`).join('\n');
     return {
       matched: true, type: 'disambiguation',
@@ -606,7 +445,7 @@ class BotEngine {
 ${list}
 
 Responda somente com o número desejado em até ${Math.ceil(timeout / 60)} min.`,
-      signature: `discipline-disambiguation:${candidates.filter(item => item.discipline).map(item => item.discipline.code || normalizeText(item.discipline.name)).join('|')}`,
+      signature: `discipline-disambiguation:${candidates.map(item => item.discipline.code || normalizeText(item.discipline.name)).join('|')}`,
       matchedItem: candidates.map(item => item.item.title).join(', '), topic: 'Professores e Disciplinas',
       detectedIntent: professorIntentLabel(fields), reasons: ['termo de disciplina ambíguo', 'confirmação numérica necessária'],
       candidates: candidates.map(candidate => ({ kind: candidate.kind, id: candidate.item.id, title: candidate.item.title })),
@@ -951,9 +790,6 @@ Responda somente com o número desejado em até ${Math.ceil(timeout / 60)} min.`
     if (!this.semesterScheduleEnabled({ includeDrafts: Boolean(context.includeDrafts), messages: snapshot.messages })) return null;
     const prepared = context.prepared || prepareMessage(text, { now: context.now || Date.now(), teachers: snapshot.teachers, isGroup: context.isGroup });
     if (['schedule-status-confirmation','schedule-narrative','professor-attendance-confirmation'].includes(prepared.intent)) return null;
-    const asksRoomWithoutSubject = /\b(?:onde|sala|local|bloco|predio|prédio)\b/u.test(normalized)
-      && !(prepared.disciplineMatches || []).length && !(prepared.professorMatches || []).some(match => match?.teacher && match.fuzzy !== true) && !Number(prepared.semester || 0);
-    if (asksRoomWithoutSubject) return null;
     const request = classifySemesterScheduleRequest(text, {
       now: context.now || Date.now(), scheduleEntries: snapshot.scheduleEntries, calendarEvents: snapshot.calendarEvents, academicPeriod: snapshot.academicPeriod
     });
@@ -1010,7 +846,6 @@ Responda somente com o número desejado em até ${Math.ceil(timeout / 60)} min.`
           details_text: item.details_text || '', source_url: item.source_url || '', source_title: item.source_title || '', verified_at: item.verified_at || '' } };
     }).filter(Boolean).slice(0, 5);
     if (!candidates.length) return null;
-    candidates.push({ kind: 'none', label: 'Nenhuma dessas', item: { id: 'none', title: 'Nenhuma dessas', topic: 'Recuperação', response_text: '' }, score: 0, reasons: ['saída da lista'] });
     const timeout = Math.max(30, Math.min(600, Number(settings.disambiguation_timeout_seconds || 120)));
     return {
       matched: true, type: 'disambiguation', text: formatFlowMenu({ ...flow, options: candidates.map(candidate => [candidate.label, candidate.item.title]) }, timeout),
@@ -1049,18 +884,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   rememberPendingChoice(message, evaluation, settings) {
     if (!evaluation?.pendingCandidates?.length) return;
     const timeout = Math.max(30, Math.min(600, Number(settings.disambiguation_timeout_seconds || 120)));
-    const graceSeconds = Math.max(60, Math.min(1800, Number(settings.recovery_recent_expired_seconds || 600)));
-    const entry = {
-      candidates: evaluation.pendingCandidates,
-      expiresAt: Date.now() + timeout * 1000,
-      graceUntil: Date.now() + (timeout + graceSeconds) * 1000,
-      originalMessage: evaluation.recoveryMetadata?.originalMessage || evaluation.context?.originalMessage || '',
-      recoveryMetadata: evaluation.recoveryMetadata || null,
-      promptText: String(evaluation.text || '').slice(0, 3000)
-    };
-    const key = this.conversationKey(message);
-    this.pendingChoices.set(key, entry);
-    try { this.db.savePendingChoice?.(key, entry, entry.expiresAt, entry.graceUntil); } catch {}
+    this.pendingChoices.set(this.conversationKey(message), { candidates: evaluation.pendingCandidates, expiresAt: Date.now() + timeout * 1000 });
     if (evaluation.type === 'disambiguation') this.metrics.disambiguations += 1;
   }
 
@@ -1121,9 +945,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     // apenas aproximadas ficam depois, evitando confundir “amanhã” com Amanda.
     const strongProfessorReference = Boolean(prepared.disciplineMatches?.length)
       || Boolean(prepared.professorMatches?.some(match => !match.fuzzy));
-    const explicitFacilityReference = /\b(?:miniauditorio|miniauditório)\b/iu.test(text)
-      || /\blaborat[oó]rio\s+de\s+redes(?:\s+de)?\s+(?:bsi|sistemas\s+de\s+informa[cç][aã]o)\b/iu.test(text);
-    if (strongProfessorReference && !explicitFacilityReference) {
+    if (strongProfessorReference) {
       const professorCard = this.professorCardEvaluation(text, context);
       if (professorCard) return { ...result, ...professorCard };
     }
@@ -1184,14 +1006,12 @@ ${menuText}`.trim(), pendingCandidates: candidates };
 
     if (conflict && asBool(settings.disambiguation_enabled, true)) {
       const timeout = Math.max(30, Math.min(600, Number(settings.disambiguation_timeout_seconds || 120)));
-      const pendingWithNone = [...candidates.slice(0, 3), { kind: 'none', label: 'Nenhuma dessas', item: { id: 'none', title: 'Nenhuma dessas', topic: 'Recuperação', response_text: '' }, score: 0, reasons: ['saída da lista'] }];
-      const disambiguationText = `Encontrei mais de uma possibilidade:\n\n${pendingWithNone.map((candidate,index)=>`${index+1}. *${candidate.item.title}*`).join('\n')}\n\nResponda somente com o número desejado em até ${Math.ceil(timeout / 60)} min.`;
       return {
-        ...result, matched: true, type: 'disambiguation', text: disambiguationText,
+        ...result, matched: true, type: 'disambiguation', text: formatDisambiguation(candidates, timeout, ''),
         signature: candidates.slice(0, 3).map(candidate => `message:${candidate.item.id}`).join('|'),
         matchedItem: candidates.slice(0, 3).map(candidate => candidate.item.title).join(', '), topic: 'Desambiguação',
         reasons: candidates.slice(0, 3).flatMap(candidate => candidate.reasons), candidates: candidatePayload, conflict: true,
-        pendingCandidates: pendingWithNone
+        pendingCandidates: candidates.slice(0, 3)
       };
     }
 
@@ -1295,14 +1115,11 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   contextualFollowUpEvaluation(message, body, settings) {
     this.cleanConversationContexts();
     const quotedKey = this.replyContextKey(message, message?.quotedMessageId);
-    const now = Date.now();
     let stored = quotedKey ? this.replyContexts.get(quotedKey) : null;
-    if (stored && Number(stored.expiresAt || 0) <= now) { this.replyContexts.delete(quotedKey); stored = null; }
     if (!stored) {
       for (const key of this.conversationKeys(message)) {
-        const candidate = this.conversationContexts.get(key);
-        if (candidate && Number(candidate.expiresAt || 0) > now) { stored = candidate; break; }
-        if (candidate) this.conversationContexts.delete(key);
+        stored = this.conversationContexts.get(key);
+        if (stored) break;
       }
     }
     if (!stored && asBool(settings.persistent_context_enabled, true) && this.db.getConversationContext) {
@@ -1313,90 +1130,12 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         if (row?.payload) { stored = row.payload; this.conversationContexts.set(key, stored); break; }
       }
     }
-    let resumedExpired = false;
-    if (!stored && this.db.getRecentExpiredConversationContext) {
-      const graceMs = Math.max(60000, Number(settings.recovery_recent_expired_seconds || 600) * 1000);
-      const normalizedReply = normalizeText(String(body || ''));
-      if (/^(?:e|mas|entao|então|a primeira|a segunda|primeira|segunda|[1-9])\b/u.test(normalizedReply)) {
-        for (const key of this.conversationKeys(message)) {
-          const row = this.db.getRecentExpiredConversationContext(key, graceMs);
-          if (row?.payload) { stored = { ...row.payload, expiresAt: Date.now() + 120000 }; resumedExpired = true; this.conversationContexts.set(key, stored); break; }
-        }
-      }
-    }
     if (!stored) return null;
     if (Number(stored.expiresAt || 0) <= Date.now()) { this.forgetConversationContext(message, stored); return null; }
     const raw = String(body || '').trim();
     const normalized = normalizeText(raw.replace(/[?]+\s*$/, '')).replace(/^(?:e|mas|entao|então)\s+/, '').trim();
     const hasQuestion = /\?\s*$/.test(raw);
     const isGroup = String(message?.from || '').endsWith('@g.us') || Boolean(message?.isGroup);
-    if (stored.kind === 'recovery_prompt') {
-      const original = String(stored.originalMessage || '').trim();
-      const expected = String(stored.expected || '');
-      let complement = raw;
-      if (expected === 'semester' && !/semestre/u.test(normalizeText(raw))) complement = `semestre ${raw}`;
-      const combined = `${original} ${complement}`.trim();
-      const snapshot = this.buildMessageSnapshot(null, { isGroup, now: message.timestampMs || Date.now() }, settings);
-      const prepared = prepareMessage(combined, { now: message.timestampMs || Date.now(), teachers: snapshot.teachers,
-        scheduleEntries: snapshot.disciplineDirectory, isGroup });
-      const evaluation = this.evaluate(combined, { isGroup, now: message.timestampMs || Date.now(), settings, prepared,
-        snapshot: this.scopeMessageSnapshot(snapshot, prepared) });
-      if (evaluation?.matched) {
-        this.forgetConversationContext(message, stored);
-        const selectedId = Number(evaluation.contextSubject?.id || evaluation.candidates?.[0]?.id || 0);
-        if (selectedId > 0 && original && this.db.addUnrecognizedSuggestion) {
-          try { this.db.addUnrecognizedSuggestion({ message_excerpt: original, normalized_message: normalizeText(original),
-            chat_type: isGroup ? 'group' : 'private', chat_name: '', suggested_message_id: selectedId,
-            suggested_title: evaluation.matchedItem || evaluation.contextSubject?.title || '', confidence: 0.96,
-            reasons: ['pergunta complementar ou reformulação resolveu a mensagem original'] }); } catch {}
-        }
-        this.recordRecovery(message, { original_message: original, stage: 1, outcome: 'clarification_resolved',
-          intent: stored.primaryIntent || evaluation.detectedIntent || '', entity_type: evaluation.contextSubject?.kind || '',
-          entity_id: String(evaluation.contextSubject?.id || ''), messages_to_resolution: 2 });
-        this.clearRecoveryState(message);
-        return { ...evaluation, reasons: [...(evaluation.reasons || []), 'informação ausente fornecida em uma única pergunta complementar'] };
-      }
-      return {
-        matched: true, type: 'recovery_clarification_invalid',
-        text: expected === 'semester' ? 'Não identifiquei o semestre. Responda com um número entre 1 e 8.'
-          : expected === 'professor' ? 'Não identifiquei o professor. Envie o primeiro nome ou o nome completo.'
-          : 'Não identifiquei a disciplina. Envie a sigla ou o nome da matéria.',
-        signature: `recovery-invalid:${expected}`, matchedItem: 'Recuperação — resposta incompleta', topic: 'Recuperação de conversa',
-        reasons: ['a resposta não preencheu a informação solicitada'], candidates: [], conflict: false, redactLog: false, analysis: [],
-        contextSubject: stored
-      };
-    }
-    if (stored.kind === 'recovery_categories' || stored.kind === 'recovery_menu') {
-      const number = choiceNumber(raw);
-      const menuByChoice = { 1: 'professors', 2: 'professors', 3: 'sectors', 4: 'records', 5: 'academic', 7: 'root' };
-      if (number === 6) {
-        this.forgetConversationContext(message, stored);
-        return { matched: true, type: 'static', text: 'Para calcular a nota da final, envie por exemplo: `!final 6,9`.',
-          signature: 'recovery-calculator-help', matchedItem: 'Calculadora da final', topic: 'Calculadoras', reasons: ['categoria escolhida'], candidates: [], conflict: false, redactLog: false, analysis: [] };
-      }
-      if (menuByChoice[number]) {
-        this.forgetConversationContext(message, stored);
-        const evaluation = this.menuEvaluation(menuByChoice[number], {}, settings);
-        if (evaluation) return { ...evaluation, reasons: [...(evaluation.reasons || []), 'categoria escolhida na recuperação'] };
-      }
-      if (/^atendimento$/u.test(normalizeText(raw))) {
-        this.forgetConversationContext(message, stored);
-        return { matched: true, type: 'static', text: 'Descreva em uma frase curta o que você precisa resolver. Vou indicar o setor mais relacionado.',
-          signature: 'recovery-attendance-prompt', matchedItem: 'Encaminhamento por setor', topic: 'Recuperação de conversa', reasons: ['encaminhamento solicitado'],
-          candidates: [], conflict: false, redactLog: false, analysis: [], contextSubject: { kind: 'recovery_prompt', expected: 'subject',
-            originalMessage: 'preciso de atendimento para', primaryIntent: 'contact', title: 'Encaminhamento por setor' } };
-      }
-      return null;
-    }
-    if (stored.kind === 'discipline_card') {
-      const fields = this.disciplineRequestedFields(raw);
-      const contextualLead = /^(?:e|mas|entao|então)\b/u.test(normalizeText(raw));
-      if (!fields.length || (!message.quotedFromMe && isGroup && !contextualLead && !message.groupActivated)) return null;
-      const query = `${raw.replace(/[?]+\s*$/u, '').trim()} ${stored.referenceText || stored.title}?`.trim();
-      const evaluation = this.professorCardEvaluation(query, { isGroup, now: message.timestampMs || Date.now(), settings });
-      if (!evaluation?.matched) return null;
-      return { ...evaluation, reasons: [...(evaluation.reasons || []), resumedExpired ? 'contexto recém-expirado retomado' : 'continuação do último assunto respondido'] };
-    }
     if (stored.kind === 'professor_card') {
       const contextualLead = /^(?:e|mas|entao|então)\b/u.test(normalizeText(raw));
       const privateNoReplyAllowed = !isGroup && asBool(settings.private_context_without_reply, true) && contextualLead;
@@ -1575,133 +1314,34 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     return null;
   }
   cleanPendingChoices() {
+    // Expirações são removidas pelo temporizador periódico. Aqui só limitamos
+    // o mapa para manter o custo por mensagem constante.
     if (this.pendingChoices.size > 500) {
-      const ordered = [...this.pendingChoices.entries()].sort((a, b) => Number(a[1].graceUntil || a[1].expiresAt || 0) - Number(b[1].graceUntil || b[1].expiresAt || 0));
+      const ordered = [...this.pendingChoices.entries()].sort((a, b) => Number(a[1].expiresAt || 0) - Number(b[1].expiresAt || 0));
       for (const [key] of ordered.slice(0, this.pendingChoices.size - 500)) this.pendingChoices.delete(key);
     }
   }
-
-  loadPendingChoice(message, { includeGrace = true } = {}) {
-    this.cleanPendingChoices();
-    const key = this.conversationKey(message);
-    let pending = this.pendingChoices.get(key) || null;
-    if (!pending && this.db.getPendingChoice) {
-      try {
-        const row = this.db.getPendingChoice(key, { includeGrace });
-        if (row?.payload) {
-          pending = row.payload;
-          pending.expiresAt = Number(row.expires_at || pending.expiresAt || 0);
-          pending.graceUntil = Number(row.grace_until || pending.graceUntil || pending.expiresAt || 0);
-          this.pendingChoices.set(key, pending);
-        }
-      } catch {}
-    }
-    return pending;
-  }
-
-  clearPendingChoice(message) {
-    const key = this.conversationKey(message);
-    this.pendingChoices.delete(key);
-    try { this.db.deletePendingChoice?.(key); } catch {}
-  }
-
-  choiceIndexForBody(body, candidates = []) {
-    const raw = String(body || '').trim();
-    if (!raw) return -1;
-    const number = choiceNumber(raw);
-    if (number > 0 && number <= candidates.length) return number - 1;
-    if (isNone(raw)) {
-      const index = candidates.findIndex(candidate => candidate.kind === 'none');
-      if (index >= 0) return index;
-    }
-    const normalized = canonicalSpeechText(raw);
-    for (let index = 0; index < candidates.length; index += 1) {
-      const candidate = candidates[index];
-      const values = [candidate.label, candidate.item?.title, candidate.discipline?.code, candidate.discipline?.name,
-        candidate.contextSubject?.referenceText, ...(candidate.aliases || [])].map(canonicalSpeechText).filter(Boolean);
-      if (values.some(value => normalized === value || (normalized.length >= 3 && value.startsWith(`${normalized} `)))) return index;
-    }
-    return -1;
-  }
-
   hasPendingChoice(message) {
-    const pending = this.loadPendingChoice(message, { includeGrace: false });
-    return Boolean(pending && Number(pending.expiresAt || 0) > Date.now() && Array.isArray(pending.candidates) && pending.candidates.length);
-  }
-
-  canResolvePendingChoice(message, body) {
-    const pending = this.loadPendingChoice(message, { includeGrace: true });
-    if (!pending?.candidates?.length) return false;
-    if (isCancel(body)) return true;
-    return this.choiceIndexForBody(body, pending.candidates) >= 0;
-  }
-
-  expiredChoiceEvaluation(message, pending) {
-    if (!pending?.candidates?.length || Number(pending.graceUntil || 0) <= Date.now()) return null;
-    const labels = pending.candidates.filter(item => item.kind !== 'none').slice(0, 4)
-      .map((item,index)=>`${index+1}. ${item.label || item.item?.title || 'Opção'}`).join('\n');
-    const timeout = Math.max(30, Number(this.db.getSetting?.('disambiguation_timeout_seconds','120') || 120));
-    pending.expiresAt = Date.now() + timeout * 1000;
-    pending.graceUntil = pending.expiresAt + 600000;
-    const key = this.conversationKey(message);
-    this.pendingChoices.set(key, pending);
-    try { this.db.savePendingChoice?.(key, pending, pending.expiresAt, pending.graceUntil); } catch {}
-    return {
-      matched: true, type: 'expired_choice_recovery',
-      text: `Sua escolha anterior expirou, mas ainda consigo retomá-la.\n\n${labels}\n\nResponda novamente com o número ou o nome da opção.`,
-      signature: 'expired-choice-recovery', matchedItem: 'Retomada de escolha expirada', topic: 'Recuperação de conversa',
-      reasons: ['contexto expirado recentemente foi recuperado'], candidates: [], conflict: false, redactLog: false, analysis: [],
-      pendingCandidates: pending.candidates, recoveryMetadata: { stage: 1, outcome: 'expired_context_resumed', optionCount: pending.candidates.length }
-    };
+    this.cleanPendingChoices();
+    const pending = this.pendingChoices.get(this.conversationKey(message));
+    if (!pending) return false;
+    if (Number(pending.expiresAt || 0) <= Date.now()) {
+      this.pendingChoices.delete(this.conversationKey(message));
+      return false;
+    }
+    return Array.isArray(pending.candidates) && pending.candidates.length > 0;
   }
 
   pendingEvaluation(message, body, settings) {
-    const pending = this.loadPendingChoice(message, { includeGrace: true });
-    if (!pending) return null;
-    if (isCancel(body)) {
-      this.clearPendingChoice(message); this.clearRecoveryState(message);
-      return { matched: true, type: 'choice_cancelled', text: 'Tudo bem. A escolha foi cancelada.', signature: 'choice-cancelled',
-        matchedItem: 'Escolha cancelada', topic: 'Recuperação de conversa', reasons: ['cancelamento solicitado'], candidates: [], conflict: false, redactLog: false, analysis: [] };
-    }
-    if (Number(pending.expiresAt || 0) <= Date.now()) {
-      const indexInGrace = this.choiceIndexForBody(body, pending.candidates);
-      if (indexInGrace < 0) return this.expiredChoiceEvaluation(message, pending);
-    }
-    const index = this.choiceIndexForBody(body, pending.candidates);
-    if (index < 0) return null;
-    const selected = pending.candidates[index];
-    this.clearPendingChoice(message);
-    if (selected.kind === 'none') {
-      this.recordRecovery(message, { original_message: pending.originalMessage || '', stage: pending.recoveryMetadata?.stage || 1,
-        outcome: 'suggestions_rejected', option_count: Math.max(0,pending.candidates.length-1), selected_option: 'Nenhuma dessas' });
-      this.saveRecoveryState(message, { failures: Math.max(2, Number(this.recoveryState(message).failures || 0) + 1),
-        originalMessage: pending.originalMessage || this.recoveryState(message).originalMessage || '', lastMessage: body }, settings);
-      const categories = categoryCandidates(2);
-      return {
-        matched: true, type: 'recovery_menu', text: broadHelpText(pending.originalMessage || '', 2), signature: 'recovery-none-categories',
-        matchedItem: 'Recuperação — nenhuma opção', topic: 'Recuperação de conversa', reasons: ['usuário rejeitou as sugestões'],
-        candidates: categories.map(item => ({ kind: item.kind, id: item.item.id, title: item.item.title })), conflict: false, redactLog: false, analysis: [],
-        pendingCandidates: categories,
-        recoveryMetadata: { stage: 2, outcome: 'categories', optionCount: categories.length, originalMessage: pending.originalMessage || '' },
-        contextSubject: { kind: 'recovery_categories', title: 'Categorias de ajuda', originalMessage: pending.originalMessage || '', stage: 2 }
-      };
-    }
-    if (selected.submenuKey) {
-      this.recordRecovery(message, { original_message: pending.originalMessage || '', stage: pending.recoveryMetadata?.stage || 2,
-        outcome: 'menu_resolved', selected_option: selected.item?.title || '', entity_type: 'menu', entity_id: selected.submenuKey,
-        option_count: pending.candidates.length, messages_to_resolution: Number(this.recoveryState(message).failures || 1) + 1 });
-      this.clearRecoveryState(message);
-      return this.menuEvaluation(selected.submenuKey, {}, settings);
-    }
-    if (selected.kind === 'discipline_query') {
-      const evaluation = this.disciplineChoiceEvaluation(selected);
-      this.recordRecovery(message, { original_message: pending.originalMessage || '', stage: pending.recoveryMetadata?.stage || 1,
-        outcome: 'suggestion_selected', selected_option: selected.item?.title || '', entity_type: 'discipline',
-        entity_id: selected.discipline?.code || selected.discipline?.name || '', option_count: pending.candidates.length,
-        messages_to_resolution: Number(this.recoveryState(message).failures || 1) + 1 });
-      this.clearRecoveryState(message);
-      return evaluation;
-    }
+    this.cleanPendingChoices();
+    const key = this.conversationKey(message); const pending = this.pendingChoices.get(key);
+    if (pending && Number(pending.expiresAt || 0) <= Date.now()) { this.pendingChoices.delete(key); return null; }
+    if (!pending || !/^[1-9]$/.test(String(body).trim())) return null;
+    const index = Number(String(body).trim()) - 1; const selected = pending.candidates[index];
+    if (!selected) return null;
+    this.pendingChoices.delete(key);
+    if (selected.submenuKey) return this.menuEvaluation(selected.submenuKey, {}, settings);
+    if (selected.kind === 'discipline_query') return this.disciplineChoiceEvaluation(selected);
     const chosen = {
       matched: true, type: selected.kind, text: formatContentResponse(selected),
       signature: `${selected.kind}:${selected.item.id}`, matchedItem: selected.item.title,
@@ -1711,16 +1351,6 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         details_text: selected.item.details_text || '', source_url: selected.item.source_url || '', source_title: selected.item.source_title || '', verified_at: selected.item.verified_at || '' },
       reasons: ['opção escolhida após desambiguação'], candidates: [], conflict: false, redactLog: false
     };
-    if (pending.originalMessage && Number(selected.item?.id) > 0 && this.db.addUnrecognizedSuggestion) {
-      try { this.db.addUnrecognizedSuggestion({ message_excerpt: pending.originalMessage, normalized_message: normalizeText(pending.originalMessage),
-        chat_type: message?.isGroup ? 'group' : 'private', chat_name: '', suggested_message_id: Number(selected.item.id),
-        suggested_title: selected.item.title, confidence: 0.99, reasons: ['usuário escolheu esta opção após sugestão'] }); } catch {}
-    }
-    this.recordRecovery(message, { original_message: pending.originalMessage || '', stage: pending.recoveryMetadata?.stage || 1,
-      outcome: 'suggestion_selected', selected_option: selected.item?.title || '', entity_type: selected.contextSubject?.kind || 'message',
-      entity_id: String(selected.item?.id || ''), option_count: pending.candidates.length,
-      messages_to_resolution: Number(this.recoveryState(message).failures || 1) + 1 });
-    this.clearRecoveryState(message);
     return selected.kind === 'message' ? this.progressiveMenuEvaluation(chosen, selected.item, settings) : chosen;
   }
 
@@ -1805,7 +1435,7 @@ ${menuText}`.trim(), pendingCandidates: candidates };
   }
 
   async handleContextualReaction(message, body, chat, settings) {
-    const reaction = classifyBotReaction({ ...message, mentionedMe: Boolean(message?.mentionedMe || message?.groupActivated) }, body, { isPrivate: !chat.isGroup });
+    const reaction = classifyBotReaction(message, body, { isPrivate: !chat.isGroup });
     if (!reaction || typeof message.react !== 'function') return false;
     try {
       await message.react(reaction.emoji);
@@ -1828,13 +1458,13 @@ ${menuText}`.trim(), pendingCandidates: candidates };
 
   adminNumbers(settings) { return new Set(parseList(String(settings.admin_numbers || '').replace(/\s+/g, ',' )).map(senderNumber).filter(Boolean)); }
   isAdmin(message, settings) { const candidate = senderNumber(message.author || message.from); return candidate && this.adminNumbers(settings).has(candidate); }
-  isAdminCommand(body) { return /^!(?:bot\s+)?(?:ajuda|help|status|pausar|pause|continuar|retomar|resume|backup|reiniciar|restart)\b/iu.test(String(body || '').trim()); }
+  isAdminCommand(body) { return normalizeText(body).startsWith('bot ') && String(body).trim().startsWith('!'); }
   async handleAdminCommand(message, body, chat, settings) {
     if (!this.isAdminCommand(body) || !this.isAdmin(message, settings)) return false;
-    const command = normalizeText(body).replace(/^!bot\s+/, '').replace(/^!/, '').trim();
+    const command = normalizeText(body).replace(/^bot\s+/, '').trim();
     let response = '';
     if (['ajuda', 'help'].includes(command)) {
-      response = ['🔐 *Comandos administrativos*', '', '• bot !status', '• bot !pausar', '• bot !continuar', '• bot !backup', '• bot !reiniciar'].join('\n');
+      response = ['🔐 *Comandos administrativos*', '', '• !bot status', '• !bot pausar', '• !bot continuar', '• !bot backup', '• !bot reiniciar'].join('\n');
     } else if (command === 'status') {
       const state = this.services.whatsapp?.getStatus?.() || {};
       response = [`🔐 *Status do HUB Bot*`, '', `WhatsApp: *${state.state || 'desconhecido'}*`, `Automação: *${asBool(settings.bot_paused, false) ? 'pausada' : 'ativa'}*`, `Respostas desde o início: ${this.metrics.totalReplies}`, `Pendências de escolha: ${this.pendingChoices.size}`].join('\n');
@@ -1919,11 +1549,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     const groupLike = Boolean(message.isGroup || String(message.from || '').endsWith('@g.us'));
     if (groupLike) {
       let activation = resolveGroupActivation({ ...message, isGroup: true });
-      const originalGroupBody = String(message.body || '').trim();
-      const pendingChoiceReply = this.canResolvePendingChoice(message, originalGroupBody);
-      const promptReply = this.canResolvePromptContext(message, originalGroupBody);
-      if (!activation.active && (pendingChoiceReply || promptReply)) {
-        activation = { active: true, body: originalGroupBody, mode: pendingChoiceReply ? 'pending-choice' : 'pending-prompt' };
+      const numericPendingChoice = /^[1-9]$/.test(String(message.body || '').trim()) && this.hasPendingChoice(message);
+      if (!activation.active && numericPendingChoice) {
+        activation = { active: true, body: String(message.body || '').trim(), mode: 'pending-choice' };
       }
       if (!activation.active) {
         this.performance.increment?.('group_messages_without_activation_skipped');
@@ -1940,10 +1568,6 @@ ${menuText}`.trim(), pendingCandidates: candidates };
 
     let settings = this.db.getSettings();
     const diagnosticBase = { chatType: chat.isGroup ? 'group' : 'private', chatName: chat.name || (chat.isGroup ? 'Grupo' : 'Conversa privada'), message: body };
-    if (this.isAdminCommand(body) && !this.isAdmin(message, settings)) {
-      this.diagnostic({ type: 'ignored', outcome: 'ignored', summary: 'Comando administrativo ignorado para remetente não autorizado.', ...diagnosticBase }, settings);
-      return;
-    }
     if (await this.handleAdminCommand(message, body, chat, settings)) {
       this.diagnostic({ type: 'admin', outcome: 'responded', matchedItem: 'Comando administrativo', summary: 'Comando administrativo autorizado e executado.', ...diagnosticBase }, settings);
       return;
@@ -1959,22 +1583,6 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     }
     if (await this.handleFalsePositiveFeedback(message, body, chat, settings)) return;
     if (await this.handleContextualReaction(message, body, chat, settings)) return;
-
-    if (!chat.isGroup) {
-      try { this.db.touchPrivateUserProfile?.(this.conversationKey(message), { welcome: false }); } catch {}
-    }
-    const common = this.commonMessageEvaluation(message, body, settings, chat);
-    if (common) {
-      if (!common.matched) {
-        this.diagnostic({ type: 'ignored', outcome: 'ignored', summary: common.reasons?.join('; ') || 'Conversa comum.', ...diagnosticBase }, settings);
-        return;
-      }
-      const renderedCommon = this.renderEvaluation(common, message, chat);
-      const sentCommon = await this.reply(message, renderedCommon, chat, body);
-      this.diagnostic({ type: sentCommon ? 'response' : 'cooldown', outcome: sentCommon ? 'responded' : 'ignored', matchedItem: common.matchedItem,
-        reply: sentCommon ? common.text : '', summary: 'Mensagem social tratada sem abrir menu.', ...diagnosticBase }, settings);
-      return;
-    }
 
     const baseContext = {
       isGroup: Boolean(chat.isGroup), groupId, now: message.timestampMs || Date.now(),
@@ -1995,7 +1603,6 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (chosen) {
       this.rememberPendingChoice(message, chosen, settings);
       const sent = await this.reply(message, chosen, chat, body);
-      if (sent) this.rememberConversationContext(message, chosen, settings, sent);
       this.diagnostic({ type: sent ? 'response' : 'cooldown', outcome: sent ? 'responded' : 'ignored', matchedItem: chosen.matchedItem, intent: chosen.detectedIntent || '', reply: sent ? chosen.text : '', summary: sent ? 'Escolha de desambiguação respondida.' : `Resposta bloqueada: ${chosen.replyBlockedReason || 'antirrepetição'}.`, ...diagnosticBase }, settings);
       return;
     }
@@ -2008,16 +1615,11 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       || ignoredScheduleStatusConfirmation
       || this.contextualFollowUpEvaluation(message, body, settings)
       || this.evaluate(body, evaluationContext);
-    if (!evaluation.matched && !evaluation.suppressPrivateFallback && !evaluation.blockedBy) {
-      const recovered = this.recoveryEvaluationFor(message, body, evaluationContext, settings);
-      if (recovered) evaluation = recovered;
-    }
     if (!evaluation.matched) this.recordUnrecognizedSuggestion(body, evaluation, chat);
     if (!evaluation.matched && !this.isAdminCommand(body) && this.botMentioned(message, body, settings) && this.featureAllowed({ isGroup: Boolean(chat.isGroup), groupId }, 'help', settings)) {
       evaluation = this.unknownMentionEvaluation(settings);
     }
     if (!evaluation.matched && !chat.isGroup && !evaluation.suppressPrivateFallback) evaluation = this.privateUnknownEvaluation(settings);
-    if (evaluation.matched && !evaluation.recoveryMetadata && !String(evaluation.type || '').startsWith('recovery_') && evaluation.type !== 'disambiguation') this.learnFromRecoveryResolution(message, evaluation);
     if (!evaluation.matched) {
       this.diagnostic({ type: 'ignored', outcome: 'ignored', matchedItem: '', intent: evaluation.detectedIntent || prepared.intent || '', summary: evaluation.blockedBy || evaluation.reasons.join('; ') || 'Nenhuma regra correspondeu.', details: this.analysisDetails(evaluation), ...diagnosticBase }, settings);
       return;

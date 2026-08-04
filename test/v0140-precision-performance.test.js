@@ -131,7 +131,7 @@ test('consulta múltipla em grupo envia cada card somente no privado do particip
   try {
     const message = {
       fromMe: false, from: '120363000000@g.us', author: '557799999999@s.whatsapp.net',
-      body: '.horários de LPII e BDI', mentionedMe: false, quotedFromMe: false,
+      body: 'horários de LPII e BDI', mentionedMe: false, quotedFromMe: false,
       timestampMs: Date.parse('2026-08-03T12:00:00Z'),
       async getChat() { return { isGroup: true, name: 'Grupo BSI', id: { _serialized: this.from }, async sendMessage(value) { groupResponses.push(value); } }; },
       async sendPrivateResponse(payload) { privateResponses.push(payload); return { key: { id: `p${privateResponses.length}` } }; },

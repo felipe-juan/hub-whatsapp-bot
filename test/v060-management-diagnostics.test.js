@@ -125,7 +125,7 @@ test('diagnóstico registra uma decisão final por mensagem e explica todas as r
   const engine = new BotEngine(db, { diagnostics });
   const replies = [];
   const message = {
-    fromMe: false, from: 'grupo@g.us', author: '5511@s.whatsapp.net', body: '.Qual é o calendário?',
+    fromMe: false, from: 'grupo@g.us', author: '5511@s.whatsapp.net', body: 'Qual é o calendário?',
     async getChat() { return { isGroup: true, id: { _serialized: 'grupo@g.us' }, name: 'Grupo teste' }; },
     async sendResponse(payload) { replies.push(payload); }
   };

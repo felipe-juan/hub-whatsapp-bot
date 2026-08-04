@@ -10,7 +10,7 @@ const allFiles = fs.readdirSync(testDir).filter(name => name.endsWith('.test.js'
 function groupFor(name) {
   if (/performance|concurrency|stability|responsiveness|v0(?:87|88|90|91|92)/iu.test(name)) return 'performance';
   if (/migration|update|backup|restore|manifest|install|rollback|schema/iu.test(name)) return 'migrations';
-  if (/content|professor|sector|schedule|calendar|card|trigger|caens|room|institutional|bsi|discipline|campus|semester|v01513|v0155/iu.test(name)) return 'content';
+  if (/content|professor|sector|schedule|calendar|card|trigger|caens|room|institutional|bsi|discipline|campus|semester/iu.test(name)) return 'content';
   if (/text|matcher|calculator|template|question|format|parser|caption|title|regex|normaliz|policy|corpus/iu.test(name)) return 'unit';
   return 'integration';
 }

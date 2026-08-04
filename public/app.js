@@ -17,7 +17,7 @@ const state = {
   teacherImportPreview: null, learningSuggestions: []
 };
 const titles = {
-  dashboard: 'Visão geral', messages: 'Mensagens automáticas', academic: 'Dados acadêmicos', diagnostics: 'Diagnóstico em tempo real',
+  dashboard: 'Visão geral', messages: 'Mensagens automáticas', diagnostics: 'Diagnóstico em tempo real',
   calculators: 'Calculadoras', groups: 'Grupos', analytics: 'Estatísticas anônimas', learning: 'Aprendizado assistido', quality: 'Qualidade e validade', management: 'Sistema e manutenção', settings: 'Configurações', logs: 'Registros'
 };
 
@@ -92,7 +92,7 @@ function cleanupMessageVirtualization(){if(state.messageVirtual.scrollHandler){w
 async function render(){
   cleanupMessageVirtualization();
   $('#page-title').textContent=titles[state.view]||'HUB Bot';content.innerHTML='<div class="card empty">Carregando…</div>';
-  const fn={dashboard:renderDashboard,messages:renderMessages,academic:renderAcademicData,diagnostics:renderDiagnostics,calculators:renderCalculators,groups:renderGroups,analytics:renderAnalytics,learning:renderLearningSuggestions,quality:renderQuality,management:renderManagement,settings:renderSettings,logs:renderLogs}[state.view];
+  const fn={dashboard:renderDashboard,messages:renderMessages,diagnostics:renderDiagnostics,calculators:renderCalculators,groups:renderGroups,analytics:renderAnalytics,learning:renderLearningSuggestions,quality:renderQuality,management:renderManagement,settings:renderSettings,logs:renderLogs}[state.view];
   try{await fn();}catch(error){content.innerHTML=`<div class="card"><h3>Não foi possível carregar esta área</h3><p class="form-error">${esc(error.message)}</p></div>`;}
 }
 
@@ -165,6 +165,25 @@ function regressionCaseModal(item){
   openModal(item?'Editar frase de regressão':'Nova frase de regressão',`<div class="form-grid"><label class="full">Frase<input name="phrase" value="${esc(current.phrase)}" required maxlength="500"></label><label>Comportamento<select name="expectation"><option value="respond" ${current.expectation==='respond'?'selected':''}>Deve responder</option><option value="ignore" ${current.expectation==='ignore'?'selected':''}>Deve ignorar</option></select></label><label>Card esperado (opcional)<input name="expected_title" value="${esc(current.expected_title||'')}" placeholder="Professor — Amanda Ferraz"></label><label class="check full"><input name="active" type="checkbox" ${current.active?'checked':''}> Executar antes das atualizações</label></div>`,async form=>{const payload={phrase:form.phrase.value,expectation:form.expectation.value,expected_title:form.expected_title.value,active:form.active.checked};await api(item?`/api/regression-cases/${item.id}`:'/api/regression-cases',{method:item?'PUT':'POST',body:JSON.stringify(payload)});closeModal();toast('✅ Frase de regressão salva.');await renderLearningSuggestions();},{wide:true});
 }
 
+async function renderQuality(){
+  const [runtime,migrations,academic,observations,falsePositives,policies]=await Promise.all([
+    api('/api/quality/runtime'),api('/api/quality/migrations'),api('/api/quality/academic'),
+    api('/api/quality/observations'),api('/api/quality/false-positives'),api('/api/quality/trigger-policies')
+  ]);
+  content.innerHTML=`
+    <div class="grid stats">
+      ${statCard('Node instalado',runtime.installed,runtime.supported?'Compatibilidade confirmada':'Fora da faixa testada')}
+      ${statCard('Migrações versionadas',migrations.length,migrations.at(-1)?.migration_id||'Nenhuma')}
+      ${statCard('Período acadêmico',academic.academic_period||'—',academic.stale?'Dados precisam de revisão':'Dados dentro da validade')}
+      ${statCard('Possíveis falsos positivos',falsePositives.length,'Pendentes de revisão')}
+    </div>
+    <div class="card"><h2>Validade acadêmica</h2><p><strong>Última fonte:</strong> ${esc(academic.latest?.source_title||'Não registrada')}</p><p><strong>Data da fonte:</strong> ${esc(academic.latest?.source_date||academic.latest?.imported_at||'—')}</p><p><strong>Registros:</strong> ${Number(academic.latest?.entry_count||0)} · <strong>idade:</strong> ${academic.age_days===null?'desconhecida':`${academic.age_days} dia(s)`}</p>${academic.stale?'<p class="notice">O quadro pode estar desatualizado. Importe ou confirme a fonte atual.</p>':''}</div>
+    <div class="card"><h2>Política central de gatilhos</h2><div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Uso</th></tr></thead><tbody>${Object.entries(policies||{}).map(([key,value])=>`<tr><td><code>${esc(key)}</code></td><td>${esc(value.description||value)}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h2>Modo de observação</h2>${observations.length?observations.map(item=>`<article class="conflict-item"><strong>${esc(item.message_excerpt)}</strong><p class="muted">${esc(item.normalized_message)} · ${Number(item.occurrences||1)} ocorrência(s)</p><button class="button small review-observation" data-id="${Number(item.id)}">Marcar como revisado</button></article>`).join(''):'<p class="muted">Nenhuma ocorrência pendente.</p>'}</div>
+    <div class="card"><h2>Respostas possivelmente incorretas</h2>${falsePositives.length?falsePositives.map(item=>`<article class="conflict-item"><strong>${esc(item.original_message)}</strong><p class="muted">Card: ${esc(item.matched_title||'não identificado')} · feedback: ${esc(item.feedback_text)}</p><button class="button small review-fp" data-id="${Number(item.id)}">Marcar como revisado</button></article>`).join(''):'<p class="muted">Nenhum relato pendente.</p>'}</div>`;
+  $$('.review-observation').forEach(button=>button.onclick=async()=>{await api(`/api/quality/observations/${button.dataset.id}`,{method:'PATCH',body:JSON.stringify({state:'reviewed'})});await renderQuality();});
+  $$('.review-fp').forEach(button=>button.onclick=async()=>{await api(`/api/quality/false-positives/${button.dataset.id}`,{method:'PATCH',body:JSON.stringify({state:'reviewed'})});await renderQuality();});
+}
 
 async function renderAnalytics(days=30){state.analytics=await api(`/api/analytics?days=${days}`);const a=state.analytics;const max=Math.max(1,...(a.top||[]).map(i=>Number(i.count)));content.innerHTML=`<div class="toolbar"><p class="muted">Somente contagens por tópico.</p><div class="actions"><select id="analytics-days"><option value="7">7 dias</option><option value="30" ${days===30?'selected':''}>30 dias</option><option value="90">90 dias</option><option value="365">1 ano</option></select><button class="button danger" id="clear-analytics">🗑️ Zerar</button></div></div><div class="grid stats">${statCard('Interações',a.total||0)}${statCard('Tópicos',a.top?.length||0)}${statCard('Desde',a.since)}${statCard('Período',`${a.days} dias`)}</div><div class="card"><h3>Mensagens mais usadas</h3>${a.top?.length?`<div class="analytics-bars">${a.top.map(i=>`<div class="analytics-row"><div><strong>${esc(i.topic)}</strong><small>${esc(i.match_type)}</small></div><div class="bar-track"><span style="width:${Math.max(3,Number(i.count)/max*100)}%"></span></div><b>${i.count}</b></div>`).join('')}</div>`:'<div class="empty">Sem dados.</div>'}</div>`;$('#analytics-days').onchange=e=>renderAnalytics(Number(e.target.value));$('#clear-analytics').onclick=async()=>{if(!confirm('Apagar as estatísticas?'))return;await api('/api/analytics',{method:'DELETE'});await renderAnalytics(days);};}
 

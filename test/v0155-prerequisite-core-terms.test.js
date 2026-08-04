@@ -39,7 +39,7 @@ test('contextos de requisitos de software continuam excluídos', () => {
       'como corrigir a quebra de requisitos de software?'
     ]) {
       const result = engine.simulate(phrase, { isGroup: false, ignorePermissions: true });
-      assert.doesNotMatch(String(result.matchedItem || ''), /Quebra de Pr[eé]-requisito/iu, phrase);
+      assert.notMatch(String(result.matchedItem || ''), /Quebra de Pr[eé]-requisito/iu, phrase);
     }
   } finally { engine.close(); h.close(); }
 });

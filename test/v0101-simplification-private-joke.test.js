@@ -43,8 +43,8 @@ test('unknown private messages always receive the fallback, even with cooldown e
     await ctx.engine.handle(message('mensagem sem comando', replies));
     await ctx.engine.handle(message('outra mensagem sem comando', replies));
     assert.equal(replies.length, 2);
-    assert.match(replies[0], /Não consegui identificar exatamente|Você está procurando/);
-    assert.match(replies[1], /Aulas, salas e horários|Você está procurando/);
+    assert.match(replies[0], /Não identifiquei nenhum comando/);
+    assert.match(replies[1], /Não identifiquei nenhum comando/);
   } finally { close(ctx); }
 });
 

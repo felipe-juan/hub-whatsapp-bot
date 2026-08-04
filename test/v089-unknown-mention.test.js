@@ -39,14 +39,13 @@ function fakeMessage(body, { mentionedMe = false, isGroup = false } = {}) {
   return { message, replies };
 }
 
-test('prefixo bot em grupo ativa a recuperação', async t => {
+test('a palavra bot em grupo não é tratada como menção', async t => {
   const { dir, db } = makeDb();
   t.after(() => { db.close(); fs.rmSync(dir, { recursive: true, force: true }); });
   const engine = new BotEngine(db);
   const { message, replies } = fakeMessage('Bot, você pode me ajudar com isso?', { isGroup: true });
   await engine.handle(message);
-  assert.equal(replies.length, 1);
-  assert.match(replies[0], /Não consegui identificar exatamente|Você está procurando/);
+  assert.equal(replies.length, 0);
 });
 
 test('menção real por @ também ativa a orientação', async t => {
@@ -56,7 +55,7 @@ test('menção real por @ também ativa a orientação', async t => {
   const { message, replies } = fakeMessage('Você consegue ajudar?', { mentionedMe: true, isGroup: true });
   await engine.handle(message);
   assert.equal(replies.length, 1);
-  assert.match(replies[0], /Não consegui identificar exatamente|Você está procurando/);
+  assert.match(replies[0], /Não identifiquei nenhum comando/);
 });
 
 test('mensagem comum no privado recebe orientação mesmo sem menção', async t => {
@@ -66,7 +65,7 @@ test('mensagem comum no privado recebe orientação mesmo sem menção', async t
   const { message, replies } = fakeMessage('alguém pode me ajudar com isso?');
   await engine.handle(message);
   assert.equal(replies.length, 1);
-  assert.match(replies[0], /Não consegui identificar exatamente|Você está procurando/);
+  assert.match(replies[0], /Não identifiquei nenhum comando/);
 });
 
 test('mensagem comum em grupo sem menção continua ignorada', async t => {

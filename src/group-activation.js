@@ -16,12 +16,7 @@ function stripNamedPrefix(body) {
   const text = String(body || '').trimStart();
   const match = text.match(GROUP_PREFIX_PATTERN);
   if (!match) return null;
-  let remainder = text.slice(match[0].length).replace(/^[\s,.:;?\-]+/u, '').trim();
-  // Preserva o ponto de exclamação dos comandos administrativos (`bot !status`).
-  // Em usos comuns como `bot! qual sala`, o sinal continua sendo apenas pontuação.
-  if (/^!(?:ajuda|help|status|pausar|pause|continuar|retomar|resume|backup|reiniciar|restart)\b/iu.test(remainder)) return remainder;
-  remainder = remainder.replace(/^!+\s*/u, '').trim();
-  return remainder;
+  return text.slice(match[0].length).replace(/^[\s,.:;!?\-]+/u, '').trim();
 }
 
 function resolveGroupActivation(message = {}) {

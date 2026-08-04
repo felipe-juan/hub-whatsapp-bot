@@ -119,19 +119,14 @@ test('classificador reage somente quando agradecimento ou ofensa é dirigido ao 
   assert.equal(classifyBotReaction({ body: 'obrigado', hasQuotedMessage: true, quotedFromMe: false }), null);
 });
 
-test('motor respeita ativação obrigatória em grupos antes de reagir', async () => {
+test('motor envia somente a reação e não uma resposta de texto', async () => {
   const holder = temporaryDatabase();
   try {
     const engine = new BotEngine(holder.db);
-    const unactivatedThanks = fakeMessage('vlw', { hasQuotedMessage: true, quotedFromMe: true });
-    await engine.handle(unactivatedThanks.message);
-    assert.deepEqual(unactivatedThanks.reactions, []);
-    assert.deepEqual(unactivatedThanks.replies, []);
-
-    const activatedThanks = fakeMessage('bot vlw');
-    await engine.handle(activatedThanks.message);
-    assert.deepEqual(activatedThanks.reactions, ['❤️']);
-    assert.deepEqual(activatedThanks.replies, []);
+    const thanks = fakeMessage('vlw', { hasQuotedMessage: true, quotedFromMe: true });
+    await engine.handle(thanks.message);
+    assert.deepEqual(thanks.reactions, ['❤️']);
+    assert.deepEqual(thanks.replies, []);
 
     const offense = fakeMessage('bot, seu burro');
     await engine.handle(offense.message);

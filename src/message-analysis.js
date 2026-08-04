@@ -4,7 +4,6 @@ const { normalizeText } = require('./text');
 const { parseSemester, parseTargetDate, hasScheduleIntent, isScheduleStatusConfirmation, DEFAULT_TIME_ZONE } = require('./semester-schedule');
 const { findTeacherMatches } = require('./professor-location');
 const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
-const { canonicalSpeechText } = require('./recovery/language');
 
 const NARRATIVE_CLASS_PATTERNS = Object.freeze([
   /\b(?:a aula|as aulas|a materia|as materias|a disciplina|as disciplinas)\b.*\b(?:foi|foram|estava|estavam|acabou|acabaram|comecou|comecaram|foi boa|foram boas)\b/u,
@@ -50,21 +49,15 @@ function prepareMessage(rawText, {
   isGroup = false, hasReply = false, mentionedMe = false
 } = {}) {
   const raw = String(rawText || '').trim();
-  const canonicalRaw = canonicalSpeechText(raw);
-  const normalized = normalizeText(canonicalRaw);
+  const normalized = normalizeText(raw);
   const tokens = tokenize(normalized);
-  const targetDate = parseTargetDate(canonicalRaw, now, timeZone);
-  const semester = parseSemester(canonicalRaw);
-  const rawProfessorMatches = findTeacherMatches(normalized, teachers);
-  // Palavras temporais como “amanhã” ficam a uma edição de alguns primeiros
-  // nomes (por exemplo, Amanda). Em consultas por data, somente nomes exatos
-  // podem definir o professor; aliases fonéticos conhecidos já são
-  // normalizados antes desta etapa.
-  const professorMatches = targetDate?.matched ? rawProfessorMatches.filter(match => match.fuzzy !== true) : rawProfessorMatches;
+  const targetDate = parseTargetDate(raw, now, timeZone);
+  const semester = parseSemester(raw);
+  const professorMatches = findTeacherMatches(normalized, teachers);
   const disciplineMatches = findDisciplineMatches(normalized, scheduleEntries);
-  const intent = classifyAcademicIntent({ raw: canonicalRaw, normalized, targetDate, semester, professorMatches, disciplineMatches });
+  const intent = classifyAcademicIntent({ raw, normalized, targetDate, semester, professorMatches, disciplineMatches });
   return Object.freeze({
-    raw, canonicalRaw, normalized, tokens: Object.freeze(tokens), tokenSet: new Set(tokens),
+    raw, normalized, tokens: Object.freeze(tokens), tokenSet: new Set(tokens),
     targetDate, semester, intent,
     professorMatches: Object.freeze(professorMatches),
     disciplineMatches: Object.freeze(disciplineMatches),

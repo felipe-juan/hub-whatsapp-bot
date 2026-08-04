@@ -67,7 +67,7 @@ test('short context resolves sector follow-up only inside the same conversation'
     const other = [];
     await engine.handle(mockMessage('e onde fica?', other, '5522888888888@s.whatsapp.net'));
     assert.equal(other.length, 1);
-    assert.match(other[0], /De qual disciplina você quer saber a sala/);
+    assert.match(other[0], /Não identifiquei nenhum comando/);
   } finally { closeAll(engine, db, dir); }
 });
 
