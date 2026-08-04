@@ -1,7 +1,7 @@
 const { normalizeText, containsPhrase } = require('./text');
 
 const BOT_ADDRESS_ALIASES = Object.freeze([
-  'bot', 'hub bot', 'escravo do juan', 'escravo do felipe juan',
+  'bot', 'bote', 'hub bot', 'escravo do juan', 'escravo do felipe juan',
   'escravo do felipe', 'robo do juan', 'robo do felipe juan',
   'assistente do juan', 'assistente do felipe juan',
   'robo do hub', 'robô do hub', 'assistente do hub', 'hub whatsapp bot'

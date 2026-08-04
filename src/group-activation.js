@@ -1,6 +1,6 @@
 'use strict';
 
-const GROUP_PREFIX_PATTERN = /^(?:bot|rob[oô]|escravo\s+do\s+juan)(?=$|[\s,.:;!?\-])/iu;
+const GROUP_PREFIX_PATTERN = /^(?:bot|bote|rob[oô]|escravo\s+do\s+juan)(?=$|[\s,.:;!?\-])/iu;
 
 function stripOwnMentionTokens(body, ownMentionNumbers = []) {
   let text = String(body || '');

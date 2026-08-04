@@ -485,6 +485,14 @@ Responda somente com o número desejado em até ${Math.ceil(timeout / 60)} min.`
     if (prepared?.disciplineMatches?.length && isDirectDisciplineReference(text, prepared.disciplineMatches)) return true;
     const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas|professor|professora|docente|onde|quando|semestre|semestres|informacao|informacoes|dados|tudo|ministra|ministro|leciona|ensina|da|nome)\b/u.test(normalized);
     if (!topic) return false;
+    const hasExactTeacher = Boolean(prepared?.professorMatches?.some(match => match?.teacher && match.fuzzy !== true));
+    const hasDiscipline = Boolean(prepared?.disciplineMatches?.length);
+    const reportedSpeech = /\b(?:falei|falou|comentou|comentamos|conversei|conversou|disse|mencionou)\b/u.test(normalized);
+    const noisyAcademicFragment = hasExactTeacher && hasDiscipline && !reportedSpeech
+      && (/^(?:professor|professora|prof|profa|docente)\b/u.test(normalized)
+        || Boolean(prepared?.targetDate?.matched)
+        || /\b(?:sala|horario|horarios|dia|aula|aulas)\b/u.test(normalized));
+    if (noisyAcademicFragment) return true;
     if (prepared?.disciplineMatches?.length && hasDisciplineInformationIntent(text)) return true;
     // 'Onde fica/encontro o professor' busca o local de atendimento. Já
     // 'qual/em qual sala' e referências explícitas à aula/turma buscam o
@@ -598,7 +606,14 @@ Responda somente com o número desejado em até ${Math.ceil(timeout / 60)} min.`
       .map(card => [Number(card.id) || normalizeText(card.title), card])).values()];
     if (!cards.length) return null;
 
-    const requestedFields = disciplineMatches.length ? this.disciplineRequestedFields(text) : requestedProfessorFields(text);
+    let requestedFields = disciplineMatches.length ? this.disciplineRequestedFields(text) : requestedProfessorFields(text);
+    const normalizedFragmentText = normalizeText(text);
+    const noisyTeacherDisciplineFragment = !requestedFields.length && disciplineMatches.length && explicitTeacherNames.size
+      && !/\b(?:falei|falou|comentou|comentamos|conversei|conversou|disse|mencionou)\b/u.test(normalizedFragmentText)
+      && (/^(?:professor|professora|prof|profa|docente)\b/u.test(normalizedFragmentText)
+        || Boolean(prepared.targetDate?.matched)
+        || /\b(?:sala|horario|horarios|dia|aula|aulas)\b/u.test(normalizedFragmentText));
+    if (noisyTeacherDisciplineFragment) requestedFields = ['professor', 'contact', 'day', 'hours', 'room'];
     if (!requestedFields.length && disciplineMatches.length) {
       const discipline = disciplineMatches[0];
       const entries = this.db.listProfessorScheduleEntries?.({

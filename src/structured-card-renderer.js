@@ -4,8 +4,17 @@ const DAY_ORDER = ['domingo','segunda-feira','terça-feira','quarta-feira','quin
 function unique(values) { return [...new Set(values.filter(Boolean))]; }
 function sourceFooter(entries=[]) {
   const first=entries.find(e=>e.source_title||e.source_date||e.source_version); if(!first)return '';
-  const pieces=[first.source_title,first.source_version?`versão ${first.source_version}`:'',first.source_date?`publicado em ${first.source_date.split('-').reverse().join('/')}`:''].filter(Boolean);
-  return pieces.length?`\n\nFonte: ${pieces.join(', ')}.`:'';
+  const title=String(first.source_title||'').trim();
+  const version=String(first.source_version||'').trim();
+  const date=String(first.source_date||'').trim();
+  const details=[];
+  if(version)details.push(normalizeText(version).startsWith('versao')?version:`Versão ${version}`);
+  if(date)details.push(`publicado em ${date.split('-').reverse().join('/')}`);
+  if(!title&&!details.length)return '';
+  return `
+
+Fonte: ${title||'quadro acadêmico'}${details.length?`
+${details.join(' · ')}`:''}`;
 }
 function groupClasses(entries=[]) {
   const groups=new Map();

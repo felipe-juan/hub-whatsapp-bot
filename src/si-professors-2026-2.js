@@ -2,7 +2,7 @@
 // Versão 2, publicada em 28/07/2026. Cada aula inclui a sala informada no quadro.
 
 const SI_SCHEDULE_SOURCE_2026_2 = Object.freeze({
-  file: '2026-07-09 - Horários Docentes 2026 (1).csv',
+  file: 'https://ifbaedubr-my.sharepoint.com/:x:/g/personal/rodrigobonfim_ifba_edu_br/IQCqjeOoMcvWQoiikRSUwWOxAZSOwJaih1qWmWFq5Vxa73Y?rtime=aTN-B0Ly3kg',
   version: 'Versão 2',
   published_at: '2026-07-28',
   sha256: 'ec6000abd72154f3675147a20b74f0ef02eda5fb7bcea59da8b00fa2fad10f16',
@@ -892,7 +892,7 @@ const SI_DISCIPLINE_ALIASES_2026_2 = Object.freeze({
   'Contabilidade Geral e Custos': ['CGC', 'contabilidade e custos'],
   'Cálculo Diferencial Aplicado à Computação': ['CDAC', 'cálculo aplicado', 'calculo aplicado', 'cálculo', 'calculo'],
   'Direito Cibernético': ['DC'],
-  'Economia': ['ECO'],
+  'Economia': ['ECO', 'econimia'],
   'Empreendedorismo': ['EMP'],
   'Engenharia de Software': ['eng software', 'eng de software'],
   'Estruturas de Dados': ['ED'],

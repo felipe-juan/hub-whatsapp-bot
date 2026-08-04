@@ -1,6 +1,6 @@
-# HUB WhatsApp Bot v0.15.12
+# HUB WhatsApp Bot v0.15.13
 
-Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.12 amplia as consultas estruturadas por disciplina, responde por sigla, nome completo ou primeiro termo seguro e oferece desambiguação numerada sem perder a intenção original da pergunta.
+Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.13 amplia as consultas estruturadas por disciplina, responde por sigla, nome completo ou primeiro termo seguro e oferece desambiguação numerada sem perder a intenção original da pergunta.
 
 > [!IMPORTANT]
 > ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
@@ -10,7 +10,7 @@ Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e c
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA.
 
-## O que mudou na v0.15.12
+## O que mudou na v0.15.13
 
 - consultas como `professor de algoritmos` e `qual nome do professor de algoritmo` retornam professor e e-mail institucional;
 - sigla, nome completo ou primeiro termo único da disciplina, quando enviados isoladamente, abrem o card completo da matéria;
@@ -81,9 +81,9 @@ npm run release:verify
 Implantação:
 
 ```bash
-scripts/hub-bot release local 0.15.12 ~/Downloads/hub-whatsapp-bot-v0.15.12.zip
-scripts/hub-bot release github 0.15.12 ~/Downloads/hub-whatsapp-bot-v0.15.12-github.zip
-scripts/hub-bot release oracle 0.15.12 ~/Downloads/hub-whatsapp-bot-v0.15.12.zip
+scripts/hub-bot release local 0.15.13 ~/Downloads/hub-whatsapp-bot-v0.15.13.zip
+scripts/hub-bot release github 0.15.13 ~/Downloads/hub-whatsapp-bot-v0.15.13-github.zip
+scripts/hub-bot release oracle 0.15.13 ~/Downloads/hub-whatsapp-bot-v0.15.13.zip
 ```
 
 ## Documentação
