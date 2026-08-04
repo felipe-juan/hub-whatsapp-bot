@@ -1,3 +1,10 @@
+# v0.15.8 — 2026-08-04
+
+- Adiciona e-mail, WhatsApp e Instagram oficiais do Serviço Social aos cards de PAAE.
+- Exibe os valores numéricos divulgados no edital de 2025 para Bolsa Estudo, Transporte, Moradia e Cópia e Impressão.
+- Inclui o auxílio para aquisição de óculos, com documentos exigidos e aviso de que não houve valor fixo publicado.
+- Atualiza instalações existentes por migração, preservando cards personalizados como atualização pendente.
+
 # v0.15.7 — 2026-08-04
 
 - exige ativação explícita em todos os grupos por prefixo (`bot`, `robô`, `Escravo do Juan`), menção real ou ponto inicial;

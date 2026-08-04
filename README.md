@@ -1,6 +1,6 @@
-# HUB WhatsApp Bot v0.15.7
+# HUB WhatsApp Bot v0.15.8
 
-Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.7 exige ativação explícita em grupos e acrescenta um guia atualizado sobre PAAE, auxílios, valores e cronogramas recentes. No privado, o comportamento permanece inalterado.
+Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.8 exige ativação explícita em grupos e amplia o guia do PAAE com valores de 2025, auxílio para óculos e contatos oficiais do Serviço Social. No privado, o comportamento permanece inalterado.
 
 > [!IMPORTANT]
 > ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
@@ -10,7 +10,11 @@ Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e c
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA.
 
-## O que mudou na v0.15.7
+## O que mudou na v0.15.8
+
+- Contatos do Serviço Social adicionados aos cards de PAAE.
+- Valores monetários de 2025 apresentados numericamente.
+- Auxílio para óculos incluído com requisitos e valor variável.
 
 - mensagens casuais em grupos são descartadas antes de entrar na fila serial;
 - comandos deixam de esperar atrás do tráfego normal de um grupo movimentado;
@@ -81,9 +85,9 @@ npm run release:verify
 Implantação:
 
 ```bash
-scripts/hub-bot release local 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7.zip
-scripts/hub-bot release github 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7-github.zip
-scripts/hub-bot release oracle 0.15.7 ~/Downloads/hub-whatsapp-bot-v0.15.7.zip
+scripts/hub-bot release local 0.15.8 ~/Downloads/hub-whatsapp-bot-v0.15.8.zip
+scripts/hub-bot release github 0.15.8 ~/Downloads/hub-whatsapp-bot-v0.15.8-github.zip
+scripts/hub-bot release oracle 0.15.8 ~/Downloads/hub-whatsapp-bot-v0.15.8.zip
 ```
 
 ## Documentação
