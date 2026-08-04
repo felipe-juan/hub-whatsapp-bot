@@ -51,7 +51,7 @@ test('professor cards contain institutional emails and complete 2026.2 schedules
   }
 });
 
-test('professor triggers answer contact and IFBA-day questions but ignore a bare name', () => {
+test('professor triggers answer contact, IFBA-day questions and an isolated name', () => {
   const { db, dir } = temporaryDatabase();
   try {
     const messages = db.listAutomaticMessages();
@@ -68,7 +68,8 @@ test('professor triggers answer contact and IFBA-day questions but ignore a bare
     assert.equal(evaluateTrigger('Você tem o e-mail do Alexandro?', alexandro).matched, true);
     assert.equal(evaluateTrigger('Que dia o Allan está no IFBA?', allan).matched, true);
     assert.equal(evaluateTrigger('Quais os horários do Cláudio?', claudio).matched, true);
-    assert.equal(evaluateTrigger('Alexandro', alexandro).matched, false);
+    assert.equal(evaluateTrigger('Alexandro', alexandro).matched, true);
+    assert.equal(evaluateTrigger('falei com Alexandro ontem', alexandro).matched, false);
     assert.equal(evaluateTrigger('Qual é o contato do professor Allan?', alexandro).matched, false);
     assert.equal(evaluateTrigger('Qual o contato de Thiago Leonardo?', leonardo).matched, false);
     assert.equal(evaluateTrigger('Qual o contato de Thiago Leonardo?', thiago).matched, true);

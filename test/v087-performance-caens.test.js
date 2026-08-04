@@ -18,7 +18,7 @@ function card(db, title) {
   return db.listAutomaticMessages().find(item => item.title === title);
 }
 
-test('CAENS accepts common contact formulations without reacting to the isolated acronym', () => {
+test('CAENS accepts common contact formulations and the isolated acronym', () => {
   const { db, dir } = temporaryDatabase(); const engine = new BotEngine(db);
   try {
     for (const body of ['qual o contato da CAENS?', 'qual o contato do CAENS?', 'ctt da caens', 'telefone da caens', 'número da caens', 'whats da CAENS', 'como entrar em contato com a CAENS?', 'preciso falar com a caens?']) {
@@ -26,7 +26,7 @@ test('CAENS accepts common contact formulations without reacting to the isolated
       assert.equal(result.matched, true, body); assert.match(result.matchedItem, /^CAENS —/);
     }
     assert.equal(engine.evaluate('a CAENS participou da reunião', { isGroup: false, ignorePermissions: true }).matched, false);
-    assert.equal(engine.evaluate('CAENS', { isGroup: false, ignorePermissions: true }).matched, false);
+    assert.equal(engine.evaluate('CAENS', { isGroup: false, ignorePermissions: true }).matched, true);
   } finally { engine.close(); db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

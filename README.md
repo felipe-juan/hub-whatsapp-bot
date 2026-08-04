@@ -1,4 +1,4 @@
-# HUB WhatsApp Bot v0.14.3
+# HUB WhatsApp Bot v0.14.4
 
 Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB Arquivos IFBA. Cada automação reúne **gatilhos editáveis** e a **resposta completa** que será enviada.
 
@@ -9,6 +9,18 @@ Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB A
 
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA. Respostas simultâneas são organizadas por conversa, mas nenhuma integração não oficial garante que a conta nunca será restringida.
+
+
+## Gatilhos diretos, nomes docentes e leitura rápida — v0.14.4
+
+- amplia os cards semanais para aceitar formas diretas como `semestre 1`, `1o semestre`, `segundo semestre`, `horários semestre 2` e `horários e salas do 3º semestre`;
+- `horários e salas do semestre` abre uma pergunta curta para escolher o semestre e aceita a continuação numérica;
+- nomes isolados de docentes, como `Crijina` e `Crescêncio`, abrem o card completo com contato, semestres, disciplinas, dias, horários, salas e fonte;
+- o card de Felipe Juan passa a aceitar `felipe`, `juan`, `felipe juan` e formulações específicas sobre contato, projetos, HUB e DASI, sem reagir a menções casuais em frases maiores;
+- atalhos curtos inequívocos, como `CAENS`, `final`, `calendário`, `SUAP`, `PPC`, `ACEX`, `DASI` e `protocolo`, funcionam quando enviados isoladamente;
+- respostas seletivas passam a usar tópicos e rótulos visuais, com a sala destacada em negrito, mantendo disciplina, dia e horário quando úteis;
+- a análise de conflitos diferencia frases exatas de trechos contidos em frases maiores, evitando alertas falsos para atalhos isolados;
+- bancos existentes recebem os novos gatilhos por migração, preservando respostas, anexos e personalizações administrativas.
 
 
 ## Grades por semestre, contexto útil e diagnóstico de intenção — v0.14.3

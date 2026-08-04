@@ -86,14 +86,17 @@ function classifySectorRequest(text, sectors = []) {
   const matches = findSector(clean, sectors);
   if (!matches.length) return { matched: false };
   const best = matches[0];
-  const intent = detectIntent(clean);
+  let intent = detectIntent(clean);
+  const directSectorName = normalizeText(best.sector.acronym || '');
+  const isolatedSector = Boolean(directSectorName && clean === directSectorName);
+  if (!intent && isolatedSector) intent = 'contact';
   if (!intent) return { matched: false };
   const asksForNonPhysicalResource = intent === 'location'
     && NON_PHYSICAL_RESOURCE_TERMS.some(value => containsPhrase(clean, normalizeText(value)));
   if (asksForNonPhysicalResource) return { matched: false, deferredToCards: true };
   const fuzzyDirect = best.fuzzy && /^(?:contato|email|e mail|whatsapp|whats|zap|telefone|fone|numero|ramal|ctt|onde fica|localizacao|servicos)(?:\s+(?:da|do|de|a|o))?\s+[a-z0-9]+$/u.test(clean);
-  if (!hasQuestionStructure && !directPhrasesFor(best.sector).has(clean) && !fuzzyDirect) return { matched: false };
-  return { matched: true, intent, sector: best.sector, alias: best.alias, fuzzy: best.fuzzy, ambiguous: matches.filter(item => item.alias.length === best.alias.length).length > 1 };
+  if (!hasQuestionStructure && !isolatedSector && !directPhrasesFor(best.sector).has(clean) && !fuzzyDirect) return { matched: false };
+  return { matched: true, intent, sector: best.sector, alias: best.alias, fuzzy: best.fuzzy, isolatedSector, ambiguous: matches.filter(item => item.alias.length === best.alias.length).length > 1 };
 }
 function classifySectorFollowUp(text) {
   const raw = String(text || '').trim();

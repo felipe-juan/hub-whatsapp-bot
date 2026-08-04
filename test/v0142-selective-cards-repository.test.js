@@ -20,7 +20,7 @@ test('consultas docentes retornam apenas os campos solicitados', () => {
     const room = engine.simulate('qual sala de LPI?', { isGroup: false, ignorePermissions: true });
     assert.equal(room.matched, true);
     assert.match(room.text, /LPI — Linguagem de Programação I/u);
-    assert.match(room.text, /sala H008/u);
+    assert.match(room.text, /\*Sala:\* \*H008\*/u);
     assert.doesNotMatch(room.text, /claudiorodolfo@/u);
     assert.doesNotMatch(room.text, /Estruturas de Dados|ACEX II/u);
 
@@ -44,7 +44,7 @@ test('consulta com mais de um campo combina somente os dados pedidos', () => {
   try {
     const result = engine.simulate('sala e dia de aula de LPII', { isGroup: false, ignorePermissions: true });
     assert.match(result.text, /segunda-feira/u);
-    assert.match(result.text, /sala H108/u);
+    assert.match(result.text, /\*Sala:\* \*H108\*/u);
     assert.doesNotMatch(result.text, /alexandrossilva@|Programação Web II/u);
   } finally { engine.close(); holder.close(); }
 });

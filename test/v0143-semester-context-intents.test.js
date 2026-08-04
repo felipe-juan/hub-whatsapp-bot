@@ -52,7 +52,7 @@ test('pergunta de sala preserva contexto acadêmico útil', () => {
     assert.match(result.text, /LPI — Linguagem de Programação I/u);
     assert.match(result.text, /segunda-feira/u);
     assert.match(result.text, /18h30/u);
-    assert.match(result.text, /sala H008/u);
+    assert.match(result.text, /\*Sala:\* \*H008\*/u);
     assert.doesNotMatch(result.text, /claudiorodolfo@|Estruturas de Dados|ACEX II/u);
   } finally { engine.close(); holder.close(); }
 });
@@ -98,7 +98,7 @@ test('continuação privada recupera professor ou disciplina sem repetição', a
     await engine.handle(mockMessage('qual sala de LPI?', replies));
     await engine.handle(mockMessage('e o horário?', replies));
     assert.equal(replies.length, 2);
-    assert.match(replies[0], /sala H008/u);
+    assert.match(replies[0], /\*Sala:\* \*H008\*/u);
     assert.match(replies[1], /LPI — Linguagem de Programação I/u);
     assert.match(replies[1], /18h30/u);
     assert.doesNotMatch(replies[1], /claudiorodolfo@|Estruturas de Dados/u);

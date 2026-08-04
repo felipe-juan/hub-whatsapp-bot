@@ -592,12 +592,56 @@ const SEMESTER_WEEKLY_CARDS_V0143_RAW = Object.freeze([
   }
 ]);
 
-const SEMESTER_WEEKLY_CARDS_V0143 = Object.freeze(SEMESTER_WEEKLY_CARDS_V0143_RAW.map(definition => Object.freeze({
-  ...definition,
-  message: Object.freeze({
-    ...definition.message,
-    response_text: formatDisciplineNamesInText(definition.message.response_text)
-  })
-})));
+const SEMESTER_ORDINALS = Object.freeze([
+  'primeiro', 'segundo', 'terceiro', 'quarto', 'quinto', 'sexto', 'sétimo', 'oitavo'
+]);
 
-module.exports = { SEMESTER_WEEKLY_CARDS_V0143 };
+function semesterTriggerVariants(number) {
+  const ordinal = SEMESTER_ORDINALS[number - 1];
+  const direct = [
+    `semestre ${number}`,
+    `${number} semestre`,
+    `${number}º semestre`,
+    `${number}o semestre`,
+    `${ordinal} semestre`
+  ];
+  const sentenceSubjects = [
+    `${number} semestre`,
+    `${number}º semestre`,
+    `${number}o semestre`,
+    `${ordinal} semestre`,
+    `semestre ${number}`
+  ];
+  const prefixes = [
+    'aulas', 'horários', 'horario', 'horários e salas', 'horarios e salas',
+    'salas e horários', 'salas e horarios', 'matérias', 'materias', 'disciplinas'
+  ];
+  const sentences = [];
+  for (const prefix of prefixes) {
+    for (const subject of sentenceSubjects) {
+      sentences.push(`${prefix} do ${subject}`, `${prefix} ${subject}`);
+    }
+  }
+  return {
+    exact_phrases: [...new Set(direct)],
+    sentences: [...new Set(sentences)]
+  };
+}
+
+const SEMESTER_WEEKLY_CARDS_V0143 = Object.freeze(SEMESTER_WEEKLY_CARDS_V0143_RAW.map((definition, index) => {
+  const variants = semesterTriggerVariants(index + 1);
+  return Object.freeze({
+    ...definition,
+    message: Object.freeze({
+      ...definition.message,
+      response_text: formatDisciplineNamesInText(definition.message.response_text),
+      trigger: Object.freeze({
+        ...definition.message.trigger,
+        sentences: Object.freeze([...new Set([...(definition.message.trigger.sentences || []), ...variants.sentences])]),
+        exact_phrases: Object.freeze([...new Set([...(definition.message.trigger.exact_phrases || []), ...variants.exact_phrases])])
+      })
+    })
+  });
+}));
+
+module.exports = { SEMESTER_WEEKLY_CARDS_V0143, semesterTriggerVariants };

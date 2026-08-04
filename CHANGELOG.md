@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.14.4 — 2026-08-03
+
+- amplia os gatilhos dos oito cards semanais com formas numéricas, ordinais e por extenso, incluindo `semestre 1`, `1o semestre`, `segundo semestre`, `horários semestre 2` e `horários e salas do 3º semestre`;
+- adiciona um fluxo guiado para `horários e salas do semestre`, solicitando apenas o número do semestre e reutilizando o contexto na resposta seguinte;
+- permite que o nome isolado de qualquer docente abra o card completo, sem ativar o bot quando o mesmo nome aparece em uma conversa maior;
+- corrige e amplia os gatilhos do card de Felipe Juan, com `felipe`, `juan`, nome completo e frases específicas sobre contato, projetos, HUB Arquivos e DASI;
+- libera atalhos exatos e seguros para cards institucionais e acadêmicos, como `CAENS`, `final`, `calendário`, `SUAP`, `PPC`, `ACEX`, `DASI` e `protocolo`;
+- reorganiza respostas seletivas em tópicos com rótulos explícitos de dia, horário, sala, professor, contato e semestre;
+- destaca salas em negrito e preserva contexto acadêmico útil para leitura rápida;
+- corrige a análise de conflitos para que uma frase exata curta não seja tratada como sobreposição com uma sentença maior;
+- adiciona migração para bancos existentes e testes de regressão para atalhos, nomes isolados, cards completos, semestres e formatação;
+- conclui 355 testes automatizados sem falhas.
+
 ## 0.14.3 — 2026-08-03
 
 - adiciona oito cards completos de aulas e horários, um para cada semestre de BSI, com dados da planilha oficial de 28/07/2026;

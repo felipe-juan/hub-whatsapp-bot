@@ -3,7 +3,7 @@
 const { buildProfessorScheduleImportPlan, buildEffectiveProfessorScheduleRecords } = require('../schedule-import-plan');
 
 module.exports = function createMixin(deps) {
-  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, toPortugueseTitleCase, crypto } = deps;
+  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, captionAnalysis, toPortugueseTitleCase, crypto } = deps;
   return class {
   validateAutomaticMessage(input) {
     const title = toPortugueseTitleCase(String(input.title || '').trim());
@@ -420,7 +420,7 @@ module.exports = function createMixin(deps) {
           const created = this.saveAutomaticMessage({
             title: `Professor — ${record.name}`, response_text: response, priority: 35, active: true, archived: false, scope: 'both',
             trigger: { match_mode: 'all', sentences, keywords: [], required_words: [], require_question_mark: false,
-              typo_tolerance: 1, excluded_words: [], exact_phrases: [], synonym_group_ids: [], negative_examples: [] }
+              typo_tolerance: 1, excluded_words: [], exact_phrases: buildSiProfessorExactNamePhrases(professorShape), synonym_group_ids: [], negative_examples: [] }
           });
           this.db.prepare("UPDATE automatic_messages SET source_type='teacher_import',customized=1,updated_at=? WHERE id=?").run(nowIso(), Number(created.id));
           report.created += 1;

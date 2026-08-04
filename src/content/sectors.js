@@ -39,7 +39,7 @@ const SECTOR_CARDS = Object.freeze([
         "require_question_mark": true,
         "typo_tolerance": 1,
         "excluded_words": [],
-        "exact_phrases": [],
+        "exact_phrases": ["protocolo"],
         "synonym_group_ids": [],
         "negative_examples": [],
         "regex_pattern": "",

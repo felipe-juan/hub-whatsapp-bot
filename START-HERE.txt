@@ -1,17 +1,16 @@
-HUB WhatsApp Bot v0.14.3 — Fedora GNOME
+HUB WhatsApp Bot v0.14.4 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.14.3
+ATUALIZAÇÃO v0.14.4
 
 NOVIDADES PRINCIPAIS
-- Oito novos cards mostram a grade semanal completa de cada semestre de BSI em 2026.2.
-- Perguntas de sala incluem disciplina, dia e horário, mas evitam contato e outras informações desnecessárias.
-- “Em quais dias Amanda dá aula?” mostra os dias e horários; confirmações pontuais de presença continuam bloqueadas.
-- No privado, “e o horário?” pode continuar uma consulta anterior sem repetir professor ou disciplina.
-- “Onde Allan dá aula hoje?” prioriza a aula atual ou a próxima do dia.
-- E-mail, localização e outros campos de setores são respondidos seletivamente.
-- O diagnóstico mostra a intenção classificada e respostas usam menos emojis decorativos.
-- Dados acadêmicos ausentes são indicados de forma explícita.
+- Cards de semestre aceitam formas diretas como “semestre 1”, “1o semestre”, “segundo semestre” e “horários semestre 2”.
+- “Horários e salas do semestre” pergunta qual semestre deve ser consultado.
+- O nome isolado de qualquer professor abre o card docente completo com contato, semestres, horários, salas e fonte.
+- “Felipe” e frases específicas sobre Felipe Juan passam a abrir corretamente o card correspondente.
+- Atalhos isolados como “CAENS”, “final”, “calendário”, “SUAP”, “PPC”, “ACEX”, “DASI” e “protocolo” funcionam sem ponto de interrogação.
+- Respostas seletivas usam tópicos, rótulos claros e salas em negrito para facilitar a leitura.
+- Menções casuais dentro de frases maiores continuam protegidas contra falsos acionamentos.
 
 INSTALAÇÃO
 1. Extraia o ZIP.

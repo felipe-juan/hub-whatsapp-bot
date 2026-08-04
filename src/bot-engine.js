@@ -503,6 +503,23 @@ class BotEngine {
 
   semesterScheduleEvaluation(text, context = {}) {
     const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context);
+    const normalized = normalizeText(String(text || '').trim().replace(/[?]+\s*$/u, '')).trim();
+    const asksWeeklySemesterWithoutNumber = /^(?:aulas|horarios|horarios e salas|salas e horarios|grade|grade de horarios|quadro|quadro de horarios|materias|disciplinas)(?: do)? semestre$/u.test(normalized);
+    if (asksWeeklySemesterWithoutNumber) {
+      return {
+        matched: true,
+        type: 'semester_overview_prompt',
+        text: ['Qual semestre você quer consultar?', '', 'Responda apenas com um número entre `1` e `8`.'].join('\n'),
+        signature: 'semester-overview-prompt',
+        matchedItem: 'BSI — Aulas e horários por semestre',
+        topic: 'Horários de BSI',
+        detectedIntent: 'horário',
+        reasons: ['consulta da grade semanal sem número do semestre'],
+        candidates: [], conflict: false, redactLog: false, analysis: [], attachment: null,
+        context: { ...context },
+        contextSubject: { kind: 'semester_overview_prompt', title: 'BSI — Aulas e horários por semestre' }
+      };
+    }
     if (!this.semesterScheduleEnabled({ includeDrafts: Boolean(context.includeDrafts), messages: snapshot.messages })) return null;
     const prepared = context.prepared || prepareMessage(text, { now: context.now || Date.now(), teachers: snapshot.teachers, isGroup: context.isGroup });
     if (['schedule-status-confirmation','schedule-narrative','professor-attendance-confirmation'].includes(prepared.intent)) return null;
@@ -881,6 +898,39 @@ ${menuText}`.trim(), pendingCandidates: candidates };
         candidates: [], conflict: false, redactLog: false, attachment: null,
         contextSubject: { kind: 'semester_schedule', title: SEMESTER_SCHEDULE_CARD_TITLE,
           targetDate: stored.targetDate || '', dayIndex, semester }
+      };
+    }
+    if (stored.kind === 'semester_overview_prompt') {
+      const semester = semesterFromFollowUp(raw);
+      if (!semester) {
+        return {
+          matched: true,
+          type: 'semester_overview_prompt_invalid',
+          text: ['Não consegui identificar o semestre.', '', 'Responda apenas com um número entre `1` e `8`.'].join('\n'),
+          signature: 'semester-overview-prompt-invalid',
+          matchedItem: 'BSI — Aulas e horários por semestre',
+          topic: 'Horários de BSI', detectedIntent: 'horário',
+          reasons: ['resposta ao pedido de semestre não pôde ser interpretada'],
+          candidates: [], conflict: false, redactLog: false, attachment: null,
+          contextSubject: { kind: 'semester_overview_prompt', title: 'BSI — Aulas e horários por semestre' }
+        };
+      }
+      const title = `BSI — Aulas e horários do ${semester}º semestre`;
+      const card = this.db.listAutomaticMessages({ activeOnly: true, cloneResult: false })
+        .find(item => normalizeText(item.title) === normalizeText(title));
+      if (!card?.response_text) return null;
+      this.forgetConversationContext(message, stored);
+      return {
+        matched: true, type: 'message', text: card.response_text,
+        signature: `semester-overview:${semester}`, matchedItem: card.title,
+        topic: card.topic || 'Horários de BSI', detectedIntent: 'horário',
+        reasons: ['semestre informado como continuação da consulta da grade semanal'],
+        candidates: [{ kind: 'message', id: card.id, title: card.title }], conflict: false,
+        redactLog: false, attachment: card.attachment || null,
+        details_text: card.details_text || '', source_url: card.source_url || '',
+        source_title: card.source_title || '', verified_at: card.verified_at || '',
+        contextSubject: { kind: 'message', id: Number(card.id || 0), title: card.title, topic: card.topic || card.title,
+          details_text: card.details_text || '', source_url: card.source_url || '', source_title: card.source_title || '', verified_at: card.verified_at || '' }
       };
     }
     if (stored.kind === 'semester_schedule') {

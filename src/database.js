@@ -4,7 +4,7 @@ const { EventEmitter } = require('node:events');
 const { parseList, normalizeText } = require('./text');
 const { toPortugueseTitleCase } = require('./title-case');
 const { normalizeTriggerRules, validateRegex } = require('./trigger-rules');
-const { SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2 } = require('./si-professors-2026-2');
+const { SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2 } = require('./si-professors-2026-2');
 const { buildProfessorScheduleResponse } = require('./professor-schedule-import');
 const { SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload } = require('./si-support-messages-v083');
 const { INSTITUTIONAL_CARDS_V098 } = require('./institutional-cards');
@@ -106,6 +106,7 @@ const DEFAULT_SETTINGS = {
   content_v0140_precision_performance: 'false',
   content_v0142_selective_cards_and_repository: 'false',
   content_v0143_semester_cards_context_intents: 'false',
+  content_v0144_direct_short_triggers: 'false',
   private_context_without_reply: 'true',
   external_backups_enabled: 'false',
   external_backup_interval_hours: '24',
@@ -684,14 +685,29 @@ class Database {
       const effective = item.draft || item;
       const trigger = normalizeTriggerRules(effective.trigger);
       const unique = new Map();
-      for (const original of [...trigger.keywords, ...trigger.sentences, ...trigger.exact_phrases, ...trigger.required_words]) {
-        const normalized = normalizeText(original); if (normalized && !unique.has(normalized)) unique.set(normalized, original);
-      }
-      const terms = [...unique.entries()].map(([normalized, original]) => ({ normalized, original, tokens: normalized.split(' ').filter(Boolean) }));
-      const compact = terms.filter(term => term.normalized.length >= 5)
+      const addTerms = (values, kind) => {
+        for (const original of values || []) {
+          const normalized = normalizeText(original);
+          if (!normalized) continue;
+          if (!unique.has(normalized)) unique.set(normalized, { original, kinds: new Set() });
+          unique.get(normalized).kinds.add(kind);
+        }
+      };
+      addTerms(trigger.keywords, 'keyword');
+      addTerms(trigger.sentences, 'sentence');
+      addTerms(trigger.exact_phrases, 'exact');
+      addTerms(trigger.required_words, 'required');
+      const terms = [...unique.entries()].map(([normalized, data]) => ({
+        normalized,
+        original: data.original,
+        tokens: normalized.split(' ').filter(Boolean),
+        exactOnly: data.kinds.size === 1 && data.kinds.has('exact')
+      }));
+      const termSet = new Set(unique.keys());
+      const compact = terms.filter(term => term.normalized.length >= 5 && !term.exactOnly)
         .sort((a, b) => a.normalized.length - b.normalized.length)
         .slice(0, 60);
-      return { id: item.id, effective, terms, termSet: new Set(unique.keys()), compact };
+      return { id: item.id, effective, terms, termSet, compact };
     });
     const conflicts = [];
     for (let i = 0; i < contents.length; i += 1) for (let j = i + 1; j < contents.length; j += 1) {
@@ -781,7 +797,7 @@ class Database {
   }
 
 }
-const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto };
+const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto };
 for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin, createIncomingRepositoryMixin, createLearningRepositoryMixin, createChangeHistoryRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;

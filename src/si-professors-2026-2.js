@@ -957,6 +957,15 @@ const SI_SHARED_DISCIPLINES_2026_2 = Object.freeze({
 
 function unique(values) { return [...new Set(values.map(value => String(value || '').trim()).filter(Boolean))]; }
 
+function buildSiProfessorExactNamePhrases(item) {
+  if (!item || item.pending) return [];
+  const aliases = SI_PROFESSOR_TRIGGER_ALIASES_2026_2[item.name] || [];
+  const firstName = String(item.name || '').trim().split(/\s+/u)[0] || '';
+  // Nomes isolados são frases exatas. Isso permite “Crijina” ou “Crescêncio”
+  // sem fazer o nome capturar qualquer conversa longa em que ele seja apenas citado.
+  return unique([item.name, item.identifier, firstName, ...aliases]);
+}
+
 function buildSiProfessorNameTriggerSentences(item) {
   const aliases = SI_PROFESSOR_TRIGGER_ALIASES_2026_2[item.name] || [item.identifier].filter(Boolean);
   const templates = [
@@ -1133,6 +1142,7 @@ module.exports = {
   formatDisciplineNamesInText,
   buildDisciplineTriggerSentences,
   buildSharedDisciplineCards2026_2,
+  buildSiProfessorExactNamePhrases,
   buildSiProfessorNameTriggerSentences,
   buildSiProfessorDisciplineTriggerSentences,
   buildSiProfessorTriggerSentences,

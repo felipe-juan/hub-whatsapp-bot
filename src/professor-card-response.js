@@ -85,9 +85,9 @@ function formatProfessorFieldResponse({ entries = [], teachers = [], fields = []
     const people = cleanTeachers.length ? cleanTeachers : uniqueBy(cleanEntries.map(entry => ({ name: entry.professor_name, email: entry.professor_email })), person => normalizeText(person.name));
     const lines = [];
     for (const person of people) {
-      if (people.length > 1) lines.push(`*${person.name}*`);
-      if (requested.has('professor') && people.length === 1) lines.push(`*Professor:* ${person.name}`);
-      if (requested.has('contact')) lines.push(`*Contato:* ${person.email || 'não cadastrado'}`);
+      if (people.length > 1 || requested.has('contact')) lines.push(`*${person.name}*`);
+      if (requested.has('professor') && people.length === 1 && !requested.has('contact')) lines.push(`• *Professor:* ${person.name}`);
+      if (requested.has('contact')) lines.push(`• *Contato:* ${person.email || 'não cadastrado'}`);
       if (people.length > 1) lines.push('');
     }
     return lines.join('\n').trim();
@@ -105,12 +105,12 @@ function formatProfessorFieldResponse({ entries = [], teachers = [], fields = []
   const blocks = [];
   for (const group of groups) {
     const lines = [`*${group.title}*`];
-    if (displayFields.has('professor')) lines.push(`*Professor:* ${group.professor}`);
-    if (displayFields.has('contact')) lines.push(`*Contato:* ${group.email || 'não cadastrado'}`);
-    if (requested.has('discipline') && !requested.has('professor') && groups.length === 1) lines.push(`*Disciplina:* ${group.title}`);
+    if (displayFields.has('professor')) lines.push(`• *Professor:* ${group.professor}`);
+    if (displayFields.has('contact')) lines.push(`• *Contato:* ${group.email || 'não cadastrado'}`);
+    if (requested.has('discipline') && !requested.has('professor') && groups.length === 1) lines.push(`• *Disciplina:* ${group.title}`);
 
     const semesters = uniqueBy(group.entries, entry => Number(entry.semester_number)).map(entry => entry.semester_label || `${entry.semester_number}º semestre`);
-    if (displayFields.has('semester')) lines.push(`*Semestre${semesters.length > 1 ? 's' : ''}:* ${semesters.join(', ') || 'não cadastrado'}`);
+    if (displayFields.has('semester')) lines.push(`• *Semestre${semesters.length > 1 ? 's' : ''}:* ${semesters.join(', ') || 'não cadastrado'}`);
 
     const scheduleRows = uniqueBy(group.entries, entry => [
       displayFields.has('day') ? Number(entry.day_of_week) : '',
@@ -126,14 +126,13 @@ function formatProfessorFieldResponse({ entries = [], teachers = [], fields = []
       } else if ((requested.has('hours') || requested.has('day')) && !hasAnyHours) {
         lines.push('O horário dessa disciplina ainda não está cadastrado.');
       } else {
-        for (const entry of scheduleRows) {
-          const parts = [];
-          if (displayFields.has('day')) parts.push(entry.day_label || 'dia não informado');
-          if (displayFields.has('hours')) parts.push(entry.hours_label || 'horário não informado');
-          if (displayFields.has('room')) parts.push(`sala ${entry.room || 'não cadastrada'}`);
-          const prefix = entry._schedule_status_label ? `*${entry._schedule_status_label}:* ` : '• ';
-          lines.push(`${prefix}${parts.join(' — ')}`);
-        }
+        scheduleRows.forEach((entry, index) => {
+          if (index > 0) lines.push('');
+          if (entry._schedule_status_label) lines.push(`*${entry._schedule_status_label}*`);
+          if (displayFields.has('day')) lines.push(`• *Dia:* ${entry.day_label || 'não informado'}`);
+          if (displayFields.has('hours')) lines.push(`• *Horário:* ${entry.hours_label || 'não informado'}`);
+          if (displayFields.has('room')) lines.push(`• *Sala:* *${entry.room || 'não cadastrada'}*`);
+        });
       }
     }
     blocks.push(lines.join('\n'));

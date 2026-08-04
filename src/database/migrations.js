@@ -4,7 +4,7 @@ const { ACADEMIC_CALENDAR_EVENTS_2026 } = require('../content/academic-calendar-
 const { SI_SCHEDULE_SOURCE_2026_2 } = require('../si-professors-2026-2');
 
 module.exports = function createMixin(deps) {
-  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto } = deps;
+  const { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto } = deps;
 
   const professorContactValue = response => {
     const lines = String(response || '').split('\n');
@@ -309,6 +309,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0140();
     if (seedBundledContent) this.migrateContentV0142();
     if (seedBundledContent) this.migrateContentV0143();
+    if (seedBundledContent) this.migrateContentV0144();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -570,7 +571,7 @@ module.exports = function createMixin(deps) {
           trigger: {
             match_mode: 'all', sentences: buildSiProfessorTriggerSentences(item), keywords: [], required_words: [],
             require_question_mark: true, typo_tolerance: 1, excluded_words: Array.isArray(item.excluded) ? item.excluded : [],
-            exact_phrases: [], synonym_group_ids: [], negative_examples: []
+            exact_phrases: buildSiProfessorExactNamePhrases(item), synonym_group_ids: [], negative_examples: []
           }
         }
       });
@@ -1683,6 +1684,120 @@ module.exports = function createMixin(deps) {
       this.db.exec('COMMIT');
     } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
     this.invalidate('settings', 'activeMessages', 'conflictReport');
+  }
+
+
+  migrateContentV0144() {
+    if (asBool(this.getSetting('content_v0144_direct_short_triggers', 'false'), false)) return;
+    const timestamp = nowIso();
+    const select = this.db.prepare(`SELECT id,title,trigger_json,draft_json,package_snapshot_json,pending_package_json
+      FROM automatic_messages WHERE lower(title)=lower(?) ORDER BY id LIMIT 1`);
+    const update = this.db.prepare(`UPDATE automatic_messages
+      SET trigger_json=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?`);
+
+    const mergeTrigger = (input, exactPhrases = [], sentences = []) => {
+      const trigger = normalizeTriggerRules(input || {});
+      trigger.sentences = [...new Set([...(sentences || []), ...(trigger.sentences || [])])];
+      trigger.exact_phrases = [...new Set([...(exactPhrases || []), ...(trigger.exact_phrases || [])])];
+      return trigger;
+    };
+    const patchSnapshot = (value, exactPhrases, sentences, fallbackTrigger) => {
+      if (!value) return value || '';
+      const object = parseJson(value, null);
+      if (!object || typeof object !== 'object') return value;
+      object.trigger = mergeTrigger(object.trigger || fallbackTrigger, exactPhrases, sentences);
+      return JSON.stringify(object);
+    };
+    const patchMessage = (title, exactPhrases = [], sentences = [], removeSentences = []) => {
+      const row = select.get(title);
+      if (!row) return false;
+      const live = mergeTrigger(parseJson(row.trigger_json || '{}', {}), exactPhrases, sentences);
+      const removed = new Set((removeSentences || []).map(normalizeText));
+      if (removed.size) live.sentences = live.sentences.filter(value => !removed.has(normalizeText(value)));
+      const patchValue = value => {
+        const patched = patchSnapshot(value, exactPhrases, sentences, live);
+        if (!patched || !removed.size) return patched;
+        const object = parseJson(patched, null);
+        if (!object || typeof object !== 'object') return patched;
+        object.trigger = normalizeTriggerRules(object.trigger || live);
+        object.trigger.sentences = object.trigger.sentences.filter(value => !removed.has(normalizeText(value)));
+        return JSON.stringify(object);
+      };
+      update.run(
+        JSON.stringify(live),
+        patchValue(row.draft_json),
+        patchValue(row.package_snapshot_json),
+        patchValue(row.pending_package_json),
+        timestamp,
+        Number(row.id)
+      );
+      return true;
+    };
+
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      // O nome isolado funciona apenas como frase exata. Em mensagens maiores,
+      // o nome continua exigindo uma intenção coerente, evitando falsos positivos.
+      for (const professor of SI_PROFESSORS_2026_2) {
+        patchMessage(
+          `Professor — ${professor.name}`,
+          buildSiProfessorExactNamePhrases(professor),
+          buildSiProfessorNameTriggerSentences(professor)
+        );
+      }
+
+      // Atualiza o cartão pessoal inclusive em bancos já existentes.
+      const juanDefinition = INSTITUTIONAL_CARDS_V098.find(item => item.key === 'hub-easter-egg-felipe-juan-v0104');
+      if (juanDefinition) {
+        const canonical = normalizeTriggerRules(juanDefinition.message.trigger || {});
+        patchMessage('Contato — Felipe Juan', canonical.exact_phrases, canonical.sentences, ['juan', 'felipe', 'felipe juan', 'felipo juano']);
+      }
+
+      // Formas diretas e completas para os oito semestres.
+      for (const definition of SEMESTER_WEEKLY_CARDS_V0143) {
+        const trigger = normalizeTriggerRules(definition.message.trigger || {});
+        patchMessage(definition.message.title, trigger.exact_phrases, trigger.sentences);
+      }
+
+      // Atalhos curtos inequívocos. Eles só funcionam quando a mensagem inteira
+      // é o termo cadastrado; não capturam o termo dentro de uma conversa.
+      const directCards = new Map([
+        ['HUB — Média final e tabela da final', ['final']],
+        ['HUB — Calendário acadêmico', ['calendário', 'calendario']],
+        ['SUAP — Acessar o sistema', ['suap']],
+        ['Serviço — Protocolo', ['protocolo']],
+        ['BSI — PPC atual', ['ppc']],
+        ['HUB — Fluxograma e matriz de Sistemas de Informação', ['fluxograma', 'matriz curricular', 'matriz de bsi']],
+        ['BSI — Diretório Acadêmico DASI', ['dasi']],
+        ['BSI — Empresa Júnior BTech', ['btech']],
+        ['BSI — Atividades Curriculares de Extensão', ['acex']]
+      ]);
+      for (const [title, exactPhrases] of directCards) patchMessage(title, exactPhrases);
+
+      const seedRegression = this.db.prepare(`INSERT OR IGNORE INTO regression_cases
+        (phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`);
+      for (const [phrase, title] of [
+        ['felipe', 'Contato — Felipe Juan'],
+        ['quem fez o bot?', 'Contato — Felipe Juan'],
+        ['crijina', 'Professor — Crijina Chagas Flores'],
+        ['crescencio', 'Professor — Crescêncio Rodrigues Lima Neto'],
+        ['claudio', 'Professor — Cláudio Rodolfo Sousa de Oliveira'],
+        ['semestre 1', 'BSI — Aulas e horários do 1º semestre'],
+        ['1o semestre', 'BSI — Aulas e horários do 1º semestre'],
+        ['segundo semestre', 'BSI — Aulas e horários do 2º semestre'],
+        ['horários semestre 2', 'BSI — Aulas e horários do 2º semestre'],
+        ['horários e salas do 3º semestre', 'BSI — Aulas e horários do 3º semestre'],
+        ['caens', 'CAENS'],
+        ['final', 'HUB — Média final e tabela da final'],
+        ['protocolo', 'Serviço — Protocolo'],
+        ['ppc', 'BSI — PPC atual'],
+        ['dasi', 'BSI — Diretório Acadêmico DASI']
+      ]) seedRegression.run(phrase, normalizeText(phrase), 'respond', title, timestamp, timestamp);
+
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0144_direct_short_triggers','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.db.exec('COMMIT');
+    } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+    this.invalidate('settings', 'activeMessages', 'messageSummaries', 'activeSectors', 'conflictReport');
   }
 
 

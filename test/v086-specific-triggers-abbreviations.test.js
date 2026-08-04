@@ -33,7 +33,7 @@ test('structured coordination understands coordenador and coordenadora without m
   } finally { engine.close(); db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('bundled support triggers avoid isolated generic words and reject unrelated contexts', () => {
+test('bundled support triggers allow safe exact shortcuts while rejecting unrelated contexts', () => {
   const { db, dir } = temporaryDatabase();
   try {
     for (const item of SI_SUPPORT_MESSAGES_V083) {
@@ -51,11 +51,12 @@ test('bundled support triggers avoid isolated generic words and reject unrelated
     assert.equal(evaluateTrigger('minha nota final foi oito', media).matched, false);
     assert.equal(evaluateTrigger('matriz', fluxograma).matched, false);
     assert.equal(evaluateTrigger('essa matriz tem determinante zero', fluxograma).matched, false);
-    assert.equal(evaluateTrigger('protocolo', protocolo).matched, false);
+    assert.equal(evaluateTrigger('protocolo', protocolo).matched, true);
     assert.equal(evaluateTrigger('o protocolo tcp controla a conexão', protocolo).matched, false);
-    assert.equal(evaluateTrigger('calendário', calendario).matched, false);
+    assert.equal(evaluateTrigger('calendário', calendario).matched, true);
     assert.equal(evaluateTrigger('marquei a consulta no calendário', calendario).matched, false);
 
+    assert.equal(evaluateTrigger('final', media).matched, true);
     assert.equal(evaluateTrigger('qual a tabela da final?', media).matched, true);
     assert.equal(evaluateTrigger('onde encontro a matriz curricular atual de bsi', fluxograma).matched, true);
     assert.equal(evaluateTrigger('preciso abrir um protocolo?', protocolo).matched, true);
