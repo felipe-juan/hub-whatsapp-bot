@@ -39,7 +39,7 @@ function fakePrivateMessage(body) {
   };
 }
 
-test('perguntas sobre dias e matérias abrem o card completo da professora', () => {
+test('perguntas sobre dias e matérias retornam somente os campos solicitados', () => {
   const holder = temporaryDatabase();
   try {
     const engine = new BotEngine(holder.db);
@@ -53,9 +53,8 @@ test('perguntas sobre dias e matérias abrem o card completo da professora', () 
       const result = engine.simulate(value, { isGroup: true });
       assert.equal(result.type, 'message', value);
       assert.equal(result.matchedItem, 'Professor — Amanda Ferraz de Oliveira Passos', value);
-      assert.match(result.text, /Amanda Ferraz de Oliveira Passos/u, value);
-      assert.match(result.text, /Horários e salas/u, value);
       assert.match(result.text, /Gestão de Projetos/u, value);
+      assert.doesNotMatch(result.text, /amandaferraz@|Horários e salas|Sala:/u, value);
     }
     engine.close();
   } finally { holder.close(); }

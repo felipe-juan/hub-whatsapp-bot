@@ -1,4 +1,4 @@
-# HUB WhatsApp Bot v0.14.1
+# HUB WhatsApp Bot v0.14.2
 
 Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB Arquivos IFBA. Cada automação reúne **gatilhos editáveis** e a **resposta completa** que será enviada.
 
@@ -9,6 +9,16 @@ Bot comunitário autohospedado para grupos e conversas privadas ligados ao HUB A
 
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA. Respostas simultâneas são organizadas por conversa, mas nenhuma integração não oficial garante que a conta nunca será restringida.
+
+
+## Respostas seletivas, repositório e referências do HUB — v0.14.2
+
+- perguntas sobre docentes e disciplinas retornam somente os campos solicitados, como sala, horário, dia, professor, contato ou semestre;
+- consultas com mais de um campo combinam apenas as informações pedidas, sem anexar automaticamente contato, outras disciplinas ou o card completo;
+- o termo `repositório` passa a acionar o card existente de links do Google Drive, inclusive em bancos já configurados;
+- cards documentais relacionados passam a incluir, quando cabível, o endereço público do HUB Arquivos IFBA: `https://felipe-juan.github.io/hub-arquivos-ifba/`;
+- perguntas como `Crescêncio dá aula hoje?` e `Crescêncio tem aula hoje?` são reconhecidas como confirmação de presença ou realização da aula e não acionam o card docente;
+- novas regressões automatizadas protegem esses comportamentos durante futuras atualizações.
 
 
 ## Proteção contra confirmação docente sem data — v0.14.1

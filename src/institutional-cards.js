@@ -12,6 +12,29 @@ const { COMMUNITY_CARDS } = require('./content/community');
 const { formatDisciplineNamesInText } = require('./si-professors-2026-2');
 const { toPortugueseTitleCase } = require('./title-case');
 
+const HUB_ARQUIVOS_URL = 'https://felipe-juan.github.io/hub-arquivos-ifba/';
+const HUB_RELATED_CARD_KEYS = new Set([
+  'ifba-bsi-v095-bsi-pagina-oficial-do-curso',
+  'ifba-bsi-v095-bsi-ppc-atual',
+  'ifba-bsi-v095-hub-fluxograma-e-matriz-de-sistemas-de-informacao',
+  'ifba-bsi-v095-bsi-disciplinas-optativas',
+  'ifba-bsi-v095-bsi-ementas-e-bibliografias',
+  'ifba-bsi-v095-bsi-pre-requisitos-das-disciplinas',
+  'ifba-bsi-v095-bsi-equivalencia-entre-matrizes',
+  'ifba-bsi-v095-bsi-migracao-curricular',
+  'ifba-bsi-v095-bsi-regulamentos-especificos',
+  'ifba-bsi-v095-bsi-atividades-complementares-da-matriz-atual',
+  'ifba-bsi-v095-bsi-atividades-complementares-de-matrizes-anteriores'
+]);
+function appendHubReference(key, value) {
+  const text = String(value || '').trim();
+  if (!HUB_RELATED_CARD_KEYS.has(key) || text.includes('felipe-juan.github.io/hub-arquivos-ifba')) return text;
+  return `${text}
+
+🌐 *HUB Arquivos IFBA*
+${HUB_ARQUIVOS_URL}`.trim();
+}
+
 const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   ...CAMPUS_CARDS,
   ...SECTOR_CARDS,
@@ -27,8 +50,8 @@ const INSTITUTIONAL_CARDS_V098 = Object.freeze([
   message: {
     ...definition.message,
     title: toPortugueseTitleCase(definition.message?.title || ''),
-    response_text: formatDisciplineNamesInText(definition.message?.response_text || ''),
-    details_text: formatDisciplineNamesInText(definition.message?.details_text || '')
+    response_text: formatDisciplineNamesInText(appendHubReference(definition.key, definition.message?.response_text || '')),
+    details_text: formatDisciplineNamesInText(appendHubReference(definition.key, definition.message?.details_text || ''))
   }
 })));
 

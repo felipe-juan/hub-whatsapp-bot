@@ -307,6 +307,7 @@ module.exports = function createMixin(deps) {
     if (seedBundledContent) this.migrateContentV0110();
     if (seedBundledContent) this.migrateContentV0130();
     if (seedBundledContent) this.migrateContentV0140();
+    if (seedBundledContent) this.migrateContentV0142();
     this.migrateRoomTriggerConflictsV096();
     this.migrateProfessorLocationV097();
     this.migrateQuestionGuardV095();
@@ -1418,6 +1419,119 @@ module.exports = function createMixin(deps) {
       this.db.exec('COMMIT');
     } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
     this.invalidate('settings', 'activeMessages', 'messageSummaries', 'conflictReport', 'calculators');
+  }
+
+
+  migrateContentV0142() {
+    if (asBool(this.getSetting('content_v0142_selective_cards_and_repository', 'false'), false)) return;
+    const timestamp = nowIso();
+    const hubUrl = 'https://felipe-juan.github.io/hub-arquivos-ifba/';
+    const relatedTitles = new Set([
+      'BSI — Página Oficial do Curso',
+      'BSI — PPC Atual',
+      'HUB — Fluxograma e Matriz de Sistemas de Informação',
+      'BSI — Disciplinas Optativas',
+      'BSI — Ementas e Bibliografias',
+      'BSI — Pré-Requisitos das Disciplinas',
+      'BSI — Equivalência entre Matrizes',
+      'BSI — Migração Curricular',
+      'BSI — Regulamentos Específicos',
+      'BSI — Atividades Complementares da Matriz Atual',
+      'BSI — Atividades Complementares de Matrizes Anteriores'
+    ].map(normalizeText));
+    const addHub = value => {
+      const text = String(value || '').trim();
+      if (!text || text.includes('felipe-juan.github.io/hub-arquivos-ifba')) return text;
+      return `${text}\n\n🌐 *HUB Arquivos IFBA*\n${hubUrl}`.trim();
+    };
+    const patchJsonResponse = (value, transform) => {
+      if (!value) return value || '';
+      const object = parseJson(value, null);
+      if (!object || typeof object !== 'object') return value;
+      if (typeof object.response_text === 'string') object.response_text = transform(object.response_text);
+      return JSON.stringify(object);
+    };
+    const addRepositoryTrigger = triggerInput => {
+      const trigger = normalizeTriggerRules(triggerInput || {});
+      trigger.sentences = [...new Set([...(trigger.sentences || []), 'repositório', 'repositorio'])];
+      trigger.exact_phrases = [...new Set([...(trigger.exact_phrases || []), 'repositório', 'repositorio'])];
+      return trigger;
+    };
+    const driveScore = row => {
+      const title = normalizeText(row.title || '');
+      const response = normalizeText(row.response_text || '');
+      let score = Number(row.priority || 0);
+      if (title.includes('drive')) score += 200;
+      if (title.includes('link')) score += 80;
+      if (title.includes('repositorio')) score += 60;
+      if (String(row.response_text || '').includes('drive.google.com')) score += 50;
+      if (response.includes('google drive')) score += 30;
+      return score;
+    };
+
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const rows = this.db.prepare('SELECT id,title,response_text,trigger_json,draft_json,package_snapshot_json,pending_package_json,priority FROM automatic_messages').all();
+      const updateHub = this.db.prepare('UPDATE automatic_messages SET response_text=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?');
+      for (const row of rows) {
+        if (!relatedTitles.has(normalizeText(row.title))) continue;
+        const next = addHub(row.response_text);
+        const draft = patchJsonResponse(row.draft_json, addHub);
+        const snapshot = patchJsonResponse(row.package_snapshot_json, addHub);
+        const pending = patchJsonResponse(row.pending_package_json, addHub);
+        if (next === row.response_text && draft === (row.draft_json || '') && snapshot === (row.package_snapshot_json || '') && pending === (row.pending_package_json || '')) continue;
+        const current = this.getAutomaticMessage(row.id);
+        if (current) this.archiveAutomaticMessage(current, 'v0.14.2-link-hub-relacionado');
+        updateHub.run(next, draft, snapshot, pending, timestamp, Number(row.id));
+      }
+
+      const driveCandidates = rows.filter(row => {
+        const title = normalizeText(row.title || '');
+        const response = String(row.response_text || '');
+        return response.includes('drive.google.com') || title.includes('drive') || title.includes('links do drive');
+      }).sort((a, b) => driveScore(b) - driveScore(a));
+      const drive = driveCandidates[0];
+      if (drive) {
+        const current = this.getAutomaticMessage(drive.id);
+        const trigger = addRepositoryTrigger(parseJson(drive.trigger_json || '{}', {}));
+        const patchTriggerJson = value => {
+          if (!value) return value || '';
+          const object = parseJson(value, null);
+          if (!object || typeof object !== 'object') return value;
+          object.trigger = addRepositoryTrigger(object.trigger || trigger);
+          return JSON.stringify(object);
+        };
+        if (current) this.archiveAutomaticMessage(current, 'v0.14.2-gatilho-repositorio-drive');
+        this.db.prepare('UPDATE automatic_messages SET trigger_json=?,draft_json=?,package_snapshot_json=?,pending_package_json=?,updated_at=? WHERE id=?')
+          .run(JSON.stringify(trigger), patchTriggerJson(drive.draft_json), patchTriggerJson(drive.package_snapshot_json), patchTriggerJson(drive.pending_package_json), timestamp, Number(drive.id));
+      }
+
+      const legacyRows = this.db.prepare('SELECT id,title,url,response_text,keywords_json,trigger_json,draft_json,priority FROM hub_links').all();
+      const legacyDrive = legacyRows.filter(row => String(row.url || '').includes('drive.google.com') || String(row.response_text || '').includes('drive.google.com') || normalizeText(row.title || '').includes('drive'))
+        .sort((a, b) => driveScore(b) - driveScore(a))[0];
+      if (legacyDrive) {
+        const trigger = addRepositoryTrigger(parseJson(legacyDrive.trigger_json || '{}', {}));
+        const keywords = [...new Set([...parseJsonList(legacyDrive.keywords_json || '[]'), 'repositório', 'repositorio'])];
+        let draft = legacyDrive.draft_json || '';
+        if (draft) {
+          const object = parseJson(draft, null);
+          if (object && typeof object === 'object') {
+            object.trigger = addRepositoryTrigger(object.trigger || trigger);
+            object.keywords = [...new Set([...(Array.isArray(object.keywords) ? object.keywords : []), 'repositório', 'repositorio'])];
+            draft = JSON.stringify(object);
+          }
+        }
+        this.db.prepare('UPDATE hub_links SET keywords_json=?,trigger_json=?,draft_json=?,updated_at=? WHERE id=?')
+          .run(JSON.stringify(keywords), JSON.stringify(trigger), draft, timestamp, Number(legacyDrive.id));
+      }
+
+      const seedRegression = this.db.prepare(`INSERT OR IGNORE INTO regression_cases(phrase,normalized_phrase,expectation,expected_title,active,created_at,updated_at) VALUES (?,?,?,?,1,?,?)`);
+      seedRegression.run('Crescêncio dá aula hoje?', normalizeText('Crescêncio dá aula hoje?'), 'ignore', '', timestamp, timestamp);
+      seedRegression.run('Crescêncio tem aula hoje?', normalizeText('Crescêncio tem aula hoje?'), 'ignore', '', timestamp, timestamp);
+      this.db.prepare("INSERT INTO settings(key,value) VALUES ('content_v0142_selective_cards_and_repository','true') ON CONFLICT(key) DO UPDATE SET value='true'").run();
+      this.db.exec('COMMIT');
+    } catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
+    this.invalidate('settings', 'activeMessages', 'activeLinks', 'conflictReport');
   }
 
   seedStructuredSectorsV098() {

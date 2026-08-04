@@ -36,6 +36,7 @@ const { semanticQuestionAssessment, implicitQuestionStructure } = require('./sem
 const { classifyBotReaction } = require('./reactions');
 const { prepareMessage, isProfessorAttendanceConfirmation } = require('./message-analysis');
 const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
+const { requestedProfessorFields, formatProfessorFieldResponse } = require('./professor-card-response');
 const {
   SEMESTER_SCHEDULE_CARD_TITLE,
   classifySemesterScheduleRequest,
@@ -322,7 +323,7 @@ class BotEngine {
   professorCardIntent(text, prepared = null) {
     const normalized = normalizeText(text);
     if (!normalized) return false;
-    const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas|professor|professora|docente|onde|quando|ministra|ministro|leciona|ensina|da)\b/u.test(normalized);
+    const topic = /\b(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|sala|salas|laboratorio|lab|aula|aulas|professor|professora|docente|onde|quando|semestre|semestres|informacao|informacoes|dados|tudo|ministra|ministro|leciona|ensina|da)\b/u.test(normalized);
     if (!topic) return false;
     if (prepared?.disciplineMatches?.length && hasDisciplineInformationIntent(text)) return true;
     // 'Onde fica/encontro o professor' busca o local de atendimento. Já
@@ -333,7 +334,7 @@ class BotEngine {
       && !/\b(?:qual|em\s+qual)\s+sala\b|\bsala\s+(?:da|de)\s+(?:aula|turma)\b/u.test(normalized);
     if (asksOfficeLocation) return false;
     if (/\?\s*$/.test(String(text || '')) || implicitQuestionStructure(text)) return true;
-    if (/^(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|sala|laboratorio|lab|onde|quando|qual\s+(?:e\s+)?(?:a\s+)?sala|em\s+qual\s+sala)\b/u.test(normalized)) return true;
+    if (/^(?:contato|ctt|email|e-mail|dia|dias|horario|horarios|sala|laboratorio|lab|onde|quando|qual\s+(?:e\s+)?(?:a\s+)?sala|em\s+qual\s+sala|(?:em\s+)?(?:qual|quais|que)\s+(?:dias?|horarios?|materias?|disciplinas?|semestres?|salas?|laboratorios?))\b/u.test(normalized)) return true;
     return /\b(?:da|dar|dá|ministra|ensina|leciona) aula\b[\s\S]{0,80}\b(?:quais|qual|quando|onde|dias|materias|disciplinas|sala)\b/u.test(String(text || '').toLowerCase());
   }
 
@@ -366,22 +367,60 @@ class BotEngine {
       .filter(card => !(context.isGroup && (card.scope || 'both') === 'private') && !(!context.isGroup && (card.scope || 'both') === 'group'))
       .map(card => [Number(card.id) || normalizeText(card.title), card])).values()];
     if (!cards.length) return null;
-    const responseItems = cards.map(card => ({
+    const requestedFields = requestedProfessorFields(text);
+    let structuredEntries = [];
+    if (requestedFields.length) {
+      if (disciplineMatches.length) {
+        for (const discipline of disciplineMatches) {
+          structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
+            academicPeriod: snapshot.academicPeriod, activeOnly: true,
+            discipline: discipline.code || discipline.name
+          }) || []));
+        }
+      } else {
+        for (const teacher of teachers) {
+          structuredEntries.push(...(this.db.listProfessorScheduleEntries?.({
+            academicPeriod: snapshot.academicPeriod, activeOnly: true, professor: teacher.name
+          }) || []).filter(entry => normalizeText(entry.professor_name) === normalizeText(teacher.name)));
+        }
+      }
+    }
+    const compactResponseItems = requestedFields.length ? cards.map(card => {
+      const professorName = String(card.title || '').replace(/^Professor\s*[—-]\s*/iu, '').trim();
+      const sharedDiscipline = String(card.title || '').replace(/^Disciplina Compartilhada\s*[—-]\s*/iu, '').trim();
+      let entries = structuredEntries;
+      let cardTeachers = teachers;
+      if (/^Professor\s*[—-]/iu.test(String(card.title || ''))) {
+        entries = structuredEntries.filter(entry => normalizeText(entry.professor_name) === normalizeText(professorName));
+        cardTeachers = teachers.filter(teacher => normalizeText(teacher.name) === normalizeText(professorName));
+      } else if (/^Disciplina Compartilhada\s*[—-]/iu.test(String(card.title || ''))) {
+        entries = structuredEntries.filter(entry => normalizeText(entry.discipline_name) === normalizeText(sharedDiscipline));
+      }
+      const compactText = formatProfessorFieldResponse({ entries, teachers: cardTeachers, fields: requestedFields });
+      return {
+        text: compactText || card.response_text, attachment: compactText ? null : (card.attachment || null),
+        source_url: compactText ? '' : (card.source_url || ''), source_title: compactText ? '' : (card.source_title || ''), verified_at: compactText ? '' : (card.verified_at || ''),
+        matchedItem: card.title, topic: card.topic || card.title
+      };
+    }) : [];
+    const compact = Boolean(compactResponseItems.length && compactResponseItems.some(item => item.text));
+    const responseItems = compact ? compactResponseItems : cards.map(card => ({
       text: card.response_text, attachment: card.attachment || null,
       source_url: card.source_url || '', source_title: card.source_title || '', verified_at: card.verified_at || '',
       matchedItem: card.title, topic: card.topic || card.title
     }));
     const first = cards[0];
+    const firstText = compact ? responseItems[0].text : first.response_text;
     return {
-      matched: true, type: cards.length > 1 ? 'multi_message' : 'message', text: first.response_text,
+      matched: true, type: cards.length > 1 ? 'multi_message' : 'message', text: firstText,
       responseItems: cards.length > 1 ? responseItems : null,
       privateDelivery: Boolean(context.isGroup && cards.length > 1),
       signature: cards.map(card => `message:${card.id}`).join('|'), matchedItem: cards.map(card => card.title).join(', '),
       topic: cards.length > 1 ? 'Professores e Disciplinas' : (first.topic || first.title),
-      attachment: cards.length === 1 ? first.attachment || null : null,
-      details_text: first.details_text || '', source_url: first.source_url || '', source_title: first.source_title || '', verified_at: first.verified_at || '',
+      attachment: compact ? null : (cards.length === 1 ? first.attachment || null : null),
+      details_text: compact ? '' : (first.details_text || ''), source_url: compact ? '' : (first.source_url || ''), source_title: compact ? '' : (first.source_title || ''), verified_at: compact ? '' : (first.verified_at || ''),
       conflict: false, redactLog: false,
-      reasons: [disciplineMatches.length ? 'disciplina reconhecida por sigla ou nome completo' : 'nome do professor reconhecido'],
+      reasons: [disciplineMatches.length ? 'disciplina reconhecida por sigla ou nome completo' : 'nome do professor reconhecido', ...(compact ? ['resposta limitada aos campos solicitados'] : [])],
       candidates: cards.map(card => ({ kind: 'message', id: card.id, title: card.title })), analysis: [], context: { ...context },
       contextSubject: { kind: 'message', id: Number(first.id || 0), title: first.title, topic: first.topic || first.title,
         details_text: first.details_text || '', source_url: first.source_url || '', source_title: first.source_title || '', verified_at: first.verified_at || '' }

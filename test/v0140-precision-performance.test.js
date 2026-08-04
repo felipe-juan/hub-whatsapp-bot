@@ -137,7 +137,8 @@ test('consulta múltipla em grupo envia cada card somente no privado do particip
     await engine.handle(message);
     assert.equal(privateResponses.length, 2);
     assert.equal(groupResponses.length, 0);
-    assert.ok(privateResponses.every(item => /Horários e salas/u.test(item.text)));
+    assert.ok(privateResponses.every(item => /18h30/u.test(item.text)));
+    assert.ok(privateResponses.every(item => !/@ifba\.edu\.br/u.test(item.text)));
   } finally { engine.close(); db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

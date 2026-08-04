@@ -103,6 +103,7 @@ const DEFAULT_SETTINGS = {
   content_v0110_structured_schedule_calendar_typos: 'false',
   content_v0130_management_and_triggers: 'false',
   content_v0140_precision_performance: 'false',
+  content_v0142_selective_cards_and_repository: 'false',
   private_context_without_reply: 'true',
   external_backups_enabled: 'false',
   external_backup_interval_hours: '24',

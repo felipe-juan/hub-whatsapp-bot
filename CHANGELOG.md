@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.14.2 — 2026-08-03
+
+- passa a responder consultas docentes e por disciplina somente com os campos pedidos: sala, horário, dia, professor, contato, semestre ou combinações desses dados;
+- evita que perguntas como `qual sala de LPI?` enviem contato, outras disciplinas e todos os horários do professor;
+- preserva o envio privado separado quando uma consulta seletiva encontra vários professores ou disciplinas;
+- adiciona `repositório` e `repositorio` ao card existente de links do Google Drive por meio de migração que preserva personalizações;
+- acrescenta `https://felipe-juan.github.io/hub-arquivos-ifba/` aos cards documentais relacionados em que essa referência é pertinente;
+- amplia a proteção contra confirmações de presença ou realização da aula, incluindo `Crescêncio dá aula hoje?` e `Crescêncio tem aula hoje?`;
+- adiciona testes de regressão para respostas seletivas, migração do repositório, referência do HUB e confirmação docente.
+
 ## 0.14.1 — 2026-08-03
 
 - impede que confirmações sem data, como `Crescéncio vai dar aula né?`, `Crescêncio vai dar aula?` e `vai ter aula com Crescêncio?`, ativem o card docente;

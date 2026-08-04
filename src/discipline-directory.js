@@ -83,8 +83,8 @@ function findDisciplineMatches(text, scheduleEntries = []) {
 function hasDisciplineInformationIntent(text) {
   const normalized = normalizeText(text);
   if (!normalized) return false;
-  return /\b(?:sala|salas|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|aula|aulas|professor|professora|quem|onde|quando|contato|email|e-mail|laboratorio|lab|ministra|ministro|ministrao|ministração|leciona|ensina|da)\b/u.test(normalized)
-    && (/\?$/.test(String(text || '').trim()) || /^(?:qual|quais|onde|quando|quem|professor|professora|docente|sala|salas|dia|dias|horario|horarios|contato|email|e-mail|laboratorio|lab)\b/u.test(normalized)
+  return /\b(?:sala|salas|dia|dias|horario|horarios|materia|materias|disciplina|disciplinas|aula|aulas|professor|professora|quem|onde|quando|contato|email|e-mail|laboratorio|lab|semestre|semestres|informacao|informacoes|dados|tudo|ministra|ministro|ministrao|ministração|leciona|ensina|da)\b/u.test(normalized)
+    && (/\?$/.test(String(text || '').trim()) || /^(?:qual|quais|onde|quando|quem|professor|professora|docente|sala|salas|dia|dias|horario|horarios|contato|email|e-mail|laboratorio|lab|informacao|informacoes|dados|tudo)\b/u.test(normalized)
       || /\b(?:sala|salas)\s+e\s+(?:dia|dias|horario|horarios)\b/u.test(normalized));
 }
 

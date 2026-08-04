@@ -1,25 +1,15 @@
-HUB WhatsApp Bot v0.14.1 — Fedora GNOME
+HUB WhatsApp Bot v0.14.2 — Fedora GNOME
 
 
-ATUALIZAÇÃO v0.14.1
+ATUALIZAÇÃO v0.14.2
 
 NOVIDADES PRINCIPAIS
-- “Crescéncio vai dar aula né?” e confirmações semelhantes não acionam mais o card docente, mesmo sem data.
-- Perguntas objetivas sobre dias, horários, salas, matérias e semestres continuam funcionando.
-- A pergunta de semestre mostra apenas exemplos numéricos: 3, 5 ou 8.
-- O card de Felipe Juan aceita “felipe” e inclui o projeto HUB Arquivos IFBA.
-- A calculadora passa a se chamar “Calculadora de Prova Final”.
-- Todos os títulos dos cards seguem capitalização portuguesa.
-- Consultas por disciplina aceitam sigla, nome completo, “horário” e “horários”.
-- “Sala e dia de aula de <disciplina>” abre o card docente correspondente.
-- Consultas privadas podem pedir várias disciplinas ou professores de uma vez.
-- Em grupos, respostas múltiplas são entregues no privado do participante.
-- A mensagem é preparada uma única vez e reutiliza um snapshot único do banco.
-- O quadro é consultado somente para o dia e semestre solicitados.
-- Um catálogo compacto reconhece disciplinas novas importadas.
-- A intenção é classificada antes dos gatilhos, reduzindo falsos positivos.
-- O painel permite salvar e executar frases permanentes de regressão.
-- O índice de frases foi reduzido aproximadamente pela metade.
+- “Qual sala de LPI?” responde somente a sala, sem contato, outras disciplinas ou o card completo.
+- Consultas podem pedir sala, horário, dia, professor, contato, semestre ou mais de um desses campos.
+- “Repositório” aciona o card existente de links do Google Drive.
+- Cards documentais relacionados incluem o endereço público do HUB Arquivos IFBA quando cabível.
+- “Crescêncio dá aula hoje?” e “Crescêncio tem aula hoje?” não acionam o card docente.
+- A migração preserva cards personalizados e aplica as novas regras em bancos existentes.
 
 INSTALAÇÃO
 1. Extraia o ZIP.

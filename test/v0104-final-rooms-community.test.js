@@ -84,7 +84,8 @@ test('sala, onde, laboratório and lab variants find professor schedule cards', 
     for (const [body, title] of cases) {
       const result = engine.evaluate(body, { isGroup: true, ignorePermissions: true });
       assert.equal(result.matchedItem, title, body);
-      assert.match(result.text, /Sala: \*[A-Z0-9]+\*/);
+      assert.match(result.text, /sala[^A-Z0-9]*[A-Z0-9]+/iu, body);
+      assert.doesNotMatch(result.text, /Contato|@ifba\.edu\.br/u, body);
     }
     engine.close();
   } finally { holder.close(); }

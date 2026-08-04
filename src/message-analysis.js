@@ -18,6 +18,7 @@ const PROFESSOR_ATTENDANCE_PATTERNS = Object.freeze([
   /\b(?:hoje|amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b.*\b(?:tem|tera|vai ter) aulas? (?:de|com)\b/u,
   /\b(?:aula|aulas)\b.*\b(?:confirmad[ao]s?|cancelad[ao]s?)\b/u,
   /\b(?:da|dara|ministra|ministrara|leciona|lecionara)\s+aulas?\b.*\b(?:hoje|amanha|depois de amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b/u,
+  /\b(?:tem|tera|vai ter)\s+aulas?\b.*\b(?:hoje|amanha|depois de amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b/u,
   /\b(?:vai|ira)\s+(?:dar|ministrar|lecionar)\s+aulas?\b/u,
   /\b(?:da|dara|ministra|ministrara|leciona|lecionara)\s+aulas?\b/u,
   /\b(?:tem|tera|vai ter|havera|vai haver)\s+aulas?\s+(?:de|do|da|com)\b/u,

@@ -112,8 +112,8 @@ test('classroom request resolves to the individual professor card with the curre
       assert.equal(result.matched, true, body);
       assert.equal(result.type, 'message', body);
       assert.equal(result.matchedItem, expectedTitle, body);
-      assert.match(result.text, /Horários e salas — 2026\.2/);
-      assert.match(result.text, /Sala: \*[A-Z]\d{3}\*/);
+      assert.match(result.text, /sala[^A-Z0-9]*[A-Z]\d{3}/iu, body);
+      assert.doesNotMatch(result.text, /Contato|@ifba\.edu\.br|Horários e salas/u, body);
     }
     const officeQuestion = engine.evaluate('onde encontro o professor Allan para falar sobre a aula?', { isGroup: false, ignorePermissions: true });
     assert.equal(officeQuestion.matched, true);
