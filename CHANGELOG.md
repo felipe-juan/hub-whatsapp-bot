@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.15.3 — 2026-08-04
+
+- corrige o endereço do Google Drive mais atual da turma 2025.2;
+- identifica esse Drive como acervo do 1º e 2º semestres, com o segundo ainda em desenvolvimento;
+- mantém separado o Drive de veteranos, com acervo atualmente organizado do I ao VI semestre e possibilidade de conteúdo desatualizado;
+- remove a observação antiga de que os dois Drives usavam o mesmo endereço;
+- adiciona gatilhos específicos para o Drive atual e para o acervo de veteranos;
+- adiciona migração versionada e testes para atualizar o card canônico sem sobrescrever personalizações.
+
 ## 0.15.2 — 2026-08-04
 
 - corrige o verificador de release, que recusava a pasta `data/` mesmo quando ela estava vazia;

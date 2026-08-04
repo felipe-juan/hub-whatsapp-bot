@@ -1,6 +1,6 @@
-# HUB WhatsApp Bot v0.15.2
+# HUB WhatsApp Bot v0.15.3
 
-Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.2 corrige e fortalece o atualizador introduzido na série 0.15, preservando os conteúdos acadêmicos e a arquitetura estruturada.
+Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e conversas privadas relacionadas ao HUB Arquivos IFBA. A v0.15.3 corrige os endereços e a descrição dos dois Google Drives do card de repositórios, preservando as melhorias do atualizador e da arquitetura estruturada.
 
 > [!IMPORTANT]
 > ### Todo o código deste repositório foi criado por IA generativa, em especial ChatGPT/OpenAI, a partir de instruções, ideias, testes e revisões humanas.
@@ -9,6 +9,15 @@ Bot comunitário autohospedado para responder dúvidas acadêmicas em grupos e c
 
 > [!WARNING]
 > O projeto usa Baileys, uma integração não oficial com o WhatsApp. Use um número separado, responda apenas a solicitações reais, evite mensagens em massa e não apresente o bot como serviço oficial do IFBA.
+
+## O que mudou na v0.15.3
+
+- corrige o Google Drive da turma 2025.2 para o endereço próprio `1d7RuJsK8dhAFFu1z45nC6nYTscY8aqSl`;
+- informa que esse acervo mais atual possui atualmente o 1º semestre e o 2º semestre em desenvolvimento;
+- mantém o Drive de veteranos no endereço `1WC7rQ6et4OiSq_4eZ9rLbKqGNeUm37dA`;
+- descreve o acervo de veteranos como mais amplo, atualmente organizado do I ao VI semestre, mas potencialmente desatualizado;
+- adiciona atalhos seguros como `drive 2025.2`, `drive mais atual` e `drive dos veteranos`;
+- migra automaticamente o card canônico em instalações existentes, preservando cards personalizados.
 
 ## O que mudou na v0.15.2
 
@@ -72,9 +81,9 @@ npm run release:verify
 Implantação:
 
 ```bash
-scripts/hub-bot release local 0.15.2 ~/Downloads/hub-whatsapp-bot-v0.15.2.zip
-scripts/hub-bot release github 0.15.2 ~/Downloads/hub-whatsapp-bot-v0.15.2-github.zip
-scripts/hub-bot release oracle 0.15.2 ~/Downloads/hub-whatsapp-bot-v0.15.2.zip
+scripts/hub-bot release local 0.15.3 ~/Downloads/hub-whatsapp-bot-v0.15.3.zip
+scripts/hub-bot release github 0.15.3 ~/Downloads/hub-whatsapp-bot-v0.15.3-github.zip
+scripts/hub-bot release oracle 0.15.3 ~/Downloads/hub-whatsapp-bot-v0.15.3.zip
 ```
 
 ## Documentação

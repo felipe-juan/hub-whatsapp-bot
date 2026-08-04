@@ -24,6 +24,7 @@ test('card de repositórios aceita atalhos diretos e perguntas contextuais', () 
   try {
     const phrases = [
       'repositório', 'arquivos', 'links do drive', 'drive', 'hub arquivos', 'materiais',
+      'drive 2025.2', 'drive dos veteranos', 'drive mais atual',
       'qual o repositório?', 'o que tem no repositório?', 'que arquivos existem de BSI?',
       'onde encontro materiais do curso?', 'qual o link do drive?', 'quais são os links úteis de BSI?'
     ];
@@ -44,9 +45,14 @@ test('card de repositórios apresenta todas as fontes informadas', () => {
     assert.match(result.text, /https:\/\/app\.notion\.com\/p\/felipejuan\/Reposit-rio-BSI-2-0-2d71fedecab280bfb1d6e2a466724fb4/u);
     assert.match(result.text, /HUB Arquivos IFBA/u);
     assert.match(result.text, /https:\/\/felipe-juan\.github\.io\/hub-arquivos-ifba\//u);
-    assert.match(result.text, /Google Drive de veteranos/u);
-    assert.match(result.text, /Google Drive da turma 2025\.2/u);
-    assert.equal((result.text.match(/1WC7rQ6et4OiSq_4eZ9rLbKqGNeUm37dA/gu) || []).length, 2);
+    assert.match(result.text, /Google Drive da turma 2025\.2 — mais atual/u);
+    assert.match(result.text, /1º semestre e o 2º semestre/u);
+    assert.match(result.text, /1d7RuJsK8dhAFFu1z45nC6nYTscY8aqSl/u);
+    assert.match(result.text, /Google Drive de veteranos — todos os semestres/u);
+    assert.match(result.text, /I ao VI semestre/u);
+    assert.match(result.text, /1WC7rQ6et4OiSq_4eZ9rLbKqGNeUm37dA/u);
+    assert.equal((result.text.match(/1d7RuJsK8dhAFFu1z45nC6nYTscY8aqSl/gu) || []).length, 1);
+    assert.equal((result.text.match(/1WC7rQ6et4OiSq_4eZ9rLbKqGNeUm37dA/gu) || []).length, 1);
     assert.match(result.text, /Manual de sobrevivência universitária do DASI/u);
   } finally { engine.close(); holder.close(); }
 });
