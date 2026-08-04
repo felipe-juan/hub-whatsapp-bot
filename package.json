@@ -1,6 +1,6 @@
 {
   "name": "hub-whatsapp-bot",
-  "version": "0.15.3",
+  "version": "0.15.4",
   "private": true,
   "description": "Bot comunitário autohospedado do HUB Arquivos IFBA, com painel local de administração.",
   "main": "src/index.js",

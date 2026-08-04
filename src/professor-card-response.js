@@ -19,6 +19,36 @@ function requestedProfessorFields(text) {
   return FIELD_ORDER.filter(field => fields.has(field));
 }
 
+
+function isProfessorPrivatePhoneRequest(text, { professorMatches = [], disciplineMatches = [], hasProfessorContext = false } = {}) {
+  const normalized = normalizeText(text);
+  if (!normalized) return false;
+  const asksPrivateNumber = /\b(?:numero|número|telefone|celular|whatsapp|whats|zap)\b/u.test(normalized);
+  if (!asksPrivateNumber) return false;
+  const mentionsProfessorRole = /\b(?:professor|professora|professores|professoras|docente|docentes|prof|profa)\b/u.test(normalized);
+  const hasExactProfessor = (professorMatches || []).some(match => match && match.fuzzy !== true && match.teacher);
+  const refersToProfessor = hasProfessorContext || mentionsProfessorRole || hasExactProfessor;
+  if (!refersToProfessor) return false;
+  // Telefones de setores e canais institucionais continuam sendo tratados pelo
+  // diretório institucional, desde que não haja um professor identificado.
+  const onlyInstitutionalSector = !hasProfessorContext && !hasExactProfessor
+    && /\b(?:caens|cores|capne|biblioteca|coordenacao|coordenação|campus|setor|instituto|ifba)\b/u.test(normalized);
+  return !onlyInstitutionalSector;
+}
+
+function formatProfessorPhonePrivacyResponse(teachers = []) {
+  const names = uniqueBy((teachers || []).filter(Boolean), teacher => normalizeText(teacher.name))
+    .map(teacher => String(teacher.name || '').trim()).filter(Boolean);
+  const subject = names.length === 1 ? ` de *${names[0]}*` : '';
+  return [
+    '*Telefone de professores*',
+    '',
+    `Por privacidade e segurança, o bot não fornece número pessoal, telefone ou WhatsApp${subject}.`,
+    '',
+    'Para entrar em contato, consulte o e-mail institucional no card do docente ou procure a Coordenação de BSI.'
+  ].join('\n');
+}
+
 function professorIntentLabel(fields = []) {
   const values = new Set(fields);
   if (!values.size) return 'informações completas';
@@ -140,4 +170,4 @@ function formatProfessorFieldResponse({ entries = [], teachers = [], fields = []
   return blocks.join('\n\n').trim();
 }
 
-module.exports = { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse };
+module.exports = { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse, isProfessorPrivatePhoneRequest, formatProfessorPhonePrivacyResponse };

@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.15.4 — 2026-08-04
+
+- amplia os gatilhos naturais do card de quebra de pré-requisito, incluindo perguntas sem a palavra “pré”;
+- bloqueia pedidos de número pessoal, telefone, celular, WhatsApp ou zap de professores;
+- orienta o estudante a usar o e-mail institucional ou procurar a Coordenação de BSI;
+- mantém disponíveis os telefones institucionais dos setores.
+
 ## 0.15.3 — 2026-08-04
 
 - corrige o endereço do Google Drive mais atual da turma 2025.2;

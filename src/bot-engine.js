@@ -39,7 +39,7 @@ const { classifyBotReaction } = require('./reactions');
 const { prepareMessage } = require('./message-analysis');
 const { shouldBlockAttendanceQuestion } = require('./engine/attendance-guard');
 const { findDisciplineMatches, hasDisciplineInformationIntent } = require('./discipline-directory');
-const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse } = require('./engine/professor-intent-handler');
+const { requestedProfessorFields, professorIntentLabel, formatProfessorFieldResponse, isProfessorPrivatePhoneRequest, formatProfessorPhonePrivacyResponse } = require('./engine/professor-intent-handler');
 const {
   SEMESTER_SCHEDULE_CARD_TITLE,
   classifySemesterScheduleRequest,
@@ -323,6 +323,36 @@ class BotEngine {
       context: { ...context },
       analysis: [],
       suppressPrivateFallback: true
+    };
+  }
+
+
+  professorPhonePrivacyEvaluation(text, context = {}, options = {}) {
+    const snapshot = context.snapshot || this.buildMessageSnapshot(context.prepared || null, context);
+    const prepared = context.prepared || prepareMessage(text, {
+      now: context.now || Date.now(), teachers: snapshot.teachers,
+      scheduleEntries: snapshot.disciplineDirectory, isGroup: context.isGroup
+    });
+    if (!isProfessorPrivatePhoneRequest(text, {
+      professorMatches: prepared.professorMatches || [],
+      disciplineMatches: prepared.disciplineMatches || [],
+      hasProfessorContext: Boolean(options.hasProfessorContext)
+    })) return null;
+    const teachers = options.teachers?.length
+      ? options.teachers
+      : [...new Map((prepared.professorMatches || []).filter(match => !match.fuzzy && match.teacher)
+        .map(match => [Number(match.teacher.id || 0) || normalizeText(match.teacher.name), match.teacher])).values()];
+    return {
+      matched: true,
+      type: 'professor_phone_privacy',
+      text: formatProfessorPhonePrivacyResponse(teachers),
+      signature: `professor-phone-privacy:${teachers.map(item => Number(item.id || 0) || normalizeText(item.name)).join(',') || 'generic'}`,
+      matchedItem: 'Privacidade — telefone de professores',
+      topic: 'Professores e Disciplinas',
+      detectedIntent: 'telefone de professor — dado sensível',
+      reasons: ['pedido de número pessoal, telefone ou WhatsApp de professor', 'informação bloqueada por privacidade'],
+      candidates: [], conflict: false, redactLog: true, analysis: [], attachment: null,
+      context: { ...context }
     };
   }
 
@@ -698,6 +728,9 @@ ${menuText}`.trim(), pendingCandidates: candidates };
     if (!asBool(settings.automatic_messages_enabled, true)) return { ...result, blockedBy: 'messages-disabled', reasons: ['mensagens automáticas desativadas'] };
     if (!this.featureAllowed(context, 'messages', settings)) return { ...result, blockedBy: 'group-messages-disabled', reasons: ['mensagens automáticas desativadas neste grupo'] };
 
+    const professorPhonePrivacy = this.professorPhonePrivacyEvaluation(text, context);
+    if (professorPhonePrivacy) return { ...result, ...professorPhonePrivacy };
+
     // Uma correspondência docente exata ou uma disciplina reconhecida tem
     // prioridade sobre a pergunta genérica por semestre. Correspondências
     // apenas aproximadas ficam depois, evitando confundir “amanhã” com Amanda.
@@ -898,6 +931,11 @@ ${menuText}`.trim(), pendingCandidates: candidates };
       const contextualLead = /^(?:e|mas|entao|então)\b/u.test(normalizeText(raw));
       const privateNoReplyAllowed = !isGroup && asBool(settings.private_context_without_reply, true) && contextualLead;
       if (!message.quotedFromMe && !privateNoReplyAllowed) return null;
+      const contextTeachers = (stored.teacherNames || []).map(name => ({ name }));
+      const privacy = this.professorPhonePrivacyEvaluation(raw, { isGroup, now: message.timestampMs || Date.now(), settings }, {
+        hasProfessorContext: true, teachers: contextTeachers
+      });
+      if (privacy) return { ...privacy, reasons: [...(privacy.reasons || []), 'continuação contextual do card docente'] };
       const fields = requestedProfessorFields(raw);
       if (!fields.length || !stored.referenceText) return null;
       const contextualQuery = `${raw.replace(/[?]+\s*$/, '').trim()} ${stored.referenceText}?`.trim();
