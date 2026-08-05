@@ -27,13 +27,15 @@ function summarize(results = []) {
   return { total, passed: correctResponse, failed: total - correctResponse, true_positive: truePositive, false_positive: falsePositive, false_negative: falseNegative, precision, recall };
 }
 async function runCorpus({ corpus, evaluate }) {
-  const results=[]; let previous=null;
-  for (const item of corpus) {
-    if (item.requires_previous) previous = await evaluate(item.requires_previous, null);
-    const started=performance.now(); const evaluation=await evaluate(item.message, previous); const elapsed=performance.now()-started;
+  const results=[];
+  for (let index = 0; index < corpus.length; index += 1) {
+    const item = corpus[index];
+    const sessionId = String(item.session_id || `case-${index + 1}`);
+    let previous = null;
+    if (item.requires_previous) previous = await evaluate(item.requires_previous, { sessionId, phase: 'prerequisite', previous: null });
+    const started=performance.now(); const evaluation=await evaluate(item.message, { sessionId, phase: 'target', previous }); const elapsed=performance.now()-started;
     const actualRespond=Boolean(evaluation?.matched && evaluation?.text); const expectedRespond=item.must_respond!==false;
     results.push({ ...item, expected_respond:expectedRespond, actual_respond:actualRespond, actual_intent:intentFromEvaluation(evaluation), response_correct:actualRespond===expectedRespond, elapsed_ms:Number(elapsed.toFixed(3)) });
-    previous=evaluation;
   }
   return { ...summarize(results), average_ms: results.reduce((s,r)=>s+r.elapsed_ms,0)/Math.max(1,results.length), results };
 }

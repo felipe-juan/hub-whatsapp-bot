@@ -47,6 +47,10 @@ function findSector(text, sectors = []) {
 }
 function detectIntent(text) {
   const normalized = normalizeText(text);
+  // Perguntas naturais costumam intercalar o nome do setor entre “o que” e
+  // “faz/resolve” (ex.: “o que a CAENS faz?”). A lista de frases exatas não
+  // deve exigir que essas palavras fiquem adjacentes.
+  if (/\bo que\b[\s\S]{0,100}\b(?:faz|resolve|atende)\b/u.test(normalized)) return 'services';
   for (const [intent, phrases] of Object.entries(SECTOR_INTENTS)) {
     if (phrases.some(value => containsPhrase(normalized, normalizeText(value)))) return intent;
   }

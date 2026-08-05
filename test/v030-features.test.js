@@ -63,7 +63,7 @@ test('importa mensagens por CSV com resposta completa', () => {
 test('respostas podem citar ou não a mensagem original', async () => {
   const dir = tempDir(); const db = clean(path.join(dir, 'db.sqlite')); db.saveAutomaticMessage({ title: 'Teste', response_text: 'Resposta', trigger: { keywords: ['teste'] }, active: true }); db.setSettings({ cooldown_seconds: '0', log_matched_messages: 'false' });
   const engine = new BotEngine(db); let quoted = 0; let loose = 0; const chat = { isGroup: true, name: 'Grupo', id: { _serialized: 'grupo@g.us' }, sendMessage: async () => { loose += 1; } };
-  const msg = () => ({ fromMe: false, from: 'grupo@g.us', body: 'teste?', getChat: async () => chat, reply: async () => { quoted += 1; } });
+  const msg = () => ({ fromMe: false, from: 'grupo@g.us', body: '.teste?', getChat: async () => chat, reply: async () => { quoted += 1; } });
   await engine.handle(msg()); assert.equal(quoted, 1); db.setSettings({ quote_replies: 'false' }); await engine.handle(msg()); assert.equal(loose, 1);
   db.close(); fs.rmSync(dir, { recursive: true, force: true });
 });

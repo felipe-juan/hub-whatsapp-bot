@@ -9,8 +9,23 @@ const { loadCorpus, runCorpus } = require('../src/corpus-runner');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hub-corpus-'));
 const db = new Database(path.join(dir, 'hub.sqlite'), { seedBundledContent: true });
 const engine = new BotEngine(db);
-const user = '5577999999999@s.whatsapp.net';
-function message(body, replies) { return { fromMe:false,from:user,author:user,body,senderName:'Corpus',timestampMs:Date.now(),quotedFromMe:false,mentionedMe:false,
-  async getChat(){return {isGroup:false,id:{_serialized:user},name:'Corpus'};}, async sendResponse(payload){replies.push(String(payload?.text||'')); return {key:{id:`corpus-${replies.length}`}};} }; }
-async function evaluate(text) { const replies=[]; await engine.handle(message(text,replies)); const type=engine.metrics.lastMatchType||''; const fallback=['private_unknown','unknown_mention'].includes(type); return { matched:replies.length>0&&!fallback, text:fallback?'':(replies.at(-1)||''), type }; }
+async function evaluate(text, context = {}) {
+  // O corpus de mensagens mede identificação do domínio, não a camada de
+  // conversa privada que oferece ajuda genérica para qualquer frase desconhecida.
+  // Fluxos conversacionais são validados separadamente pelo corpus de diálogos.
+  const evaluation = engine.evaluate(text, {
+    isGroup: false,
+    ignorePermissions: true,
+    includeDrafts: false,
+    now: Date.now(),
+    sessionId: context.sessionId
+  });
+  return {
+    matched: Boolean(evaluation?.matched),
+    text: evaluation?.matched ? String(evaluation.text || evaluation.matchedItem || evaluation.type || 'correspondência') : '',
+    type: String(evaluation?.type || ''),
+    intent: String(evaluation?.detectedIntent || evaluation?.queryModel?.intents?.[0] || ''),
+    sessionId: context.sessionId
+  };
+}
 (async()=>{try{const report=await runCorpus({corpus:loadCorpus(),evaluate});console.log(JSON.stringify({...report,results:report.results.map(r=>({message:r.message,expected:r.expected_respond,actual:r.actual_respond,intent:r.actual_intent,ms:r.elapsed_ms,ok:r.response_correct}))},null,2));if(report.failed)process.exitCode=1;}finally{engine.close();db.close();fs.rmSync(dir,{recursive:true,force:true});}})().catch(error=>{console.error(error);process.exit(1);});

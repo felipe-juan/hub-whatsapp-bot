@@ -1,0 +1,2272 @@
+[
+  {
+    "title": "001 — complemento preservado para AP",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 1",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "AP",
+        "expect": [
+          "AP",
+          "H204"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "002 — complemento preservado para IA",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 2",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "IA",
+        "expect": [
+          "IA",
+          "H212"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "003 — complemento preservado para SO",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 3",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "SO",
+        "expect": [
+          "SO",
+          "H211"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "004 — complemento preservado para MDII",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 4",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "MDII",
+        "expect": [
+          "MDII",
+          "H008"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "005 — complemento preservado para PWI",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 5",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "PWI",
+        "expect": [
+          "PWI",
+          "H205"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "006 — complemento preservado para RC",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 6",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "RC",
+        "expect": [
+          "RC",
+          "H202"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "007 — complemento preservado para ES",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 7",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "ES",
+        "expect": [
+          "ES",
+          "H213"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "008 — complemento preservado para BDI",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 8",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "BDI",
+        "expect": [
+          "BDI",
+          "H211"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "009 — complemento preservado para ED",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 9",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "ED",
+        "expect": [
+          "ED",
+          "H108"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "010 — complemento preservado para TCCI",
+    "category": "pending",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "palavra inválida 10",
+        "expect": [
+          "não identifiquei",
+          "disciplina"
+        ]
+      },
+      {
+        "text": "TCCI",
+        "expect": [
+          "TCCI",
+          "H106"
+        ],
+        "expect_not": [
+          "não identifiquei a disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "011 — descoberta por 1º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 1 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "012 — descoberta por 2º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 2 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "013 — descoberta por 3º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 3 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "014 — descoberta por 4º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 4 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "015 — descoberta por 5º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 5 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "016 — descoberta por 6º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 6 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "017 — descoberta por 7º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 7 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "018 — descoberta por 8º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 8 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "019 — descoberta por 1º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 1 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "020 — descoberta por 2º semestre",
+    "category": "guided",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "não lembro, é do 2 semestre",
+        "expect": [
+          "encontrei estas disciplinas",
+          "nenhuma dessas"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "021 — sala, horário e contato de AP",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de AP?",
+        "expect": [
+          "AP",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "AP",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "022 — sala, horário e contato de IA",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de IA?",
+        "expect": [
+          "IA",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "IA",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "023 — sala, horário e contato de SO",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de SO?",
+        "expect": [
+          "SO",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "SO",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "024 — sala, horário e contato de MDII",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de MDII?",
+        "expect": [
+          "MDII",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "MDII",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "025 — sala, horário e contato de PWI",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de PWI?",
+        "expect": [
+          "PWI",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "PWI",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "026 — sala, horário e contato de RC",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de RC?",
+        "expect": [
+          "RC",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "RC",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "027 — sala, horário e contato de ES",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de ES?",
+        "expect": [
+          "ES",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "ES",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "028 — sala, horário e contato de BDI",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de BDI?",
+        "expect": [
+          "BDI",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "BDI",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "029 — sala, horário e contato de ED",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de ED?",
+        "expect": [
+          "ED",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "ED",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "030 — sala, horário e contato de TCCI",
+    "category": "followup",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de TCCI?",
+        "expect": [
+          "TCCI",
+          "sala"
+        ]
+      },
+      {
+        "text": "e o horário?",
+        "expect": [
+          "TCCI",
+          "horário"
+        ]
+      },
+      {
+        "text": "não, quero o contato",
+        "expect": [
+          "contato"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "031 — semestre 1 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 1 semestre",
+        "expect": [
+          "1º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "1º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "032 — semestre 2 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 2 semestre",
+        "expect": [
+          "2º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "2º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "033 — semestre 3 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 3 semestre",
+        "expect": [
+          "3º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "3º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "034 — semestre 4 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 4 semestre",
+        "expect": [
+          "4º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "4º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "035 — semestre 5 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 5 semestre",
+        "expect": [
+          "5º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "5º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "036 — semestre 6 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 6 semestre",
+        "expect": [
+          "6º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "6º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "037 — semestre 7 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 7 semestre",
+        "expect": [
+          "7º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "7º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "038 — semestre 8 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 8 semestre",
+        "expect": [
+          "8º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "8º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "039 — semestre 1 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 1 semestre",
+        "expect": [
+          "1º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "1º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "040 — semestre 2 preservado na troca de dia",
+    "category": "preference",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "aulas de amanhã do 2 semestre",
+        "expect": [
+          "2º semestre"
+        ]
+      },
+      {
+        "text": "e sexta?",
+        "expect": [
+          "2º semestre",
+          "sexta-feira"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "041 — professor e sala de AP",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de AP?",
+        "expect": [
+          "AP",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "042 — professor e sala de IA",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de IA?",
+        "expect": [
+          "IA",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "043 — professor e sala de SO",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de SO?",
+        "expect": [
+          "SO",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "044 — professor e sala de MDII",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de MDII?",
+        "expect": [
+          "MDII",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "045 — professor e sala de PWI",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de PWI?",
+        "expect": [
+          "PWI",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "046 — professor e sala de RC",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de RC?",
+        "expect": [
+          "RC",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "047 — professor e sala de ES",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de ES?",
+        "expect": [
+          "ES",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "048 — professor e sala de BDI",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de BDI?",
+        "expect": [
+          "BDI",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "049 — professor e sala de ED",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de ED?",
+        "expect": [
+          "ED",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "050 — professor e sala de TCCI",
+    "category": "multi-intent",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual professor e sala de TCCI?",
+        "expect": [
+          "TCCI",
+          "professor",
+          "sala"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "051 — continuação de serviços de Biblioteca",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Biblioteca",
+        "expect": [
+          "Biblioteca"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "052 — continuação de serviços de CAENS",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CAENS",
+        "expect": [
+          "CAENS"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "053 — continuação de serviços de CAPNE",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CAPNE",
+        "expect": [
+          "CAPNE"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "054 — continuação de serviços de CGTI",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CGTI",
+        "expect": [
+          "CGTI"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "055 — continuação de serviços de CORES",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CORES",
+        "expect": [
+          "CORES"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "056 — continuação de serviços de COTEP",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da COTEP",
+        "expect": [
+          "COTEP"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "057 — continuação de serviços de CSI",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CSI",
+        "expect": [
+          "CSI"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "058 — continuação de serviços de Ingresso",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Ingresso",
+        "expect": [
+          "Ingresso"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "059 — continuação de serviços de Psicologia",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Psicologia",
+        "expect": [
+          "Psicologia"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "060 — continuação de serviços de Serviço Social",
+    "category": "sector",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Serviço Social",
+        "expect": [
+          "Serviço Social"
+        ]
+      },
+      {
+        "text": "e o que faz?",
+        "expect": [
+          "o que o setor atende"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "061 — nova solicitação substitui sala por Biblioteca",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da Biblioteca?",
+        "expect": [
+          "Biblioteca"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "062 — nova solicitação substitui sala por CAENS",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da CAENS?",
+        "expect": [
+          "CAENS"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "063 — nova solicitação substitui sala por CAPNE",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da CAPNE?",
+        "expect": [
+          "CAPNE"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "064 — nova solicitação substitui sala por CGTI",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da CGTI?",
+        "expect": [
+          "CGTI"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "065 — nova solicitação substitui sala por CORES",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da CORES?",
+        "expect": [
+          "CORES"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "066 — nova solicitação substitui sala por COTEP",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da COTEP?",
+        "expect": [
+          "COTEP"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "067 — nova solicitação substitui sala por CSI",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da CSI?",
+        "expect": [
+          "CSI"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "068 — nova solicitação substitui sala por Ingresso",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da Ingresso?",
+        "expect": [
+          "Ingresso"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "069 — nova solicitação substitui sala por Psicologia",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da Psicologia?",
+        "expect": [
+          "Psicologia"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "070 — nova solicitação substitui sala por Serviço Social",
+    "category": "new-request",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "qual o contato da Serviço Social?",
+        "expect": [
+          "Serviço Social"
+        ],
+        "expect_not": [
+          "de qual disciplina"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "071 — troca AP por IA",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de AP?",
+        "expect": [
+          "AP",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é AP, é IA",
+        "expect": [
+          "IA",
+          "H212"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "072 — troca IA por SO",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de IA?",
+        "expect": [
+          "IA",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é IA, é SO",
+        "expect": [
+          "SO",
+          "H211"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "073 — troca SO por MDII",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de SO?",
+        "expect": [
+          "SO",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é SO, é MDII",
+        "expect": [
+          "MDII",
+          "H008"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "074 — troca MDII por PWI",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de MDII?",
+        "expect": [
+          "MDII",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é MDII, é PWI",
+        "expect": [
+          "PWI",
+          "H205"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "075 — troca PWI por RC",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de PWI?",
+        "expect": [
+          "PWI",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é PWI, é RC",
+        "expect": [
+          "RC",
+          "H202"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "076 — troca RC por ES",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de RC?",
+        "expect": [
+          "RC",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é RC, é ES",
+        "expect": [
+          "ES",
+          "H213"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "077 — troca ES por BDI",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de ES?",
+        "expect": [
+          "ES",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é ES, é BDI",
+        "expect": [
+          "BDI",
+          "H211"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "078 — troca BDI por ED",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de BDI?",
+        "expect": [
+          "BDI",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é BDI, é ED",
+        "expect": [
+          "ED",
+          "H108"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "079 — troca ED por TCCI",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de ED?",
+        "expect": [
+          "ED",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é ED, é TCCI",
+        "expect": [
+          "TCCI",
+          "H106"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "080 — troca TCCI por AP",
+    "category": "correction",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "qual sala de TCCI?",
+        "expect": [
+          "TCCI",
+          "sala"
+        ]
+      },
+      {
+        "text": "não é TCCI, é AP",
+        "expect": [
+          "AP",
+          "H204"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "081 — reply explícito retoma Biblioteca",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Biblioteca",
+        "expect": [
+          "Biblioteca"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "Biblioteca"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "082 — reply explícito retoma CAENS",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CAENS",
+        "expect": [
+          "CAENS"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "CAENS"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "083 — reply explícito retoma CAPNE",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CAPNE",
+        "expect": [
+          "CAPNE"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "CAPNE"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "084 — reply explícito retoma CGTI",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CGTI",
+        "expect": [
+          "CGTI"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "CGTI"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "085 — reply explícito retoma CORES",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CORES",
+        "expect": [
+          "CORES"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "CORES"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "086 — reply explícito retoma COTEP",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da COTEP",
+        "expect": [
+          "COTEP"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "COTEP"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "087 — reply explícito retoma CSI",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da CSI",
+        "expect": [
+          "CSI"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "CSI"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "088 — reply explícito retoma Ingresso",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Ingresso",
+        "expect": [
+          "Ingresso"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "Ingresso"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "089 — reply explícito retoma Psicologia",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Psicologia",
+        "expect": [
+          "Psicologia"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "Psicologia"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "090 — reply explícito retoma Serviço Social",
+    "category": "quoted",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "contato da Serviço Social",
+        "expect": [
+          "Serviço Social"
+        ]
+      },
+      {
+        "text": "e onde fica?",
+        "expect": [
+          "Serviço Social"
+        ],
+        "reply_to": 0,
+        "expect_any": [
+          "localização",
+          "não há localização"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "091 — cancelamento seguido de AP",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "cancelar",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina AP?",
+        "expect": [
+          "professor",
+          "Liojes"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "092 — cancelamento seguido de IA",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "sair",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina IA?",
+        "expect": [
+          "professor",
+          "Bruno"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "093 — cancelamento seguido de SO",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "cancelar",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina SO?",
+        "expect": [
+          "professor",
+          "Camilo"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "094 — cancelamento seguido de MDII",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "sair",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina MDII?",
+        "expect": [
+          "professor",
+          "Allan"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "095 — cancelamento seguido de PWI",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "cancelar",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina PWI?",
+        "expect": [
+          "professor",
+          "Bruno"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "096 — cancelamento seguido de RC",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "sair",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina RC?",
+        "expect": [
+          "professor",
+          "Igor"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "097 — cancelamento seguido de ES",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "cancelar",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina ES?",
+        "expect": [
+          "professor",
+          "Crescêncio"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "098 — cancelamento seguido de BDI",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "sair",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina BDI?",
+        "expect": [
+          "professor",
+          "Pablo"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "099 — cancelamento seguido de ED",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "cancelar",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina ED?",
+        "expect": [
+          "professor",
+          "Cláudio"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "100 — cancelamento seguido de TCCI",
+    "category": "cancel-restart",
+    "anonymized": true,
+    "messages": [
+      {
+        "text": "sala",
+        "expect": [
+          "disciplina"
+        ]
+      },
+      {
+        "text": "sair",
+        "expect": [
+          "cancelada"
+        ]
+      },
+      {
+        "text": "quem ensina TCCI?",
+        "expect": [
+          "professor",
+          "Djan"
+        ],
+        "expect_not": [
+          "consulta pendente"
+        ]
+      }
+    ]
+  }
+]

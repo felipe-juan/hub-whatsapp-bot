@@ -5,7 +5,7 @@ const { resolveGroupActivation } = require('../src/group-activation');
 const { STUDENT_ASSISTANCE_CARDS } = require('../src/content/student-assistance');
 const { evaluateTrigger } = require('../src/trigger-rules');
 
-test('group activation accepts only prefix, mention or leading dot', () => {
+test('group activation accepts prefix, mention, leading dot or reply to bot', () => {
   const cases = [
     ['Bot qual sala de LPI?', false, 'qual sala de LPI?', 'name-prefix'],
     ['ROBÔ, qual sala?', false, 'qual sala?', 'name-prefix'],
@@ -21,6 +21,9 @@ test('group activation accepts only prefix, mention or leading dot', () => {
     assert.equal(result.mode, mode);
   }
   assert.equal(resolveGroupActivation({ isGroup: true, body: 'qual sala de LPI?' }).active, false);
+  const reply = resolveGroupActivation({ isGroup: true, body: 'e a sala?', quotedFromMe: true });
+  assert.equal(reply.active, true);
+  assert.equal(reply.mode, 'reply-to-bot');
   assert.equal(resolveGroupActivation({ isGroup: false, body: 'qual sala de LPI?' }).active, true);
 });
 

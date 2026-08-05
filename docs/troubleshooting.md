@@ -2,7 +2,7 @@
 
 ## SSH fica em “Connecting”
 
-Teste outra rede ou hotspot e use `ssh -o ConnectTimeout=10 -o ConnectionAttempts=1 hub-oracle hostname`.
+Teste outra rede ou hotspot. Use o destino salvo em `~/.config/hub-whatsapp-bot/oracle-ssh-target` ou informe `HUB_ORACLE_SSH_TARGET=ubuntu@IP`; o alias `hub-oracle` só é usado quando estiver definido no `~/.ssh/config`.
 
 ## Dependências
 

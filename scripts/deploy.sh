@@ -156,9 +156,44 @@ case "$MODE" in
 
   oracle)
     SSH_OPTS=(-o ConnectTimeout=10 -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=2)
-    REMOTE_STAGE="/home/ubuntu/$NAME"
-    rsync -az --info=progress2 -e "ssh ${SSH_OPTS[*]}" --delete --exclude='.git/' --exclude='.env' --exclude='data/' --exclude='node_modules/' --exclude='private-content.json' "$SRC/" "hub-oracle:$REMOTE_STAGE/"
-    ssh "${SSH_OPTS[@]}" hub-oracle "VERSION='$VERSION' NAME='$NAME' bash -s" <<'REMOTE'
+    resolve_oracle_target() {
+      local target_file="$HOME/.config/hub-whatsapp-bot/oracle-ssh-target"
+      local configured=''
+      if [[ -n "${HUB_ORACLE_SSH_TARGET:-}" ]]; then
+        printf '%s\n' "$HUB_ORACLE_SSH_TARGET"
+        return 0
+      fi
+      if [[ -s "$target_file" ]]; then
+        configured="$(sed -n '/[^[:space:]]/{s/^[[:space:]]*//;s/[[:space:]]*$//;p;q;}' "$target_file")"
+        if [[ -n "$configured" ]]; then
+          printf '%s\n' "$configured"
+          return 0
+        fi
+      fi
+      if [[ -f "$HOME/.ssh/config" ]] && awk '
+        BEGIN { IGNORECASE=1; found=0 }
+        /^[[:space:]]*Host[[:space:]]+/ {
+          for (i=2; i<=NF; i++) if ($i == "hub-oracle") found=1
+        }
+        END { exit(found ? 0 : 1) }
+      ' "$HOME/.ssh/config"; then
+        printf '%s\n' 'hub-oracle'
+        return 0
+      fi
+      cat >&2 <<'MSG'
+Destino SSH da Oracle não encontrado.
+Informe-o na execução:
+  HUB_ORACLE_SSH_TARGET=ubuntu@IP ... release oracle ...
+ou salve o destino em:
+  ~/.config/hub-whatsapp-bot/oracle-ssh-target
+MSG
+      return 1
+    }
+    ORACLE_TARGET="$(resolve_oracle_target)" || exit 1
+    REMOTE_HOME="${HUB_ORACLE_REMOTE_HOME:-/home/ubuntu}"
+    REMOTE_STAGE="$REMOTE_HOME/$NAME"
+    rsync -az --info=progress2 -e "ssh ${SSH_OPTS[*]}" --delete --exclude='.git/' --exclude='.env' --exclude='data/' --exclude='node_modules/' --exclude='private-content.json' "$SRC/" "$ORACLE_TARGET:$REMOTE_STAGE/"
+    ssh "${SSH_OPTS[@]}" "$ORACLE_TARGET" "VERSION='$VERSION' NAME='$NAME' bash -s" <<'REMOTE'
 set -Eeuo pipefail
 DEST="$HOME/hub-whatsapp-bot"
 STAGE="$HOME/$NAME"

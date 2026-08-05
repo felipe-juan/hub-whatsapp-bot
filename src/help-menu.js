@@ -4,12 +4,14 @@ const MENUS = Object.freeze({
   root: {
     title: 'Como posso ajudar?',
     options: [
-      { label: 'Professores e horários', menu: 'professors' },
-      { label: 'Curso de Sistemas de Informação', menu: 'course' },
-      { label: 'TCC, estágio e atividades acadêmicas', menu: 'academic' },
-      { label: 'Matrícula, documentos e SUAP', menu: 'records' },
+      { label: 'Aulas, salas e horários', menu: 'professors' },
+      { label: 'Professores e contatos', menu: 'professors' },
+      { label: 'Setores do IFBA', menu: 'sectors' },
+      { label: 'Documentos e regulamentos', menu: 'records' },
+      { label: 'BSI, estágio e TCC', menu: 'academic' },
+      { label: 'Calculadora da final', staticText: 'Envie `!final` seguido da média. Exemplo: `!final 6,9`.' },
       { label: 'Auxílios e permanência', menu: 'aid' },
-      { label: 'Setores e contatos', menu: 'sectors' }
+      { label: 'Ver todos os assuntos', staticText: 'Escreva o assunto com suas próprias palavras. Exemplos: `sala de Cálculo`, `contato da CAENS`, `quebra de pré-requisito`.' }
     ]
   },
   professors: {
@@ -129,7 +131,7 @@ function menuCandidates(menuKey, messages = []) {
       item: { id: `static:${menuKey}:${index}`, title: option.label, topic: menu.title, response_text: option.staticText || '' },
       score: 100, reasons: [`orientação do menu ${menuKey}`]
     };
-  }).filter(Boolean).slice(0, 6);
+  }).filter(Boolean).slice(0, 8);
 }
 
 function formatMenu(menuKey, candidates, timeoutSeconds = 120) {

@@ -3,14 +3,20 @@
 const { normalizeText } = require('../text');
 const { normalizeStructuredScheduleEntry } = require('../schedule-structure');
 const { buildProfessorScheduleResponse } = require('../professor-schedule-import');
+const { PRECEDENCE, eventPrecedence, resolveAcademicEventLayers, filterScheduleByValidity } = require('../academic-precedence');
 
 function parseJson(value, fallback) { try { return JSON.parse(value); } catch { return fallback; } }
 function nowIso() { return new Date().toISOString(); }
 function dateOnly(value) { return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : ''; }
+function todayBahia() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bahia', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 module.exports = function createScheduleRepositoryMixin() {
   return class {
-    listProfessorScheduleEntries({ academicPeriod = '', semester = 0, dayOfWeek = null, activeOnly = true, professor = '', discipline = '' } = {}) {
+    listProfessorScheduleEntries({ academicPeriod = '', semester = 0, dayOfWeek = null, activeOnly = true, professor = '', discipline = '', targetDate = '' } = {}) {
       let sql = 'SELECT * FROM professor_schedule_entries'; const where = []; const params = [];
       if (activeOnly) where.push('active=1');
       if (academicPeriod) { where.push('academic_period=?'); params.push(String(academicPeriod)); }
@@ -26,13 +32,15 @@ module.exports = function createScheduleRepositoryMixin() {
       }
       if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
       sql += ' ORDER BY day_of_week,start_minutes,discipline_name COLLATE NOCASE,professor_name COLLATE NOCASE';
-      return this.db.prepare(sql).all(...params).map(row => ({
+      const rows = this.db.prepare(sql).all(...params).map(row => ({
         ...row,
         id: Number(row.id), teacher_id: row.teacher_id ? Number(row.teacher_id) : null,
         semester_number: Number(row.semester_number), day_of_week: Number(row.day_of_week),
         start_minutes: row.start_minutes === null ? null : Number(row.start_minutes),
-        end_minutes: row.end_minutes === null ? null : Number(row.end_minutes), active: Boolean(row.active)
+        end_minutes: row.end_minutes === null ? null : Number(row.end_minutes), active: Boolean(row.active),
+        precedence: Number(row.precedence || PRECEDENCE.regular)
       }));
+      return targetDate ? filterScheduleByValidity(rows, String(targetDate)) : rows;
     }
 
 
@@ -69,7 +77,7 @@ module.exports = function createScheduleRepositoryMixin() {
       const teacher=this.listTeachers({activeOnly:false}).find(item=>normalizeText(item.name)===normalizeText(professorName));
       const email=String(input.professor_email||teacher?.email||'').trim().toLowerCase();
       if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('E-mail do professor inválido.');
-      return {teacher_id:teacher?.id||input.teacher_id||null,professor_name:professorName,professor_email:email,discipline_name:disciplineName,discipline_code:disciplineCode,semester_number:semesterNumber,semester_label:`${semesterNumber}º semestre`,day_of_week:dayOfWeek,day_label:dayNames[dayOfWeek],start_minutes:startMinutes,end_minutes:endMinutes,hours_label:`${clock(startMinutes)}–${clock(endMinutes)}`,room:String(input.room||'').trim(),academic_period:String(input.academic_period||this.getSetting('current_academic_period','2026.2')).trim(),source_title:String(input.source_title||'Editor estruturado do painel').trim(),source_version:String(input.source_version||'manual').trim(),source_date:dateOnly(input.source_date)||new Date().toISOString().slice(0,10),active:input.active===undefined?true:Boolean(input.active)};
+      return {teacher_id:teacher?.id||input.teacher_id||null,professor_name:professorName,professor_email:email,discipline_name:disciplineName,discipline_code:disciplineCode,semester_number:semesterNumber,semester_label:`${semesterNumber}º semestre`,day_of_week:dayOfWeek,day_label:dayNames[dayOfWeek],start_minutes:startMinutes,end_minutes:endMinutes,hours_label:`${clock(startMinutes)}–${clock(endMinutes)}`,room:String(input.room||'').trim(),academic_period:String(input.academic_period||this.getSetting('current_academic_period','2026.2')).trim(),source_title:String(input.source_title||'Editor estruturado do painel').trim(),source_version:String(input.source_version||'manual').trim(),source_date:dateOnly(input.source_date)||new Date().toISOString().slice(0,10),valid_from:dateOnly(input.valid_from)||'',valid_until:dateOnly(input.valid_until)||'',precedence:Number(input.precedence||PRECEDENCE.regular),exception_type:String(input.exception_type||'regular').trim(),active:input.active===undefined?true:Boolean(input.active)};
     }
 
     refreshProfessorStructuredContent(professorName, academicPeriod) {
@@ -109,8 +117,8 @@ module.exports = function createScheduleRepositoryMixin() {
 
     saveProfessorScheduleEntry(input, id = null) {
       const item=this.validateProfessorScheduleEntry(input);const timestamp=nowIso();const before=id?this.getProfessorScheduleEntry(id):null;
-      if(id){const result=this.db.prepare(`UPDATE professor_schedule_entries SET teacher_id=?,professor_name=?,professor_email=?,discipline_name=?,discipline_code=?,semester_number=?,semester_label=?,day_of_week=?,day_label=?,start_minutes=?,end_minutes=?,hours_label=?,room=?,academic_period=?,source_title=?,source_version=?,source_date=?,active=?,updated_at=? WHERE id=?`).run(item.teacher_id,item.professor_name,item.professor_email,item.discipline_name,item.discipline_code,item.semester_number,item.semester_label,item.day_of_week,item.day_label,item.start_minutes,item.end_minutes,item.hours_label,item.room,item.academic_period,item.source_title,item.source_version,item.source_date,item.active?1:0,timestamp,Number(id));if(!result.changes)throw new Error('Aula estruturada não encontrada.');}
-      else{id=this.db.prepare(`INSERT INTO professor_schedule_entries(teacher_id,professor_name,professor_email,discipline_name,discipline_code,semester_number,semester_label,day_of_week,day_label,start_minutes,end_minutes,hours_label,room,academic_period,source_title,source_version,source_date,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(item.teacher_id,item.professor_name,item.professor_email,item.discipline_name,item.discipline_code,item.semester_number,item.semester_label,item.day_of_week,item.day_label,item.start_minutes,item.end_minutes,item.hours_label,item.room,item.academic_period,item.source_title,item.source_version,item.source_date,item.active?1:0,timestamp,timestamp).lastInsertRowid;}
+      if(id){const result=this.db.prepare(`UPDATE professor_schedule_entries SET teacher_id=?,professor_name=?,professor_email=?,discipline_name=?,discipline_code=?,semester_number=?,semester_label=?,day_of_week=?,day_label=?,start_minutes=?,end_minutes=?,hours_label=?,room=?,academic_period=?,source_title=?,source_version=?,source_date=?,valid_from=?,valid_until=?,precedence=?,exception_type=?,active=?,updated_at=? WHERE id=?`).run(item.teacher_id,item.professor_name,item.professor_email,item.discipline_name,item.discipline_code,item.semester_number,item.semester_label,item.day_of_week,item.day_label,item.start_minutes,item.end_minutes,item.hours_label,item.room,item.academic_period,item.source_title,item.source_version,item.source_date,item.valid_from,item.valid_until,item.precedence,item.exception_type,item.active?1:0,timestamp,Number(id));if(!result.changes)throw new Error('Aula estruturada não encontrada.');}
+      else{id=this.db.prepare(`INSERT INTO professor_schedule_entries(teacher_id,professor_name,professor_email,discipline_name,discipline_code,semester_number,semester_label,day_of_week,day_label,start_minutes,end_minutes,hours_label,room,academic_period,source_title,source_version,source_date,valid_from,valid_until,precedence,exception_type,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(item.teacher_id,item.professor_name,item.professor_email,item.discipline_name,item.discipline_code,item.semester_number,item.semester_label,item.day_of_week,item.day_label,item.start_minutes,item.end_minutes,item.hours_label,item.room,item.academic_period,item.source_title,item.source_version,item.source_date,item.valid_from,item.valid_until,item.precedence,item.exception_type,item.active?1:0,timestamp,timestamp).lastInsertRowid;}
       const after=this.getProfessorScheduleEntry(id);this.refreshProfessorStructuredContent(item.professor_name,item.academic_period);if(before&&(normalizeText(before.professor_name)!==normalizeText(item.professor_name)||before.academic_period!==item.academic_period))this.refreshProfessorStructuredContent(before.professor_name,before.academic_period);if(before)this.syncAcademicCalendarReferences(before,after);
       if(!input._skip_history&&typeof this.recordChangeHistory==='function')this.recordChangeHistory({entity_type:'schedule_entry',entity_id:String(id),entity_label:`${after.professor_name} · ${after.discipline_code||after.discipline_name}`,action:before?'updated':'created',source:'editor estruturado',before,after});
       return after;
@@ -177,7 +185,12 @@ module.exports = function createScheduleRepositoryMixin() {
       return { professor: record.name, academic_period: period, entries: rows.length };
     }
 
+    deactivateExpiredAcademicCalendarEvents(referenceDate = todayBahia()) {
+      return Number(this.db.prepare(`UPDATE academic_calendar_events SET active=0,updated_at=? WHERE active=1 AND end_date<?`).run(nowIso(), String(referenceDate)).changes || 0);
+    }
+
     listAcademicCalendarEvents({ startDate = '', endDate = '', activeOnly = true, course = '' } = {}) {
+      if (activeOnly) this.deactivateExpiredAcademicCalendarEvents();
       let sql = 'SELECT * FROM academic_calendar_events'; const where = []; const params = [];
       if (activeOnly) where.push('active=1');
       if (startDate) { where.push('end_date>=?'); params.push(String(startDate)); }
@@ -192,13 +205,16 @@ module.exports = function createScheduleRepositoryMixin() {
         recurrence_interval: Math.max(1, Number(row.recurrence_interval || 1)),
         replacement_day_of_week: row.replacement_day_of_week === null ? null : Number(row.replacement_day_of_week),
         start_minutes: row.start_minutes === null ? null : Number(row.start_minutes),
-        end_minutes: row.end_minutes === null ? null : Number(row.end_minutes)
+        end_minutes: row.end_minutes === null ? null : Number(row.end_minutes),
+        precedence: eventPrecedence(row), source_verified_at: row.source_verified_at || row.verified_at || ''
       }));
     }
 
-    academicCalendarEventsForDate(date, { course = 'bsi', semester = 0 } = {}) {
-      return this.listAcademicCalendarEvents({ startDate: date, endDate: date, activeOnly: true, course })
+    academicCalendarEventsForDate(date, { course = 'bsi', semester = 0, includeSuppressed = false } = {}) {
+      const candidates = this.listAcademicCalendarEvents({ startDate: date, endDate: date, activeOnly: true, course })
         .filter(event => !event.semester_numbers.length || !Number(semester) || event.semester_numbers.includes(Number(semester)));
+      const resolved = resolveAcademicEventLayers(candidates, { date: String(date || '') });
+      return includeSuppressed ? resolved : resolved.effective;
     }
 
     validateAcademicCalendarEvent(input = {}) {
@@ -238,7 +254,9 @@ module.exports = function createScheduleRepositoryMixin() {
         start_minutes: startMinutes, end_minutes: endMinutes,
         recurrence_type: recurrenceType, recurrence_weekdays: recurrenceWeekdays, recurrence_interval: recurrenceInterval,
         source_url: String(input.source_url || '').trim(), source_title: String(input.source_title || '').trim(),
-        verified_at: dateOnly(input.verified_at) || '', active: input.active === undefined ? true : Boolean(input.active)
+        responsible: String(input.responsible || '').trim().slice(0, 200),
+        verified_at: dateOnly(input.verified_at) || '', source_verified_at: dateOnly(input.source_verified_at || input.verified_at) || '',
+        precedence: Number(input.precedence || PRECEDENCE[eventType] || PRECEDENCE.regular), active: input.active === undefined ? true : Boolean(input.active)
       };
     }
 
@@ -246,12 +264,12 @@ module.exports = function createScheduleRepositoryMixin() {
       const item = this.validateAcademicCalendarEvent(input); const timestamp = nowIso();
       const before=id?this.listAcademicCalendarEvents({activeOnly:false}).find(event=>event.id===Number(id)):null;
       if (id) {
-        const result = this.db.prepare(`UPDATE academic_calendar_events SET package_key=?,event_type=?,start_date=?,end_date=?,title=?,description=?,course=?,semester_numbers_json=?,discipline_code=?,professor_name=?,old_room=?,new_room=?,replacement_day_of_week=?,start_minutes=?,end_minutes=?,recurrence_type=?,recurrence_weekdays_json=?,recurrence_interval=?,source_url=?,source_title=?,verified_at=?,active=?,updated_at=? WHERE id=?`)
-          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.verified_at,item.active?1:0,timestamp,Number(id));
+        const result = this.db.prepare(`UPDATE academic_calendar_events SET package_key=?,event_type=?,start_date=?,end_date=?,title=?,description=?,course=?,semester_numbers_json=?,discipline_code=?,professor_name=?,old_room=?,new_room=?,replacement_day_of_week=?,start_minutes=?,end_minutes=?,recurrence_type=?,recurrence_weekdays_json=?,recurrence_interval=?,source_url=?,source_title=?,responsible=?,verified_at=?,source_verified_at=?,precedence=?,active=?,updated_at=? WHERE id=?`)
+          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.responsible,item.verified_at,item.source_verified_at,item.precedence,item.active?1:0,timestamp,Number(id));
         if (!result.changes) throw new Error('Exceção acadêmica não encontrada.');
       } else {
-        id = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,verified_at,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.verified_at,item.active?1:0,timestamp,timestamp).lastInsertRowid;
+        id = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,responsible,verified_at,source_verified_at,precedence,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+          .run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,JSON.stringify(item.semester_numbers),item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,JSON.stringify(item.recurrence_weekdays),item.recurrence_interval,item.source_url,item.source_title,item.responsible,item.verified_at,item.source_verified_at,item.precedence,item.active?1:0,timestamp,timestamp).lastInsertRowid;
       }
       const after=this.listAcademicCalendarEvents({ activeOnly: false }).find(event => event.id === Number(id));
       if(!input._skip_history&&typeof this.recordChangeHistory==='function')this.recordChangeHistory({entity_type:'academic_calendar',entity_id:String(id),entity_label:after.title,action:before?'updated':'created',source:'calendário',before,after});
@@ -262,7 +280,7 @@ module.exports = function createScheduleRepositoryMixin() {
       const clean = (Array.isArray(events) ? events : []).map(event => this.validateAcademicCalendarEvent(event));
       if (!clean.length) throw new Error('Nenhuma exceção válida foi encontrada no CSV.');
       const timestamp = nowIso();
-      const insert = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,verified_at,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      const insert = this.db.prepare(`INSERT INTO academic_calendar_events(package_key,event_type,start_date,end_date,title,description,course,semester_numbers_json,discipline_code,professor_name,old_room,new_room,replacement_day_of_week,start_minutes,end_minutes,recurrence_type,recurrence_weekdays_json,recurrence_interval,source_url,source_title,responsible,verified_at,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
       const duplicate = this.db.prepare(`SELECT id FROM academic_calendar_events WHERE event_type=? AND start_date=? AND end_date=?
         AND lower(title)=lower(?) AND course=? AND semester_numbers_json=? AND discipline_code=? AND professor_name=?
         AND old_room=? AND new_room=? AND COALESCE(replacement_day_of_week,-1)=COALESCE(?,-1)
@@ -274,7 +292,7 @@ module.exports = function createScheduleRepositoryMixin() {
         for (const item of clean) {
           const semestersJson=JSON.stringify(item.semester_numbers); const weekdaysJson=JSON.stringify(item.recurrence_weekdays);
           if (duplicate.get(item.event_type,item.start_date,item.end_date,item.title,item.course,semestersJson,item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,weekdaysJson,item.recurrence_interval)) { skipped += 1; continue; }
-          insert.run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,semestersJson,item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,weekdaysJson,item.recurrence_interval,item.source_url,item.source_title,item.verified_at,item.active?1:0,timestamp,timestamp);
+          insert.run(item.package_key,item.event_type,item.start_date,item.end_date,item.title,item.description,item.course,semestersJson,item.discipline_code,item.professor_name,item.old_room,item.new_room,item.replacement_day_of_week,item.start_minutes,item.end_minutes,item.recurrence_type,weekdaysJson,item.recurrence_interval,item.source_url,item.source_title,item.responsible,item.verified_at,item.active?1:0,timestamp,timestamp);
           imported += 1;
         }
         this.db.exec('COMMIT');

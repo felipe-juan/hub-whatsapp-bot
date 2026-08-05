@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 const { Database } = require('../src/database');
 const { BotEngine } = require('../src/bot-engine');
@@ -12,7 +13,9 @@ function databasePath() {
   return path.resolve(root, process.env.DATA_DIR || './data', 'hub-bot.sqlite');
 }
 
-const db = new Database(databasePath(), { seedBundledContent: false });
+const targetDatabase = databasePath();
+fs.mkdirSync(path.dirname(targetDatabase), { recursive: true });
+const db = new Database(targetDatabase, { seedBundledContent: false });
 const engine = new BotEngine(db);
 let failures = 0;
 try {

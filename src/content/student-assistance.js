@@ -99,7 +99,6 @@ const STUDENT_ASSISTANCE_CARDS = Object.freeze([
           "como solicitar auxílio no ifba",
           "como se inscrever no paae",
           "como funciona o paae",
-          "como funciona a assistência estudantil",
           "tenho direito a auxílio estudantil",
           "quem tem direito aos auxílios",
           "quais auxílios existem no ifba",

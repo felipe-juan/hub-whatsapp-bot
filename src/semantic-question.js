@@ -6,7 +6,7 @@ const REPORTED_SPEECH = [
   /\b(?:vi|viu|vimos|viram|leu|leram)\b.{0,70}\b(?:postagem|publicacao|publicação|aviso|noticia|notícia|mensagem)\b.{0,70}\b(?:sobre|a respeito de)\b/u
 ];
 
-const DIRECT_REQUEST = /(?:^|\b)(?:qual|quais|onde|como|quando|quem|quanto|quantos|quanta|quantas|que\s+dia|posso|podemos|preciso|precisamos|existe|existem|tem|sabe|sabem|pode|podem|poderia|poderiam|devo|devemos|gostaria\s+de\s+saber|quero\s+saber|queria\s+saber|me\s+(?:diga|informe|mande|manda|envie|mostre|passa|passe)|informe|diga)\b/u;
+const DIRECT_REQUEST = /(?:^|\b)(?:qual|quais|onde|como|quando|quem|quanto|quantos|quanta|quantas|o\s+que|que\s+dia|posso|podemos|preciso|precisamos|existe|existem|tem|sabe|sabem|pode|podem|poderia|poderiam|devo|devemos|gostaria\s+de\s+saber|quero\s+saber|queria\s+saber|me\s+(?:diga|informe|mande|manda|envie|mostre|passa|passe)|informe|diga)\b/u;
 const EXPLICIT_POLITE_REQUEST = /\b(?:pode|poderia|consegue|conseguiria|alguem|alguém)\b.{0,35}\b(?:informar|dizer|mostrar|explicar|enviar|passar|indicar)\b/u;
 const DIRECT_AFTER_REPORT = /\b(?:mas|entao|então|por isso|nesse caso|neste caso|agora)\b[, ]{0,4}(?:qual|quais|onde|como|quando|quem|posso|preciso|existe|tem|pode|poderia)\b/u;
 const COURTESY_PREFIX = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|por favor|por gentileza|favor|pfv)\b\s*)+/u;
@@ -91,7 +91,7 @@ function semanticQuestionAssessment(message, evidence = [], { exactConfigured = 
     return { allowed: false, coverage, reason: 'mensagem longa sem intenção interrogativa dirigida à informação' };
   }
 
-  const explicit = EXPLICIT_POLITE_REQUEST.test(normalized) || /^(?:qual|quais|onde|como|quando|quem|posso|preciso|existe|tem|sabe|pode|poderia)\b/u.test(normalized);
+  const explicit = EXPLICIT_POLITE_REQUEST.test(normalized) || /^(?:qual|quais|onde|como|quando|quem|o\s+que|posso|preciso|existe|tem|sabe|pode|poderia)\b/u.test(normalized);
   if (tokens.length > 8 && coverage < 0.25 && !explicit) {
     return { allowed: false, coverage, reason: 'o gatilho representa uma parte pequena demais da mensagem' };
   }

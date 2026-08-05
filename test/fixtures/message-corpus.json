@@ -1,12 +1,2432 @@
 [
-  {"message":"qual sala de lpi?","expected_intent":"room","expected_entity":"LPI","must_respond":true,"source":"produção"},
-  {"message":"e o horário?","expected_intent":"schedule_followup","expected_entity":"LPI","must_respond":true,"requires_previous":"qual sala de lpi?","source":"produção"},
-  {"message":"crescêncio dá aula hoje?","expected_intent":"attendance_confirmation","expected_entity":"Crescêncio","must_respond":false,"source":"produção"},
-  {"message":"em quais dias Amanda dá aula?","expected_intent":"days","expected_entity":"Amanda","must_respond":true,"source":"produção"},
-  {"message":"caens","expected_intent":"institutional_full","expected_entity":"CAENS","must_respond":true,"source":"produção"},
-  {"message":"o protocolo TCP controla a conexão","expected_intent":"none","expected_entity":"","must_respond":false,"source":"regressão"},
-  {"message":"semestre 1","expected_intent":"semester_overview","expected_entity":"1","must_respond":true,"source":"produção"},
-  {"message":"horários e salas do 2º semestre","expected_intent":"semester_overview","expected_entity":"2","must_respond":true,"source":"produção"},
-  {"message":"felipe","expected_intent":"professor_full","expected_entity":"Felipe Juan","must_respond":true,"source":"produção"},
-  {"message":"falei com Crijina ontem","expected_intent":"none","expected_entity":"","must_respond":false,"source":"regressão"}
+  {
+    "message": "qual sala de AP?",
+    "expected_intent": "room",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de AP",
+    "expected_intent": "room",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de AP?",
+    "expected_intent": "room",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem AP?",
+    "expected_intent": "room",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Cálculo?",
+    "expected_intent": "room",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Cálculo",
+    "expected_intent": "room",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Cálculo?",
+    "expected_intent": "room",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Cálculo?",
+    "expected_intent": "room",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Banco de Dados II?",
+    "expected_intent": "room",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Banco de Dados II",
+    "expected_intent": "room",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Banco de Dados II?",
+    "expected_intent": "room",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Banco de Dados II?",
+    "expected_intent": "room",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Estrutura de Dados?",
+    "expected_intent": "room",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Estrutura de Dados",
+    "expected_intent": "room",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Estrutura de Dados?",
+    "expected_intent": "room",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Estrutura de Dados?",
+    "expected_intent": "room",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Inteligência Artificial?",
+    "expected_intent": "room",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Inteligência Artificial",
+    "expected_intent": "room",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Inteligência Artificial?",
+    "expected_intent": "room",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Inteligência Artificial?",
+    "expected_intent": "room",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Sistemas Operacionais?",
+    "expected_intent": "room",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Sistemas Operacionais",
+    "expected_intent": "room",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Sistemas Operacionais?",
+    "expected_intent": "room",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Sistemas Operacionais?",
+    "expected_intent": "room",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Programação Web I?",
+    "expected_intent": "room",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Programação Web I",
+    "expected_intent": "room",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Programação Web I?",
+    "expected_intent": "room",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Programação Web I?",
+    "expected_intent": "room",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Matemática Discreta II?",
+    "expected_intent": "room",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Matemática Discreta II",
+    "expected_intent": "room",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Matemática Discreta II?",
+    "expected_intent": "room",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Matemática Discreta II?",
+    "expected_intent": "room",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Redes de Computadores?",
+    "expected_intent": "room",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Redes de Computadores",
+    "expected_intent": "room",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Redes de Computadores?",
+    "expected_intent": "room",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Redes de Computadores?",
+    "expected_intent": "room",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de Engenharia de Software?",
+    "expected_intent": "room",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "sala de Engenharia de Software",
+    "expected_intent": "room",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde é a aula de Engenharia de Software?",
+    "expected_intent": "room",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "em qual sala tem Engenharia de Software?",
+    "expected_intent": "room",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de AP?",
+    "expected_intent": "schedule",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de AP",
+    "expected_intent": "schedule",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem AP?",
+    "expected_intent": "schedule",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Cálculo?",
+    "expected_intent": "schedule",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Cálculo",
+    "expected_intent": "schedule",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Cálculo?",
+    "expected_intent": "schedule",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Banco de Dados II?",
+    "expected_intent": "schedule",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Banco de Dados II",
+    "expected_intent": "schedule",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Banco de Dados II?",
+    "expected_intent": "schedule",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Estrutura de Dados?",
+    "expected_intent": "schedule",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Estrutura de Dados",
+    "expected_intent": "schedule",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Estrutura de Dados?",
+    "expected_intent": "schedule",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Inteligência Artificial?",
+    "expected_intent": "schedule",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Inteligência Artificial",
+    "expected_intent": "schedule",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Inteligência Artificial?",
+    "expected_intent": "schedule",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Sistemas Operacionais?",
+    "expected_intent": "schedule",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Sistemas Operacionais",
+    "expected_intent": "schedule",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Sistemas Operacionais?",
+    "expected_intent": "schedule",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Programação Web I?",
+    "expected_intent": "schedule",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Programação Web I",
+    "expected_intent": "schedule",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Programação Web I?",
+    "expected_intent": "schedule",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Matemática Discreta II?",
+    "expected_intent": "schedule",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Matemática Discreta II",
+    "expected_intent": "schedule",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Matemática Discreta II?",
+    "expected_intent": "schedule",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Redes de Computadores?",
+    "expected_intent": "schedule",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Redes de Computadores",
+    "expected_intent": "schedule",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Redes de Computadores?",
+    "expected_intent": "schedule",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual o horário de Engenharia de Software?",
+    "expected_intent": "schedule",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "horário de Engenharia de Software",
+    "expected_intent": "schedule",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "que horas tem Engenharia de Software?",
+    "expected_intent": "schedule",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina AP?",
+    "expected_intent": "professor",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de AP?",
+    "expected_intent": "professor",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Cálculo?",
+    "expected_intent": "professor",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Cálculo?",
+    "expected_intent": "professor",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Banco de Dados II?",
+    "expected_intent": "professor",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Banco de Dados II?",
+    "expected_intent": "professor",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Estrutura de Dados?",
+    "expected_intent": "professor",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Estrutura de Dados?",
+    "expected_intent": "professor",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Inteligência Artificial?",
+    "expected_intent": "professor",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Inteligência Artificial?",
+    "expected_intent": "professor",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Sistemas Operacionais?",
+    "expected_intent": "professor",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Sistemas Operacionais?",
+    "expected_intent": "professor",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Programação Web I?",
+    "expected_intent": "professor",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Programação Web I?",
+    "expected_intent": "professor",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Matemática Discreta II?",
+    "expected_intent": "professor",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Matemática Discreta II?",
+    "expected_intent": "professor",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Redes de Computadores?",
+    "expected_intent": "professor",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Redes de Computadores?",
+    "expected_intent": "professor",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quem ensina Engenharia de Software?",
+    "expected_intent": "professor",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual professor de Engenharia de Software?",
+    "expected_intent": "professor",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem AP?",
+    "expected_intent": "days",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de AP?",
+    "expected_intent": "days",
+    "expected_entity": "AP",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Cálculo?",
+    "expected_intent": "days",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Cálculo?",
+    "expected_intent": "days",
+    "expected_entity": "Cálculo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Banco de Dados II?",
+    "expected_intent": "days",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Banco de Dados II?",
+    "expected_intent": "days",
+    "expected_entity": "Banco de Dados II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Estrutura de Dados?",
+    "expected_intent": "days",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Estrutura de Dados?",
+    "expected_intent": "days",
+    "expected_entity": "Estrutura de Dados",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Inteligência Artificial?",
+    "expected_intent": "days",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Inteligência Artificial?",
+    "expected_intent": "days",
+    "expected_entity": "Inteligência Artificial",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Sistemas Operacionais?",
+    "expected_intent": "days",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Sistemas Operacionais?",
+    "expected_intent": "days",
+    "expected_entity": "Sistemas Operacionais",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Programação Web I?",
+    "expected_intent": "days",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Programação Web I?",
+    "expected_intent": "days",
+    "expected_entity": "Programação Web I",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Matemática Discreta II?",
+    "expected_intent": "days",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Matemática Discreta II?",
+    "expected_intent": "days",
+    "expected_entity": "Matemática Discreta II",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Redes de Computadores?",
+    "expected_intent": "days",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Redes de Computadores?",
+    "expected_intent": "days",
+    "expected_entity": "Redes de Computadores",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quais dias tem Engenharia de Software?",
+    "expected_intent": "days",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "quando tem aula de Engenharia de Software?",
+    "expected_intent": "days",
+    "expected_entity": "Engenharia de Software",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "academic-query",
+    "anonymized": true
+  },
+  {
+    "message": "contato da CAENS",
+    "expected_intent": "institutional",
+    "expected_entity": "CAENS",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "o que a CAENS faz?",
+    "expected_intent": "institutional",
+    "expected_entity": "CAENS",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde fica a CAENS?",
+    "expected_intent": "institutional",
+    "expected_entity": "CAENS",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "contato da CORES",
+    "expected_intent": "institutional",
+    "expected_entity": "CORES",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "o que a CORES faz?",
+    "expected_intent": "institutional",
+    "expected_entity": "CORES",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde fica a CORES?",
+    "expected_intent": "institutional",
+    "expected_entity": "CORES",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "contato da CAPNE",
+    "expected_intent": "institutional",
+    "expected_entity": "CAPNE",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "o que a CAPNE faz?",
+    "expected_intent": "institutional",
+    "expected_entity": "CAPNE",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde fica a CAPNE?",
+    "expected_intent": "institutional",
+    "expected_entity": "CAPNE",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "contato da Biblioteca",
+    "expected_intent": "institutional",
+    "expected_entity": "Biblioteca",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "o que a Biblioteca faz?",
+    "expected_intent": "institutional",
+    "expected_entity": "Biblioteca",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde fica a Biblioteca?",
+    "expected_intent": "institutional",
+    "expected_entity": "Biblioteca",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "contato da Coordenação do BSI",
+    "expected_intent": "institutional",
+    "expected_entity": "Coordenação do BSI",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "o que a Coordenação do BSI faz?",
+    "expected_intent": "institutional",
+    "expected_entity": "Coordenação do BSI",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde fica a Coordenação do BSI?",
+    "expected_intent": "institutional",
+    "expected_entity": "Coordenação do BSI",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "contato da Psicologia",
+    "expected_intent": "institutional",
+    "expected_entity": "Psicologia",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "o que a Psicologia faz?",
+    "expected_intent": "institutional",
+    "expected_entity": "Psicologia",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "onde fica a Psicologia?",
+    "expected_intent": "institutional",
+    "expected_entity": "Psicologia",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "contato da CGTI",
+    "expected_intent": "institutional",
+    "expected_entity": "CGTI",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "o que a CGTI faz?",
+    "expected_intent": "institutional",
+    "expected_entity": "CGTI",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "institutional-query",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de algoritimo?",
+    "expected_intent": "room",
+    "expected_entity": "algoritimo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de algorítimo?",
+    "expected_intent": "room",
+    "expected_entity": "algorítimo",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de a p?",
+    "expected_intent": "room",
+    "expected_entity": "a p",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de bê dê dois?",
+    "expected_intent": "room",
+    "expected_entity": "bê dê dois",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de eme de dois?",
+    "expected_intent": "room",
+    "expected_entity": "eme de dois",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de s o?",
+    "expected_intent": "room",
+    "expected_entity": "s o",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de i a?",
+    "expected_intent": "room",
+    "expected_entity": "i a",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de programacao web um?",
+    "expected_intent": "room",
+    "expected_entity": "programacao web um",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de estrutura de dado?",
+    "expected_intent": "room",
+    "expected_entity": "estrutura de dado",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "qual sala de redes de computador?",
+    "expected_intent": "room",
+    "expected_entity": "redes de computador",
+    "must_respond": true,
+    "source": "corpus-v0180",
+    "category": "alias-typo",
+    "anonymized": true
+  },
+  {
+    "message": "João é burro",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "essa matéria é fudida",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "bom dia turma",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o protocolo TCP controla a conexão",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "falei com Amanda ontem",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a sala estava fechada",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o professor chegou cedo",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "quando eu era aluno",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "meu banco de dados pessoal",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "inteligência artificial está na moda",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "sistema operacional do meu celular",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o livro caiu no chão",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a biblioteca da minha casa",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o estágio do jogo",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "final do campeonato",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "nota musical alta",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "média aritmética é importante",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "vou para a sala agora",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a aula foi legal",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "contato visual é importante",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "João é burro 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "essa matéria é fudida 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "bom dia turma 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o protocolo TCP controla a conexão 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "falei com Amanda ontem 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a sala estava fechada 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o professor chegou cedo 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "quando eu era aluno 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "meu banco de dados pessoal 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "inteligência artificial está na moda 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "sistema operacional do meu celular 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o livro caiu no chão 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a biblioteca da minha casa 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o estágio do jogo 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "final do campeonato 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "nota musical alta 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "média aritmética é importante 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "vou para a sala agora 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a aula foi legal 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "contato visual é importante 1",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "João é burro 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "essa matéria é fudida 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "bom dia turma 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o protocolo TCP controla a conexão 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "falei com Amanda ontem 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a sala estava fechada 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o professor chegou cedo 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "quando eu era aluno 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "meu banco de dados pessoal 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "inteligência artificial está na moda 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "sistema operacional do meu celular 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o livro caiu no chão 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a biblioteca da minha casa 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o estágio do jogo 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "final do campeonato 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "nota musical alta 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "média aritmética é importante 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "vou para a sala agora 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a aula foi legal 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "contato visual é importante 2",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "João é burro 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "essa matéria é fudida 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "bom dia turma 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o protocolo TCP controla a conexão 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "falei com Amanda ontem 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a sala estava fechada 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o professor chegou cedo 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "quando eu era aluno 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "meu banco de dados pessoal 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "inteligência artificial está na moda 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "sistema operacional do meu celular 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o livro caiu no chão 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a biblioteca da minha casa 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o estágio do jogo 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "final do campeonato 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "nota musical alta 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "média aritmética é importante 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "vou para a sala agora 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a aula foi legal 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "contato visual é importante 3",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "João é burro 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "essa matéria é fudida 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "bom dia turma 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o protocolo TCP controla a conexão 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "falei com Amanda ontem 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a sala estava fechada 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o professor chegou cedo 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "quando eu era aluno 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "meu banco de dados pessoal 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "inteligência artificial está na moda 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "sistema operacional do meu celular 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o livro caiu no chão 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a biblioteca da minha casa 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o estágio do jogo 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "final do campeonato 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "nota musical alta 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "média aritmética é importante 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "vou para a sala agora 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a aula foi legal 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "contato visual é importante 4",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "João é burro 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "essa matéria é fudida 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "bom dia turma 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o protocolo TCP controla a conexão 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "falei com Amanda ontem 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a sala estava fechada 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o professor chegou cedo 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "quando eu era aluno 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "meu banco de dados pessoal 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "inteligência artificial está na moda 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "sistema operacional do meu celular 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o livro caiu no chão 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a biblioteca da minha casa 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o estágio do jogo 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "final do campeonato 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "nota musical alta 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "média aritmética é importante 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "vou para a sala agora 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a aula foi legal 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "contato visual é importante 5",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "João é burro 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "essa matéria é fudida 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "bom dia turma 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o protocolo TCP controla a conexão 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "falei com Amanda ontem 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "a sala estava fechada 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "o professor chegou cedo 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "quando eu era aluno 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "meu banco de dados pessoal 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  },
+  {
+    "message": "inteligência artificial está na moda 6",
+    "expected_intent": "none",
+    "expected_entity": "",
+    "must_respond": false,
+    "source": "corpus-v0180",
+    "category": "negative-control",
+    "anonymized": true
+  }
 ]

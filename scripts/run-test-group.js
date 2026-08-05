@@ -10,7 +10,7 @@ const allFiles = fs.readdirSync(testDir).filter(name => name.endsWith('.test.js'
 function groupFor(name) {
   if (/performance|concurrency|stability|responsiveness|v0(?:87|88|90|91|92)/iu.test(name)) return 'performance';
   if (/migration|update|backup|restore|manifest|install|rollback|schema/iu.test(name)) return 'migrations';
-  if (/content|professor|sector|schedule|calendar|card|trigger|caens|room|institutional|bsi|discipline|campus|semester/iu.test(name)) return 'content';
+  if (/content|professor|sector|schedule|calendar|card|trigger|caens|room|institutional|bsi|discipline|campus|semester|v01513|v0155/iu.test(name)) return 'content';
   if (/text|matcher|calculator|template|question|format|parser|caption|title|regex|normaliz|policy|corpus/iu.test(name)) return 'unit';
   return 'integration';
 }
@@ -27,15 +27,24 @@ function ensureContentTemplate() {
 }
 function executeFiles(group, files, extraEnv = {}) {
   if (!files.length) return 0;
-  const args = ['--test', '--test-force-exit', '--test-concurrency', group === 'performance' ? '1' : '4', ...files.map(name => path.join('test', name))];
-  const env = {
-    ...process.env,
-    HUB_SKIP_BUNDLED_CONTENT: group === 'content' ? '0' : (process.env.HUB_SKIP_BUNDLED_CONTENT || '1'),
-    ...extraEnv
-  };
-  const result = spawnSync(process.execPath, args, { cwd: root, stdio: 'inherit', env });
-  return Number(result.status || 0);
+  // Cada arquivo é executado em um processo Node exclusivo. Isso impede que
+  // bancos temporários, variáveis de ambiente e servidores de um cenário
+  // interfiram em outro teste quando a suíte é executada em paralelo.
+  for (const name of files) {
+    const args = ['--test', '--test-force-exit', '--test-concurrency', '1', path.join('test', name)];
+    const env = {
+      ...process.env,
+      HUB_TEST_RUN_ID: `${group}-${name}-${process.pid}-${Date.now()}`,
+      HUB_SKIP_BUNDLED_CONTENT: group === 'content' ? '0' : (process.env.HUB_SKIP_BUNDLED_CONTENT || '1'),
+      ...extraEnv
+    };
+    console.log(`\n--- ${name} ---`);
+    const result = spawnSync(process.execPath, args, { cwd: root, stdio: 'inherit', env });
+    if (result.status) return Number(result.status || 1);
+  }
+  return 0;
 }
+
 function run(group) {
   const files = groups[group] || [];
   if (!files.length) { console.log(`${group}: nenhum teste.`); return 0; }

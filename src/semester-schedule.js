@@ -260,12 +260,20 @@ function eventMatchesClass(event, item) {
   return true;
 }
 
+function calendarEventAttribution(event) {
+  const parts = [];
+  if (event.source_title) parts.push(`Fonte: ${event.source_title}${event.source_url ? ` — ${event.source_url}` : ''}.`);
+  else if (event.source_url) parts.push(`Fonte: ${event.source_url}.`);
+  if (event.responsible) parts.push(`Responsável pela informação: ${event.responsible}.`);
+  return parts.length ? `\n${parts.join('\n')}` : '';
+}
+
 function applyCalendarExceptions(classes, events = []) {
   let output = classes.map(item => ({ ...item }));
   const notices = [];
   const blockers = events.filter(event => ['no_classes','recess'].includes(event.event_type));
   if (blockers.length) {
-    for (const event of blockers) notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+    for (const event of blockers) notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}${calendarEventAttribution(event)}`);
     return { classes: [], notices, blocked: true };
   }
 
@@ -279,18 +287,18 @@ function applyCalendarExceptions(classes, events = []) {
         const overlapsSuspension = classEnd > start && classStart < end;
         return !overlapsSuspension;
       });
-      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}${calendarEventAttribution(event)}`);
     } else if (event.event_type === 'room_change') {
       let changed = 0;
       output = output.map(item => {
         if (!eventMatchesClass(event, item) || !event.new_room) return item;
         changed += 1; return { ...item, room: event.new_room };
       });
-      if (changed) notices.push(`⚠️ *Mudança excepcional de sala:* ${event.title}${event.description ? `\n${event.description}` : ''}`);
+      if (changed) { const normalRoom = event.old_room ? `\nSala habitual: ${event.old_room}.` : ''; notices.push(`⚠️ *Mudança excepcional de sala:* ${event.title}${event.description ? `\n${event.description}` : ''}${normalRoom}${calendarEventAttribution(event)}`); }
     } else if (event.event_type === 'warning') {
-      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}${calendarEventAttribution(event)}`);
     } else if (['replacement_day','class_replacement'].includes(event.event_type)) {
-      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}`);
+      notices.push(`⚠️ *${event.title}*${event.description ? `\n${event.description}` : ''}${calendarEventAttribution(event)}`);
     }
   }
   return { classes: deduplicateClasses(output), notices, blocked: false };

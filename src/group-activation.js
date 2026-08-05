@@ -16,33 +16,51 @@ function stripNamedPrefix(body) {
   const text = String(body || '').trimStart();
   const match = text.match(GROUP_PREFIX_PATTERN);
   if (!match) return null;
-  return text.slice(match[0].length).replace(/^[\s,.:;!?\-]+/u, '').trim();
+  let remainder = text.slice(match[0].length).replace(/^[\s,.:;?\-]+/u, '').trim();
+  if (/^!(?:ajuda|help|status|pausar|pause|continuar|retomar|resume|backup|reiniciar|restart)\b/iu.test(remainder)) return remainder;
+  remainder = remainder.replace(/^!+\s*/u, '').trim();
+  return remainder;
+}
+
+function normalizeOptionalActivation(body, message = {}) {
+  const originalBody = String(body || '').trim();
+  if (!originalBody) return { body: '', mode: '' };
+  if (originalBody.startsWith('.')) {
+    const remainder = originalBody.slice(1).trim();
+    if (remainder) return { body: remainder, mode: 'dot' };
+  }
+  const prefixed = stripNamedPrefix(originalBody);
+  if (prefixed !== null) return { body: prefixed || 'ajuda', mode: 'name-prefix' };
+  if (message.mentionedMe) {
+    const remainder = stripOwnMentionTokens(originalBody, message.ownMentionNumbers || []);
+    return { body: remainder || 'ajuda', mode: 'mention' };
+  }
+  return { body: originalBody, mode: '' };
 }
 
 function resolveGroupActivation(message = {}) {
   const originalBody = String(message.body || '').trim();
-  if (!message.isGroup) return { active: true, body: originalBody, mode: 'private' };
+  if (!message.isGroup) {
+    const normalized = normalizeOptionalActivation(originalBody, message);
+    return { active: true, body: normalized.body, mode: normalized.mode || 'private' };
+  }
   if (message.groupActivated) return { active: true, body: originalBody || 'ajuda', mode: message.groupActivationMode || 'preactivated' };
   if (!originalBody) return { active: false, body: '', mode: '' };
 
-  if (originalBody.startsWith('.')) {
-    const body = originalBody.slice(1).trim();
-    // Um ponto isolado não é uma consulta. O prefixo só ativa o bot quando
-    // existe algum conteúdo depois dele; `.palavra` e `. palavra` continuam
-    // equivalentes.
-    if (!body) return { active: false, body: '', mode: '' };
-    return { active: true, body, mode: 'dot' };
-  }
+  const normalized = normalizeOptionalActivation(originalBody, message);
+  if (normalized.mode) return { active: true, body: normalized.body, mode: normalized.mode };
 
-  const prefixed = stripNamedPrefix(originalBody);
-  if (prefixed !== null) return { active: true, body: prefixed || 'ajuda', mode: 'name-prefix' };
-
-  if (message.mentionedMe) {
-    const body = stripOwnMentionTokens(originalBody, message.ownMentionNumbers || []);
-    return { active: true, body: body || 'ajuda', mode: 'mention' };
+  if (message.quotedFromMe) {
+    return { active: true, body: originalBody, mode: 'reply-to-bot' };
   }
 
   return { active: false, body: '', mode: '' };
 }
 
-module.exports = { GROUP_PREFIX_PATTERN, stripOwnMentionTokens, stripNamedPrefix, resolveGroupActivation };
+module.exports = {
+  GROUP_PREFIX_PATTERN,
+  stripOwnMentionTokens,
+  stripNamedPrefix,
+  normalizeOptionalActivation,
+  resolveGroupActivation
+};

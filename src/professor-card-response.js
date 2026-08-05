@@ -89,12 +89,16 @@ function usefulFields(fields = []) {
   // Uma sala sem o dia e a disciplina costuma ser pouco útil. O título já
   // identifica a disciplina; o dia é incluído como contexto mínimo.
   if (requested.has('room')) {
-    display.add('day');
-    display.add('hours');
-    // A sala precisa ser associada ao docente correto, sobretudo nas
-    // disciplinas compartilhadas, como Cálculo.
+    // Uma consulta somente de sala recebe contexto de dia e horário. Em uma
+    // pergunta com múltiplas intenções, mostre apenas os campos pedidos e o
+    // docente necessário para desambiguar ofertas.
+    if (requested.size === 1) {
+      display.add('day');
+      display.add('hours');
+    }
     display.add('professor');
   }
+
   // Dia e horário formam uma única informação acadêmica útil.
   if (requested.has('day')) display.add('hours');
   if (requested.has('hours')) display.add('day');

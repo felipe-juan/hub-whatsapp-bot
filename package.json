@@ -1,6 +1,6 @@
 {
   "name": "hub-whatsapp-bot",
-  "version": "0.15.13",
+  "version": "0.19.0",
   "private": true,
   "description": "Bot comunitário autohospedado do HUB Arquivos IFBA, com painel local de administração.",
   "main": "src/index.js",
@@ -27,7 +27,8 @@
     "test:all": "node scripts/run-test-group.js all",
     "test:prepare": "node scripts/prepare-test-database.js",
     "release:verify": "node scripts/verify-package-lock.js && node scripts/build-update-manifest.js && node scripts/verify-release.js",
-    "deploy": "bash scripts/deploy.sh"
+    "deploy": "bash scripts/deploy.sh",
+    "test:conversation-corpus": "node scripts/run-conversation-corpus.js"
   },
   "dependencies": {
     "dotenv": "17.4.2",

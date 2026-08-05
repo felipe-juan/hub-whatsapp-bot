@@ -51,10 +51,10 @@ test('TCC intents are separated between teacher, procedure, schedule and prerequ
 test('hierarchical help menu opens the requested academic submenu', async () => {
   const holder = tempDb(); const engine = new BotEngine(holder.db); const replies = [];
   try {
-    await engine.handle(messageFactory(replies, 'ajuda'));
-    assert.match(String(replies[0]), /1\. Professores e horários/);
-    assert.match(String(replies[0]), /3\. TCC, estágio e atividades acadêmicas/);
-    await engine.handle(messageFactory(replies, '3'));
+    await engine.handle(messageFactory(replies, '.ajuda'));
+    assert.match(String(replies[0]), /1\. Aulas, salas e horários/);
+    assert.match(String(replies[0]), /5\. BSI, estágio e TCC/);
+    await engine.handle(messageFactory(replies, '5'));
     assert.match(String(replies[1]), /1\. TCC/);
     assert.match(String(replies[1]), /2\. Estágio/);
     assert.match(String(replies[1]), /3\. ACEX/);
@@ -64,8 +64,8 @@ test('hierarchical help menu opens the requested academic submenu', async () => 
 test('ambiguous contextual schedule follow-up asks the user to confirm the theme', async () => {
   const holder = tempDb(); const engine = new BotEngine(holder.db); const replies = [];
   try {
-    await engine.handle(messageFactory(replies, 'contato da CAENS'));
-    await engine.handle(messageFactory(replies, 'e o horário?'));
+    await engine.handle(messageFactory(replies, '.contato da CAENS'));
+    await engine.handle(messageFactory(replies, '.e o horário?'));
     assert.match(String(replies.at(-1)), /horário de atendimento da CAENS/i);
     assert.match(String(replies.at(-1)), /horário de uma disciplina ou turma de BSI/i);
     const metrics = engine.getMetrics();
@@ -102,7 +102,7 @@ test('database and content are split into focused modules', () => {
   assert.ok(fs.statSync(path.join(root, 'src', 'database.js')).size < 70000);
   assert.ok(fs.statSync(path.join(root, 'src', 'institutional-cards.js')).size < 10000);
   assert.ok(fs.statSync(path.join(root, 'public', 'app.js')).size < 40000);
-  assert.equal(INSTITUTIONAL_CARDS_V098.length, 115);
+  assert.equal(INSTITUTIONAL_CARDS_V098.length, 116);
 });
 
 test('historical immutable assets are limited to the immediately previous release', () => {

@@ -3,7 +3,7 @@ const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const { parseList, normalizeText } = require('./text');
 const { toPortugueseTitleCase } = require('./title-case');
-const { normalizeTriggerRules, validateRegex } = require('./trigger-rules');
+const { normalizeTriggerRules, validateRegex, evaluateTrigger } = require('./trigger-rules');
 const { SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2 } = require('./si-professors-2026-2');
 const { buildProfessorScheduleResponse } = require('./professor-schedule-import');
 const { SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload } = require('./si-support-messages-v083');
@@ -23,6 +23,8 @@ const createIncomingRepositoryMixin = require('./database/incoming-repository');
 const createLearningRepositoryMixin = require('./database/learning-repository');
 const createChangeHistoryRepositoryMixin = require('./database/change-history-repository');
 const createQualityRepositoryMixin = require('./database/quality-repository');
+const createAcademicRepositoryMixin = require('./database/academic-repository');
+const { restoreCanonicalBundledTriggers } = require('./recovery/canonical-bundled-triggers');
 
 const DEFAULT_SETTINGS = {
   bot_name: 'HUB Bot',
@@ -98,6 +100,13 @@ const DEFAULT_SETTINGS = {
   process_append_messages: 'false',
   ignored_bot_numbers: '',
   ignored_message_prefixes: '[BOT]|[HUBBOT]',
+  recovery_enabled: 'true',
+  recovery_context_seconds: '300',
+  recovery_recent_expired_seconds: '600',
+  recovery_max_suggestions: '3',
+  recovery_private_welcome_days: '60',
+  recovery_metrics_enabled: 'true',
+  recovery_common_reply_enabled: 'true',
   dashboard_cards: 'connection,messages,queue,last_reply,top_rules,errors,memory',
   dashboard_stale_minutes: '120',
   professor_room_stale_days: '180',
@@ -258,6 +267,7 @@ class Database {
     this.migrate();
     this.runVersionedMigrations();
     this.seed();
+    restoreCanonicalBundledTriggers(this);
     this.prepareFrequentlyUsedStatements();
     this.startUsageFlushTimer();
     this.pruneLogs();
@@ -701,7 +711,7 @@ class Database {
           unique.get(normalized).kinds.add(kind);
         }
       };
-      addTerms(trigger.keywords, 'keyword');
+      if (trigger.match_mode === 'any' || trigger.keywords.length <= 1) addTerms(trigger.keywords, 'keyword');
       addTerms(trigger.sentences, 'sentence');
       addTerms(trigger.exact_phrases, 'exact');
       addTerms(trigger.required_words, 'required');
@@ -738,7 +748,14 @@ class Database {
           }
         }
       }
-      if (shared.length) conflicts.push({ type: 'message-trigger', severity: 'warning', items: [a.id, b.id], titles: [a.effective.title, b.effective.title], details: [...new Set(shared)].slice(0, 8) });
+      if (shared.length) {
+        const synonyms = this.listSynonymGroups({ activeOnly: true });
+        const realistic = [...new Set(shared)].filter(detail => {
+          const samples = String(detail).split(' ↔ ').map(value => value.trim()).filter(Boolean);
+          return samples.some(sample => evaluateTrigger(sample, a.effective, synonyms).matched && evaluateTrigger(sample, b.effective, synonyms).matched);
+        }).slice(0, 8);
+        if (realistic.length) conflicts.push({ type: 'message-trigger', severity: 'warning', items: [a.id, b.id], titles: [a.effective.title, b.effective.title], details: realistic });
+      }
     }
     const report = { count: conflicts.length, conflicts };
     this.cache.conflictReport = report;
@@ -806,7 +823,7 @@ class Database {
 
 }
 const databaseMixinDependencies = { DEFAULT_SETTINGS, DEFAULT_LINKS, DEFAULT_CALCULATORS, GROUP_FEATURES, GROUP_FEATURE_COLUMNS, boolToDb, asBool, parseJson, parseJsonList, nowIso, clone, comparableMessageSnapshot, messageSnapshotsEqual, packageKeyFor, triggerTermsOverlap, normalizePhone, normalizeTag, normalizeTags, parseList, normalizeText, normalizeTriggerRules, validateRegex, SI_PROFESSORS_2026_2, SI_PENDING_2026_2, SI_PROFESSOR_TRIGGER_ALIASES_2026_2, buildSiProfessorTriggerSentences, buildSiProfessorNameTriggerSentences, buildSiProfessorExactNamePhrases, formatDisciplineLabel, formatDisciplineNamesInText, buildDisciplineTriggerSentences, buildSiProfessorResponse, buildSharedDisciplineCards2026_2, buildProfessorScheduleResponse, SI_SUPPORT_MESSAGES_V083, SCHEDULE_BOARD_V0812, automaticMessagePayload, INSTITUTIONAL_CARDS_V098, FUN_CARDS_V0101, SEMESTER_WEEKLY_CARDS_V0143, CAMPUS_CARDS, captionAnalysis, felipeJuanPhone, injectFelipeJuanPhone, toPortugueseTitleCase, crypto };
-for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin, createIncomingRepositoryMixin, createLearningRepositoryMixin, createChangeHistoryRepositoryMixin, createQualityRepositoryMixin]) {
+for (const createMixin of [createMigrationsMixin, createCardsRepositoryMixin, createDirectoriesRepositoryMixin, createDeliveriesRepositoryMixin, createBackupsRepositoryMixin, createScheduleRepositoryMixin, createIncomingRepositoryMixin, createLearningRepositoryMixin, createChangeHistoryRepositoryMixin, createQualityRepositoryMixin, createAcademicRepositoryMixin]) {
   const descriptors = Object.getOwnPropertyDescriptors(createMixin(databaseMixinDependencies).prototype);
   delete descriptors.constructor;
   Object.defineProperties(Database.prototype, descriptors);
